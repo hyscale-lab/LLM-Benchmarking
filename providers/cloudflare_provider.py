@@ -37,6 +37,7 @@ class Cloudflare(ProviderInterface):
             "meta-llama-2-7b": "@cf/meta/llama-2-7b-chat-fp16",
             "deepseek-ai-R1-32b": "@cf/deepseek-ai/deepseek-r1-distill-qwen-32b",
             "common-model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+            "common-model-small": "@hf/meta-llama/meta-llama-3-8b-instruct"
         }
 
     def get_model_name(self, model):

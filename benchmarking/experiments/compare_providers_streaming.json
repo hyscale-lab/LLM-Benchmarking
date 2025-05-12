@@ -1,23 +1,18 @@
 {
     "providers": [
-        "Groq",
-        "Hyperbolic",
-        "Anthropic",
+        "vLLM",
         "AWSBedrock",
         "Azure",
         "Cloudflare",
-        "Google",
         "OpenAI",
-        "PerplexityAI",
         "TogetherAI"
     ],
     "models": [
-        "common-model"
+        "common-model-small"
     ],
     "num_requests": 100,
     "input_tokens": 10,
     "streaming": true,
     "max_output": 100,
-    "verbose": true,
-    "backend": true
+    "verbose": true
 }

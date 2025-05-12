@@ -30,7 +30,7 @@ class AWSBedrock(ProviderInterface):
             "mistral-23b-instruct-v0.1": "mistral.mistral-small-2402-v1:0",
             "mistral-124b-instruct-v0.1": "mistral.mistral-large-2402-v1:0",
             "common-model": "meta.llama3-70b-instruct-v1:0",
-            "common-model-small": "meta.llama3-8b-instruct-v1:0"
+            "common-model-small": "mistral.mixtral-8x7b-instruct-v0:1"
         }
 
     def get_model_name(self, model):
@@ -109,6 +109,7 @@ class AWSBedrock(ProviderInterface):
         else:
             max_tokens_config = 'max_tokens'
 
+        print(max_tokens_config, max_output)
         native_request = {
             "prompt": formatted_prompt,
             max_tokens_config: max_output,
@@ -123,6 +124,7 @@ class AWSBedrock(ProviderInterface):
             streaming_response = self.bedrock_client.invoke_model_with_response_stream(
                 modelId=model_id, body=request_body
             )
+            # print(streaming_response)
 
             # Process the streaming response
             for event in streaming_response["body"]:

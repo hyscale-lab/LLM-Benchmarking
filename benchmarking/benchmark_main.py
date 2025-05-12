@@ -156,9 +156,9 @@ class Benchmark:
                     if self.verbosity:
                         print(f"Request {i + 1}/{self.num_requests}")
 
-                    if i % 20 == 0:
-                        # print("[DEBUG] Sleeping for 2 mins to bypass rate limit...")
-                        time.sleep(120)
+                    # if i % 1 == 0:
+                    #     # print("[DEBUG] Sleeping for 2 mins to bypass rate limit...")
+                    #     time.sleep(60)
 
                     if self.streaming:
                         if provider_name == "vLLM":

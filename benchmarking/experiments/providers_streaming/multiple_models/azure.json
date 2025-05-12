@@ -8,7 +8,7 @@
         "meta-llama-3.3-70b-instruct",
         "meta-llama-3.1-405b-instruct"
     ],
-    "num_requests": 1,
+    "num_requests": 100,
     "input_tokens": 10,
     "streaming": true,
     "max_output": 100,

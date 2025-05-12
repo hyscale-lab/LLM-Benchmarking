@@ -5,10 +5,9 @@
     "models": [
         "meta-llama-3.1-8b-instruct"
     ],
-    "num_requests": 100,
+    "num_requests": 10,
     "input_tokens": 10,
     "streaming": true,
     "max_output": 100,
-    "verbose": true,
-    "backend": true
+    "verbose": true
 }
