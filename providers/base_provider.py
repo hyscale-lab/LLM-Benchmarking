@@ -1,8 +1,9 @@
 # base_provider.py for chat completions api
 from timeit import default_timer as timer
+import time
 import numpy as np
 from providers.provider_interface import ProviderInterface
-
+import math
 
 class BaseProvider(ProviderInterface):
     def __init__(self, api_key, client_class, base_url=None):
@@ -20,7 +21,7 @@ class BaseProvider(ProviderInterface):
     def get_model_name(self, model):
         return self.model_map.get(model, None)
 
-    def perform_inference(self, model, prompt, max_output=100, verbosity=True):
+    def perform_inference(self, model, prompt, timeout, max_output=100, verbosity=True):
 
         try:
             model_id = self.get_model_name(model)
@@ -34,7 +35,7 @@ class BaseProvider(ProviderInterface):
                     {"role": "user", "content": prompt},
                 ],
                 max_tokens=max_output,
-                timeout=(10, 100)
+                # timeout=(10, 100)
             )
             elapsed = timer() - start
             self.log_metrics(model, "response_times", elapsed)
@@ -49,13 +50,13 @@ class BaseProvider(ProviderInterface):
     def perform_inference_streaming(
         self, model, prompt, max_output=100, verbosity=True
     ):
+        print(model, prompt, max_output, verbosity)
         try:
             model_id = self.get_model_name(model)
             if model_id is None:
                 raise ValueError(f"Model {model} not available for provider.")
             first_token_time = None
             inter_token_latencies = []
-
             start = timer()
             response = self.client.chat.completions.create(
                 model=model_id,
@@ -65,8 +66,10 @@ class BaseProvider(ProviderInterface):
                 ],
                 stream=True,
                 max_tokens=max_output,
-                timeout=(10, 100)
+                # timeout=(10, 100)
             )
+
+            # print(response)
 
             for chunk in response:
                 if first_token_time is None:
@@ -100,15 +103,15 @@ class BaseProvider(ProviderInterface):
                 print(
                     f"\nNumber of output tokens/chunks: {len(inter_token_latencies) + 1}, Avg TBT: {avg_tbt:.4f}, Time to First Token (TTFT): {ttft:.4f} seconds, Total Response Time: {elapsed:.4f} seconds"
                 )
-            self.log_metrics(model, "timetofirsttoken", ttft)
-            self.log_metrics(model, "response_times", elapsed)
-            self.log_metrics(model, "timebetweentokens", avg_tbt)
+            self.log_metrics(model, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "timetofirsttoken", ttft)
+            self.log_metrics(model, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "response_times", elapsed)
+            self.log_metrics(model, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "timebetweentokens", avg_tbt)
             median = np.percentile(inter_token_latencies, 50)
             p95 = np.percentile(inter_token_latencies, 95)
-            self.log_metrics(model, "timebetweentokens_median", median)
-            self.log_metrics(model, "timebetweentokens_p95", p95)
-            self.log_metrics(model, "totaltokens", len(inter_token_latencies) + 1)
-            self.log_metrics(model, "tps", (len(inter_token_latencies) + 1) / elapsed)
+            self.log_metrics(model, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "timebetweentokens_median", median)
+            self.log_metrics(model, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "timebetweentokens_p95", p95)
+            self.log_metrics(model, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "totaltokens", len(inter_token_latencies) + 1)
+            self.log_metrics(model, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "tps", (len(inter_token_latencies) + 1) / elapsed)
 
         except Exception as e:
             print(f"[ERROR] Streaming inference failed for model '{model}': {e}")

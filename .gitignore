@@ -8,7 +8,7 @@ dynamodb/docker/docker/dynamodb/shared-local-instance.db
 .coverage
 benchmark_graph/*
 .pytest_cache/*
-
+*.ipynb
 
 # Testing and coverage
 coverage.xml
@@ -17,6 +17,9 @@ htmlcov
 
 # Notebooks
 notebooks/.ipynb_checkpoints/
+.ipynb_checkpoints/
+exp_dir/
+experiments/
 
 
 azure-test.py

@@ -14,10 +14,9 @@
     "models": [
         "common-model"
     ],
-    "num_requests": 100,
+    "num_requests": 1,
     "input_tokens": 10,
     "streaming": true,
     "max_output": 100,
-    "verbose": true,
-    "backend": true
+    "verbose": true
 }

@@ -3,12 +3,11 @@
         "Groq"
     ],
     "models": [
-        "google-gemma-7b-it"
+        "common-model"
     ],
-    "num_requests": 100,
+    "num_requests": 3,
     "input_tokens": 10,
     "streaming": true,
     "max_output": 100,
-    "verbose": true,
-    "backend": true
+    "verbose": true
 }
