@@ -4,12 +4,13 @@
     ],
     "models": [
         "meta-llama-3.1-8b-instruct",
-        "meta-llama-3.1-70b-instruct"
+        "mistral-23b-instruct-v0.1",
+        "meta-llama-3.3-70b-instruct",
+        "meta-llama-3.1-405b-instruct"
     ],
-    "num_requests": 100,
+    "num_requests": 1,
     "input_tokens": 10,
     "streaming": true,
     "max_output": 100,
-    "verbose": true,
-    "backend": true
+    "verbose": true
 }

@@ -38,6 +38,7 @@ class TestMain(unittest.TestCase):
                 "AWS_BEDROCK_ACCESS_KEY_ID": "aws_test_id",
                 "AWS_BEDROCK_SECRET_ACCESS_KEY": "aws_test_key",
                 "AWS_BEDROCK_REGION": "us-east-1",
+                "AZURE_API_KEY": "test_azure_api",
             },
         )
 

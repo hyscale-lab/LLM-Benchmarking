@@ -3,8 +3,6 @@
         "TogetherAI"
     ],
     "models": [
-        "google-gemma-2b-it",
-        "meta-llama-3.2-3b-instruct",
         "mistral-7b-instruct-v0.1",
         "meta-llama-3.1-70b-instruct",
         "meta-llama-3.1-405b-instruct"
@@ -13,6 +11,5 @@
     "input_tokens": 10,
     "streaming": true,
     "max_output": 100,
-    "verbose": true,
-    "backend": true
+    "verbose": true
 }

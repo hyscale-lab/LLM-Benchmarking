@@ -34,6 +34,8 @@ class Cloudflare(ProviderInterface):
             "meta-llama-3.2-3b-instruct": "@cf/meta/llama-3.2-3b-instruct",
             "mistral-7b-instruct-v0.1": "@cf/mistral/mistral-7b-instruct-v0.1",
             "meta-llama-3.1-70b-instruct": "@cf/meta/llama-3.1-70b-instruct",
+            "meta-llama-2-7b": "@cf/meta/llama-2-7b-chat-fp16",
+            "deepseek-ai-R1-32b": "@cf/deepseek-ai/deepseek-r1-distill-qwen-32b",
             "common-model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
         }
 

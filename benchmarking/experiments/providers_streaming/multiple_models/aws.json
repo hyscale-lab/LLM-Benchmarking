@@ -3,12 +3,11 @@
         "AWSBedrock"
     ],
     "models": [
-        "common-model"
+        "meta-llama-3-8b-instruct", "mistral-23b-instruct-v0.1", "mistral-48b-instruct-v0.1",  "meta-llama-3-70b-instruct", "mistral-124b-instruct-v0.1"
     ],
-    "num_requests": 100,
+    "num_requests": 1,
     "input_tokens": 10,
     "streaming": true,
     "max_output": 100,
-    "verbose": true,
-    "backend": true
+    "verbose": true
 }

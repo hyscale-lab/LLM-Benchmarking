@@ -19,3 +19,4 @@ google-generativeai==0.8.3
 fastapi==0.115.6
 uvicorn==0.32.1
 pytest-asyncio==0.25.0
+azure-ai-inference

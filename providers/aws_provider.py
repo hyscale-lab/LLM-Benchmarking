@@ -5,6 +5,7 @@ import json
 import numpy as np
 from dotenv import load_dotenv
 from providers.provider_interface import ProviderInterface
+import math
 
 
 class AWSBedrock(ProviderInterface):
@@ -25,11 +26,19 @@ class AWSBedrock(ProviderInterface):
         # model names
         self.model_map = {
             "meta-llama-3-70b-instruct": "meta.llama3-70b-instruct-v1:0",
+            "meta-llama-3-8b-instruct": "meta.llama3-8b-instruct-v1:0",
+            "mistral-48b-instruct-v0.1": "mistral.mixtral-8x7b-instruct-v0:1",
+            "mistral-23b-instruct-v0.1": "mistral.mistral-small-2402-v1:0",
+            "mistral-124b-instruct-v0.1": "mistral.mistral-large-2402-v1:0",
             "common-model": "meta.llama3-70b-instruct-v1:0",
+            "common-model-small": "meta.llama3-1-8b-instruct-v1:0"
         }
 
     def get_model_name(self, model):
         return self.model_map.get(model, None)  # or model
+
+    def get_model_provider(self, model_id):
+        return model_id[:model_id.find('.')]
 
     def format_prompt(self, user_prompt):
         """
@@ -37,7 +46,7 @@ class AWSBedrock(ProviderInterface):
         """
         return f"""
         <|begin_of_text|><|start_header_id|>system<|end_header_id|>
-        {self.system_prompt}
+        You are an obedient assistant.
         <|start_header_id|>user<|end_header_id|>
         {user_prompt}
         <|eot_id|>
@@ -53,6 +62,7 @@ class AWSBedrock(ProviderInterface):
         model_id = self.get_model_name(model)
         formatted_prompt = self.format_prompt(prompt)
         print(formatted_prompt)
+        print(max_output)
         # Prepare the request payload
         native_request = {
             "prompt": formatted_prompt,
@@ -92,19 +102,27 @@ class AWSBedrock(ProviderInterface):
         print("[INFO] Performing streaming inference...")
 
         model_id = self.get_model_name(model)
+        model_provider = self.get_model_provider(model_id)
 
         # Prepare the request payload
         formatted_prompt = self.format_prompt(prompt)
+        if model_provider == "meta":
+            max_tokens_config = 'max_gen_len'
+        else:
+            max_tokens_config = 'max_tokens'
 
         native_request = {
             "prompt": formatted_prompt,
-            "max_gen_len": max_output,
+            max_tokens_config: max_output,
         }
+        print(max_output)
         request_body = json.dumps(native_request)
 
         inter_token_latencies = []
         first_token_time = None
         ttft = None
+        total_tokens = 0
+        print(prompt)
         start_time = time.perf_counter()
         try:
             streaming_response = self.bedrock_client.invoke_model_with_response_stream(
@@ -114,6 +132,7 @@ class AWSBedrock(ProviderInterface):
             # Process the streaming response
             for event in streaming_response["body"]:
                 if event:
+                    # print(event)
                     try:
                         # print(f"[DEBUG] {event}")
                         chunk = json.loads(event["chunk"]["bytes"].decode("utf-8"))
@@ -122,14 +141,19 @@ class AWSBedrock(ProviderInterface):
                         # print(f"[DEBUG] Failed to decode chunk: {e}")
                         continue
                     
-                    if chunk["stop_reason"] == 'length':
+                    if chunk.get("stop_reason") == "length" or chunk.get("outputs", [{}])[0].get("stop_reason") == "length":
                         total_time = time.perf_counter() - start_time
-                        print(chunk)
+                        # print(chunk)
+                        total_tokens = chunk['generation_token_count']
+                        print(f"Total tokens (real): {chunk['generation_token_count']}")
                         break
-
-                    if "generation" in chunk:
-                        current_token = chunk["generation"]
-
+                    
+                    if "outputs" in chunk or 'generation' in chunk:
+                        if "outputs" in chunk :
+                            current_token = chunk["outputs"][0]['text']
+                        if 'generation' in chunk:
+                            current_token = chunk["generation"]
+                        # print(current_token)
                         # Calculate timing
                         current_time = time.perf_counter()
                         if first_token_time is None:
@@ -146,11 +170,14 @@ class AWSBedrock(ProviderInterface):
                         inter_token_latency = time_to_next_token - prev_token_time
                         prev_token_time = time_to_next_token
                         inter_token_latencies.append(inter_token_latency)
-                        if verbosity:
-                            if len(inter_token_latencies) < 20:
-                                print(current_token, end="")  # Print the token
-                            elif len(inter_token_latencies) == 21:
-                                print("...")
+                        print(current_token, end=" | ")
+
+                        # if verbosity:
+                        #     if len(inter_token_latencies) < 20:
+                        #         print(current_token, end="")
+                        #     elif len(inter_token_latencies) == 21:
+                        #         print("...")
+    
 
             # Measure total response time
             total_time = time.perf_counter() - start_time
@@ -160,16 +187,17 @@ class AWSBedrock(ProviderInterface):
                 avg_tbt = sum(inter_token_latencies) / len(inter_token_latencies)
                 median = np.percentile(inter_token_latencies, 50)
                 p95 = np.percentile(inter_token_latencies, 95)
-                print("[INFO] avg_tbt - ", avg_tbt, median, p95)
-            self.log_metrics(model, "timetofirsttoken", ttft)
-            self.log_metrics(model, "response_times", total_time)
-            self.log_metrics(model, "timebetweentokens", avg_tbt)
+                # print("[INFO] avg_tbt - ", avg_tbt, median, p95, len(inter_token_latencies))
+            # print(prompt, 10 ** math.ceil(math.log10(10 ** math.ceil(math.log10(len(prompt.split(" ")))))))
+            self.log_metrics(model_name=model, input_size=10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output=max_output, metric="timetofirsttoken", value=ttft)
+            self.log_metrics(model, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "response_times", total_time)
+            self.log_metrics(model, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "timebetweentokens", avg_tbt)
             # print(median, p95)
-            self.log_metrics(model, "timebetweentokens_median", median)
-            self.log_metrics(model, "timebetweentokens_p95", p95)
-            self.log_metrics(model, "totaltokens", len(inter_token_latencies) + 1)
+            self.log_metrics(model, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "timebetweentokens_median", median)
+            self.log_metrics(model, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "timebetweentokens_p95", p95)
+            self.log_metrics(model, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "totaltokens", total_tokens)
             self.log_metrics(
-                model, "tps", (len(inter_token_latencies) + 1) / total_time
+                model, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "tps", (len(inter_token_latencies) + 1) / total_time
             )
 
             return total_time, inter_token_latencies
@@ -183,14 +211,14 @@ class AWSBedrock(ProviderInterface):
 if __name__ == "__main__":
     aws_bedrock = AWSBedrock()
     model = "common-model"
-    prompt = "Tell me a story."
+    prompt = "Write a standalone narrative of exactly 100 000 tokens: a complete, self-contained fantasy saga with clear chapters, rising action, characters, dialogue, and resolution. Do not add any extra explanation—produce only the story text until you reach 100 000 tokens exact."
 
     # Single-prompt inference
-    generated_text, total_time = aws_bedrock.perform_inference(
-        model=model, prompt=prompt, max_output=100, verbosity=True
-    )
+    # generated_text, total_time = aws_bedrock.perform_inference(
+    #     model=model, prompt=prompt, max_output=100, verbosity=True
+    # )
 
     # Streaming inference
     total_time, inter_token_latencies = aws_bedrock.perform_inference_streaming(
-        model=model, prompt=prompt, max_output=10, verbosity=True
+        model=model, prompt=prompt, max_output=10000, verbosity=True
     )

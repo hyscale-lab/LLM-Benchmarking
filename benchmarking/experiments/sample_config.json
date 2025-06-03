@@ -3,11 +3,11 @@
         "Azure"
     ],
     "models": [
-        "common-model"
+        "common-model-small"
     ],
-    "num_requests": 3,
-    "input_tokens": 10,
+    "num_requests": 10,
+    "input_tokens": [100],
     "streaming": true,
-    "max_output": 100,
+    "max_output": [10000],
     "verbose": true
 }

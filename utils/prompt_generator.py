@@ -1,9 +1,16 @@
-PROMPT_100_TOKENS = "Tell me a long story based on the following story description: \
-In a future world where emotions are regulated by technology, \
-a girl discovers a hidden garden that awakens real feelings. \
-She embarks on a journey to understand these new emotions, challenging the societal \
-norms and the oppressive tech that controls them. Alongside a group of outcasts, \
-she fights to bring authentic emotions back to a world that has forgotten how to feel."
+# PROMPT_100_TOKENS = "Tell me a long story based on the following story description: \
+# In a future world where emotions are regulated by technology, \
+# a girl discovers a hidden garden that awakens real feelings. \
+# She embarks on a journey to understand these new emotions, challenging the societal \
+# norms and the oppressive tech that controls them. Alongside a group of outcasts, \
+# she fights to bring authentic emotions back to a world that has forgotten how to feel."
+
+PROMPT_100_TOKENS = """Compose a science-fiction saga divided into 200 numbered sections.  
+• Each section must be at least 500 words (so 200×500 = 100 000 words).  
+• Begin each section with “Section 1: <title>” through “Section 200: <title>.”  
+• Do not include any explanation or instructions—only the story text.  
+Keep going until all 200 sections are written.
+"""
 
 PROMPT_1000_TOKENS = "In a world where technology has surpassed all imaginable limits, the line between human and machine became indistinct. The year was 2147, and Earth was no longer the sole hub of human civilization. Colonies sprawled across Mars, Titan, and even Europa, each developing its distinct identity shaped by the unique challenges of their environments. Amidst this age of prosperity and interstellar expansion, there lay a hidden truth only known to a few – a secret that could unravel the fabric of society. \
 \
