@@ -3,6 +3,7 @@ from providers.provider_interface import ProviderInterface
 import google.generativeai as genai
 from timeit import default_timer as timer
 import numpy as np
+import math
 
 
 class GoogleGemini(ProviderInterface):
@@ -18,6 +19,7 @@ class GoogleGemini(ProviderInterface):
             "gemini-1.5-flash-8b": "gemini-1.5-flash-8b",
             "gemini-1.5-pro": "gemini-1.5-pro",
             "common-model": "gemini-1.5-flash",
+            "common-model-small": "gemini-2.0-flash-lite"
         }
 
         # Configure API key for Google Gemini
@@ -102,10 +104,10 @@ class GoogleGemini(ProviderInterface):
 
             if first_token_time is None:
                 first_token_time = current_time
-                TTFT = first_token_time - start_time
+                ttft = first_token_time - start_time
                 prev_token_time = first_token_time
                 if verbosity:
-                    print(f"Time to First Token (TTFT): {TTFT:.4f} seconds")
+                    print(f"Time to First Token (TTFT): {ttft:.4f} seconds")
 
             # Estimate the number of tokens in the current chunk
             num_tokens = int(self.model.count_tokens(chunk.text).total_tokens)
@@ -127,24 +129,41 @@ class GoogleGemini(ProviderInterface):
             print(f"\nTotal Response Time: {total_time:.4f} seconds")
             print(f"total tokens {len(inter_token_latencies)}")
 
+        # avg_tbt = sum(inter_token_latencies) / len(inter_token_latencies)
+        # self.log_metrics(model, "timetofirsttoken", TTFT)
+        # self.log_metrics(model, "response_times", total_time)
+        # self.log_metrics(model, "timebetweentokens", avg_tbt)
+
+        # # Calculate additional latency metrics
+        # median_latency = (
+        #     np.median(inter_token_latencies) if inter_token_latencies else 0
+        # )
+        # p95_latency = (
+        #     np.percentile(inter_token_latencies, 95) if inter_token_latencies else 0
+        # )
+
+        # self.log_metrics(model, "timebetweentokens_median", median_latency)
+        # self.log_metrics(model, "timebetweentokens_p95", p95_latency)
+        # self.log_metrics(model, "totaltokens", total_tokens)
+        # self.log_metrics(
+        #     model, "tps", total_tokens / total_time if total_time > 0 else 0
+        # )
+
         avg_tbt = sum(inter_token_latencies) / len(inter_token_latencies)
-        self.log_metrics(model, "timetofirsttoken", TTFT)
-        self.log_metrics(model, "response_times", total_time)
-        self.log_metrics(model, "timebetweentokens", avg_tbt)
+        if verbosity:
 
-        # Calculate additional latency metrics
-        median_latency = (
-            np.median(inter_token_latencies) if inter_token_latencies else 0
-        )
-        p95_latency = (
-            np.percentile(inter_token_latencies, 95) if inter_token_latencies else 0
-        )
+            print(
+                f"\nNumber of output tokens/chunks: {len(inter_token_latencies) + 1}, Avg TBT: {avg_tbt:.4f}, Time to First Token (TTFT): {ttft:.4f} seconds, Total Response Time: {total_time:.4f} seconds"
+            )
+        self.log_metrics(model, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "timetofirsttoken", ttft)
+        self.log_metrics(model, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "response_times", total_time)
+        self.log_metrics(model, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "timebetweentokens", avg_tbt)
+        median = np.percentile(inter_token_latencies, 50)
+        p95 = np.percentile(inter_token_latencies, 95)
+        self.log_metrics(model, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "timebetweentokens_median", median)
+        self.log_metrics(model, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "timebetweentokens_p95", p95)
+        self.log_metrics(model, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "totaltokens", len(inter_token_latencies) + 1)
+        self.log_metrics(model, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "tps", (len(inter_token_latencies) + 1) / total_time)
 
-        self.log_metrics(model, "timebetweentokens_median", median_latency)
-        self.log_metrics(model, "timebetweentokens_p95", p95_latency)
-        self.log_metrics(model, "totaltokens", total_tokens)
-        self.log_metrics(
-            model, "tps", total_tokens / total_time if total_time > 0 else 0
-        )
 
         return streamed_output

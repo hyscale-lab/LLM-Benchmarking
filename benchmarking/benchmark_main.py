@@ -4,6 +4,9 @@ import os
 import time
 from datetime import datetime
 from matplotlib.ticker import LogLocator, FormatStrFormatter
+import random
+from utils.db_utils import save_flattened_metrics_to_csv
+from utils.prompt_generator import get_prompt
 
 class Benchmark:
     """
@@ -25,11 +28,13 @@ class Benchmark:
         providers,
         num_requests,
         models,
-        max_output,
-        prompt,
+        outputs,
+        # prompts,
+        inputs,
         streaming=False,
         verbosity=False,
-        vllm_ip=None
+        vllm_ip=None,
+        exp_dir=None
     ):
         """
         Initializes the Benchmark instance with provided parameters.
@@ -46,11 +51,28 @@ class Benchmark:
         self.providers = providers
         self.num_requests = num_requests
         self.models = models
-        self.prompt = prompt
+        # self.prompts = prompts
+        self.inputs = inputs
         self.streaming = streaming
-        self.max_output = max_output
+        self.outputs = outputs
         self.verbosity = verbosity
         self.vllm_ip = vllm_ip
+        self.exp_dir = exp_dir
+        # New parameters for retry mechanism
+        self.max_retries = 3
+        self.base_timeout = 10
+
+        self.prompts = {}
+        print("PROMPTS")
+        for input_size in self.inputs:
+            self.prompts[input_size] = []
+            for n in range(self.num_requests):
+                print(n, input_size)
+                prompt = get_prompt(input_size)
+                self.prompts[input_size].append(prompt)
+                print(prompt[:200])
+                print(len(prompt.split()))
+                print(len(self.prompts[input_size]))
 
         base_dir = "streaming" if streaming else "end_to_end"
 
@@ -77,33 +99,40 @@ class Benchmark:
 
         for provider in self.providers:
             provider_name = provider.__class__.__name__
-            for model, latencies in provider.metrics[metric].items():
-                # Convert to milliseconds and sort for CDF
-                latencies_sorted = np.sort(latencies) * 1000
-                cdf = np.arange(1, len(latencies_sorted) + 1) / len(latencies_sorted)
-                model_name = provider.get_model_name(model)
+            save_flattened_metrics_to_csv(provider, metric, f"{self.exp_dir}/{metric}_logs.csv")
+            print(provider.metrics[metric].items())
+            for model, input_dict in provider.metrics[metric].items():
+                for input_size, output_dict in input_dict.items():
+                    for max_output, latencies in output_dict.items():
+                        # Convert to milliseconds and sort for CDF
+                        print(model, input_size, len(latencies))
+                        latencies_sorted = np.sort(latencies) * 1000
+                        cdf = np.arange(1, len(latencies_sorted) + 1) / len(latencies_sorted)
+                        model_name = provider.get_model_name(model)
 
-                if provider_name.lower() == "vllm":
-                    plt.plot(
-                        latencies_sorted,
-                        cdf,
-                        marker="o",
-                        linestyle="-",
-                        markersize=6,  # Slightly larger marker size
-                        color="black",  # Black color for the marker
-                        label=f"{provider_name} - {model_name}",
-                        linewidth=2,  # Bold line
-                    )
-                else:
-                    plt.plot(
-                        latencies_sorted,
-                        cdf,
-                        marker="o",
-                        linestyle="-",
-                        markersize=5,
-                        label=f"{provider_name} - {model_name}",
-                    )
-                
+                        if provider_name.lower() == "vllm":
+                            plt.plot(
+                                latencies_sorted,
+                                cdf,
+                                marker="o",
+                                linestyle="-",
+                                markersize=6,  # Slightly larger marker size
+                                color="black",  # Black color for the marker
+                                # label=f"{provider_name} - {model_name}",
+                                label=f"{provider_name}",
+                                linewidth=2,  # Bold line
+                            )
+                        else:
+                            plt.plot(
+                                latencies_sorted,
+                                cdf,
+                                marker="o",
+                                linestyle="-",
+                                markersize=5,
+                                # label=f"{provider_name} - {model_name}",
+                                label=f"{provider_name} - {max_output}",
+                            )
+                    
         plt.xlabel("Latency (ms)", fontsize=12)
         plt.ylabel("Portion of requests", fontsize=12)
         plt.grid(True)
@@ -144,41 +173,109 @@ class Benchmark:
         This method sends a number of requests to each model for each provider, collects
         performance metrics, and generates plots based on those metrics.
         """
+        
         for provider in self.providers:
             provider_name = provider.__class__.__name__
             # logging.debug(f"{provider_name}")
-            print(f"{provider_name}")
+            # print(f"{provider_name}")
             for model in self.models:
                 model_name = provider.get_model_name(model)
-                print(f"Model: {model_name}\nPrompt: {self.prompt}")
+                # print(f"Model: {model_name}")
+                
+                for input_size in self.inputs:
+                    print(f"Prompt size: {input_size}")
+                    
+                    for max_output in self.outputs:
+                        
+                        for i in range(self.num_requests):
+                            if self.verbosity:
+                                print(f"Request {i + 1}/{self.num_requests}")
+                                print(f"{provider_name}" + f" Model: {model_name}")
 
-                for i in range(self.num_requests):
-                    if self.verbosity:
-                        print(f"Request {i + 1}/{self.num_requests}")
+                            # if provider_name == "AWSBedrock" and (i % 40) == 0:
+                            #     print("[DEBUG] Sleeping for 10 mins to bypass rate limit...")
+                            #     time.sleep(600)
+                            #     print("[DEBUG] Finished.")
+                            # if ((i+1) % 58) == 0:
+                            #     time.sleep(120)
+                            # prompt = get_prompt(input_size)
+                            # print(prompt)
+                            if model == "deepseek-r1":
+                                prompt = "Every morning Aya goes for a $9$-kilometer-long walk and stops at a coffee shop afterwards. When she walks at a constant speed of $s$ kilometers per hour, the walk takes her 4 hours, including $t$ minutes spent in the coffee shop. When she walks $s+2$ kilometers per hour, the walk takes her 2 hours and 24 minutes, including $t$ minutes spent in the coffee shop. Suppose Aya walks at $s+\frac{1}{2}$ kilometers per hour. Find the number of minutes the walk takes her, including the $t$ minutes spent in the coffee shop."
+                            else:
+                                prompt = self.prompts[input_size][i]
+                            print(f"{prompt[:200]}")
+                            if self.streaming:
+                                if provider_name == "vLLM":
+                                    provider.perform_inference_streaming(
+                                        model, prompt, self.vllm_ip, max_output, self.verbosity
+                                    )
+                                else:
+                                    provider.perform_inference_streaming(
+                                        model, prompt, max_output, self.verbosity
+                                    )
+                            else:
+                                if provider_name == "vLLM":
+                                    provider.perform_inference(
+                                        model, prompt, self.vllm_ip, max_output, self.verbosity
+                                    )
+                                else:
+                                    provider.perform_inference(
+                                        model, prompt, max_output, self.verbosity
+                                    )
 
-                    # if i % 1 == 0:
-                    #     # print("[DEBUG] Sleeping for 2 mins to bypass rate limit...")
-                    #     time.sleep(60)
 
-                    if self.streaming:
-                        if provider_name == "vLLM":
-                            provider.perform_inference_streaming(
-                                model, self.prompt, self.vllm_ip, self.max_output, self.verbosity
-                            )
-                        else:
-                            provider.perform_inference_streaming(
-                                model, self.prompt, self.max_output, self.verbosity
-                            )
-                    else:
-                        if provider_name == "vLLM":
-                            provider.perform_inference(
-                                model, self.prompt, self.vllm_ip, self.max_output, self.verbosity
-                            )
-                        else:
-                            provider.perform_inference(
-                                model, self.prompt, self.max_output, self.verbosity
-                            )
-
+                            # # Simple retry mechanism
+                            
+                            # success = False
+                            # attempts = 0
+                            
+                            # while not success and attempts < self.max_retries:
+                            #     try:
+                            #         # Calculate timeout with exponential backoff
+                            #         timeout = self.base_timeout * (2 ** attempts)
+                            #         print(timeout)
+                                    
+                            #         if self.streaming:
+                            #             if provider_name == "vLLM":
+                            #                 provider.perform_inference_streaming(
+                            #                     model, self.prompt, self.vllm_ip, 
+                            #                     self.max_output, self.verbosity, timeout=timeout
+                            #                 )
+                            #             else:
+                            #                 provider.perform_inference_streaming(
+                            #                     model, self.prompt, timeout, self.max_output, 
+                            #                     self.verbosity
+                            #                 )
+                            #         else:
+                            #             if provider_name == "vLLM":
+                            #                 provider.perform_inference(
+                            #                     model, self.prompt, self.vllm_ip, 
+                            #                     self.max_output, self.verbosity, timeout=timeout
+                            #                 )
+                            #             else:
+                            #                 provider.perform_inference(
+                            #                     model, self.prompt, self.max_output, 
+                            #                     self.verbosity, timeout=timeout
+                            #                 )
+                                    
+                            #         # If we get here, the request was successful
+                            #         success = True
+                                    
+                            #     except Exception as e:
+                            #         attempts += 1
+                            #         if self.verbosity:
+                            #             print(f"Request failed (attempt {attempts}/{self.max_retries}): {str(e)}")
+                                    
+                            #         # Add some jitter to avoid request storms on retry
+                            #         if attempts < self.max_retries:
+                            #             jitter = random.uniform(0.5, 1.5)
+                            #             wait_time = min(30, (2 ** attempts) * jitter)
+                            #             time.sleep(wait_time)
+                            
+                            # # Record failed request if all attempts failed
+                            # if not success:
+                            #     print(f"Request {i+1} failed after {self.max_retries} attempts")
         if not self.streaming:
             self.plot_metrics("response_times", "response_times")
         else:
@@ -188,3 +285,4 @@ class Benchmark:
             self.plot_metrics("timebetweentokens", "timebetweentokens")
             self.plot_metrics("timebetweentokens_median", "timebetweentokens_median")
             self.plot_metrics("timebetweentokens_p95", "timebetweentokens_p95")
+            self.plot_metrics("totaltokens", "totaltokens")

@@ -4,7 +4,7 @@ import anthropic
 import numpy as np
 from timeit import default_timer as timer
 from providers.provider_interface import ProviderInterface
-
+import math
 
 class Anthropic(ProviderInterface):
     def __init__(self):
@@ -26,8 +26,9 @@ class Anthropic(ProviderInterface):
             
             "claude-3.5-sonnet": "claude-3-5-sonnet-20241022",  # approx 70b
             "claude-3-opus": "claude-3-opus-20240229",  # approx 2T
-            "claude-3-haiku": "claude-3-5-haiku-20241022",  # approx 20b
+            "claude-3-haiku": "claude-3-5-haiku-latest",  # approx 20b
             "common-model": "claude-3-5-sonnet-20241022",
+            "common-model-small": "claude-3-5-haiku-latest"
         }
 
     def get_model_name(self, model):
@@ -95,8 +96,9 @@ class Anthropic(ProviderInterface):
 
             first_token_time = None
             inter_token_latencies = []
-
+            c = 0
             start = timer()
+            print("ENTERING")
             with self.client.messages.stream(
                 model=model_id,
                 max_tokens=max_output,
@@ -105,49 +107,87 @@ class Anthropic(ProviderInterface):
                 stop_sequences=["\nUser:"],
                 timeout=500,
             ) as stream:
+                # for chunk in stream.text_stream:
+                # for event in stream:
+                #     # maybe check for a stop event
+                #     if event == "MessageStopEvent":
+                #         print(event)
+                #         print("end")
+                #         break
+
                 for chunk in stream.text_stream:
+                    # print(chunk)
+                    
                     if first_token_time is None:
                         first_token_time = timer()
-                        TTFT = first_token_time - start
+                        ttft = first_token_time - start
                         prev_token_time = first_token_time
-                        self.log_metrics(model, "timetofirsttoken", TTFT)
+                        self.log_metrics(model, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "timetofirsttoken", ttft)
                         if verbosity:
-                            print(f"\nTime to First Token (TTFT): {TTFT:.4f} seconds\n")
-
+                            print(f"\nTime to First Token (TTFT): {ttft:.4f} seconds\n")
+            
                     # Calculate inter-token latencies
                     time_to_next_token = timer()
-                    inter_token_latency = time_to_next_token - prev_token_time
-                    prev_token_time = time_to_next_token
+                    # inter_token_latency = time_to_next_token - prev_token_time
+                    elapsed = time_to_next_token - prev_token_time
+                    token_count = len(chunk.split())
+                    c += token_count
+                    avg_latency = elapsed / max(1, token_count)
+                    # print(f"Len: {token_count}, {chunk}", end="~")
 
-                    inter_token_latencies.append(inter_token_latency)
-                    if verbosity:
-                        if len(inter_token_latencies) < 20:
-                            print(chunk, end="", flush=True)
-                        elif len(inter_token_latencies) == 20:
-                            print("...")
+                    # record one latency entry *per* token
+                    inter_token_latencies.extend([avg_latency] * token_count)
+                    prev_token_time = time_to_next_token
+                    print(chunk, end="", flush=True)
+                    # inter_token_latencies.append(inter_token_latency)
+                    # if verbosity:
+                    #     if len(inter_token_latencies) < 20:
+                    #         print(chunk, end="", flush=True)
+                    #     elif len(inter_token_latencies) == 20:
+                    #         print("...")
 
                 elapsed = timer() - start
                 if verbosity:
                     print(f"\nTotal Response Time: {elapsed:.4f} seconds")
-                    print(f"Total tokens: {len(inter_token_latencies)}")
+                    print(f"Total tokens: {len(inter_token_latencies), c}")
                     # print(
                     #     f"\nNumber of output tokens/chunks: {len(inter_token_latencies) + 1}, Avg TBT: {avg_tbt:.4f}, Time to First Token (TTFT): {ttft:.4f} seconds, Total Response Time: {elapsed:.4f} seconds"
                     # )
 
             # Log remaining metrics
             # avg_tbt = sum(inter_token_latencies) / len(inter_token_latencies)
-            avg_tbt = sum(inter_token_latencies) / max_output
+            # avg_tbt = sum(inter_token_latencies) / max_output
 
-            self.log_metrics(model, "response_times", elapsed)
-            self.log_metrics(model, "timebetweentokens", avg_tbt)
-            self.log_metrics(model, "totaltokens", len(inter_token_latencies) + 1)
-            self.log_metrics(model, "tps", (len(inter_token_latencies) + 1) / elapsed)
-            self.log_metrics(
-                model, "timebetweentokens_median", np.percentile(inter_token_latencies, 50)
-            )
-            self.log_metrics(
-                model, "timebetweentokens_p95", np.percentile(inter_token_latencies, 95)
-            )
+            # self.log_metrics(model, "response_times", elapsed)
+            # self.log_metrics(model, "timebetweentokens", avg_tbt)
+            # self.log_metrics(model, "totaltokens", len(inter_token_latencies) + 1)
+            # self.log_metrics(model, "tps", (len(inter_token_latencies) + 1) / elapsed)
+            # self.log_metrics(
+            #     model, "timebetweentokens_median", np.percentile(inter_token_latencies, 50)
+            # )
+            # self.log_metrics(
+            #     model, "timebetweentokens_p95", np.percentile(inter_token_latencies, 95)
+            # )
+
+            avg_tbt = sum(inter_token_latencies) / len(inter_token_latencies)
+            print("HI!!!!")
+            if verbosity:
+
+                print(
+                    f"\nNumber of output tokens/chunks: {len(inter_token_latencies) + 1}, Avg TBT: {avg_tbt:.4f}, Total Response Time: {elapsed:.4f} seconds"
+                )
+            
+            self.log_metrics(model, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "response_times", elapsed)
+            self.log_metrics(model, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "timebetweentokens", avg_tbt)
+            median = np.percentile(inter_token_latencies, 50)
+            p95 = np.percentile(inter_token_latencies, 95)
+            self.log_metrics(model, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "timebetweentokens_median", median)
+            self.log_metrics(model, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "timebetweentokens_p95", p95)
+            self.log_metrics(model, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "totaltokens", len(inter_token_latencies) + 1)
+            self.log_metrics(model, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "tps", (len(inter_token_latencies) + 1) / elapsed)
+            
+
+
 
         except Exception as e:
             print(f"[ERROR] Streaming inference failed for model '{model}': {e}")

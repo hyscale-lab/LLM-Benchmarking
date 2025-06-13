@@ -17,6 +17,7 @@ from providers import (
     vLLM
 )
 from utils.prompt_generator import get_prompt
+from utils.db_utils import create_experiment_folder, save_config
 
 # Load environment variables
 load_dotenv()
@@ -41,7 +42,7 @@ parser.add_argument(
 input_sizes = [10, 100, 1000, 10000, 100000]
 
 # Define possible max output tokens
-OUTPUT_SIZE_UPPER_LIMIT = 5000
+OUTPUT_SIZE_UPPER_LIMIT = 100000
 OUTPUT_SIZE_LOWER_LIMIT = 100
 
 
@@ -149,15 +150,17 @@ def validate_selected_models(selected_models, common_models, selected_providers)
 
 # Main function to run the benchmark
 def run_benchmark(config, vllm_ip=None):
+    exp_id, exp_dir = create_experiment_folder()
+    save_config(config, exp_dir)
     """Runs the benchmark based on the given configuration."""
     providers = config.get("providers", [])
     num_requests = config.get("num_requests", 1)
     models = config.get("models", [])
-    input_tokens = config.get("input_tokens", 10)
-    # input_tokens = config.get("input_tokens", [10])
+    # input_tokens = config.get("input_tokens", 10)
+    input_tokens = config.get("input_tokens", [10])
     streaming = config.get("streaming", False)
-    max_output = config.get("max_output", 100)
-    # max_output = config.get("max_output", [100])
+    # max_output = config.get("max_output", 100)
+    outputs = config.get("max_output", [100])
     verbose = config.get("verbose", False)
     backend = config.get("backend", False)
     # Select Benchmark class based on backend flag
@@ -193,30 +196,37 @@ def run_benchmark(config, vllm_ip=None):
     print(f"Selected Models: {valid_models}")
 
     # handling input tokens
-    if input_tokens not in input_sizes:
-        print(f"Please enter an input token from the following choices: {input_sizes}")
-        return
+    for input_token_size in input_tokens:
+        if input_token_size not in input_sizes:
+            print(f"Please enter an input token from the following choices: {input_sizes}")
+            return
 
-    prompt = get_prompt(input_tokens)
+    # prompts = []
+    # for input_token_size in input_tokens:
+    #     prompt = get_prompt(input_token_size)
+    #     prompts.append(prompt)
     # print(f"Prompt: {prompt}")
 
-    if max_output < OUTPUT_SIZE_LOWER_LIMIT or max_output > OUTPUT_SIZE_UPPER_LIMIT:
-        print(
-            f"Please enter an output token length between \
-            {OUTPUT_SIZE_LOWER_LIMIT} and {OUTPUT_SIZE_UPPER_LIMIT}."
-        )
-        return
+    for max_output in outputs:
+        if max_output < OUTPUT_SIZE_LOWER_LIMIT or max_output > OUTPUT_SIZE_UPPER_LIMIT:
+            print(
+                f"Please enter an output token length between \
+                {OUTPUT_SIZE_LOWER_LIMIT} and {OUTPUT_SIZE_UPPER_LIMIT}."
+            )
+            return
 
     print("\nRunning benchmark...")
     benchmark = Benchmark(
         selected_providers,
         num_requests,
         valid_models,
-        max_output,
-        prompt=prompt,
+        outputs,
+        # prompts=prompts,
+        inputs=input_tokens,
         streaming=streaming,
         verbosity=verbose,
         vllm_ip=vllm_ip,
+        exp_dir=exp_dir
     )
     benchmark.run()
 

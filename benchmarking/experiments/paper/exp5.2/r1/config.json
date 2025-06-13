@@ -1,0 +1,13 @@
+{
+    "providers": [
+        "AWSBedrock", "TogetherAI", "Azure"
+    ],
+    "models": [
+        "deepseek-r1"
+    ],
+    "num_requests": 100,
+    "input_tokens": [100],
+    "streaming": true,
+    "max_output": [1000],
+    "verbose": true
+}

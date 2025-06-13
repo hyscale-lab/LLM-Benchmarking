@@ -4,6 +4,7 @@ import numpy as np
 from providers.base_provider import ProviderInterface
 from time import perf_counter as timer
 # import re
+import math
 
 from azure.ai.inference import ChatCompletionsClient
 from azure.ai.inference.models import SystemMessage, UserMessage
@@ -30,8 +31,9 @@ class Azure(ProviderInterface):
             "mistral-large": "Mistral-Large-2411-yatcd",
             "mistral-23b-instruct-v0.1": "Mistral-small",
             "meta-llama-3.1-405b-instruct": "Meta-Llama-3.1-405B-Instruct",
-            "common-model": "Mistral-Large-2411-yatcd",
-            "common-model-small": "Meta-Llama-3.1-8B-Instruct"
+            "common-model": "Llama-3.3-70B-Instruct",
+            "common-model-small": "Meta-Llama-3.1-8B-Instruct",
+            "deepseek-r1": "DeepSeek-R1"
         }
 
         # Define API keys for each model
@@ -108,20 +110,25 @@ class Azure(ProviderInterface):
         # endpoint = f"https://{model_id}.eastus.models.ai.azure.com/chat/completions"
         # endpoint = f"https://ai-kavifyp0693ai007107396570.services.ai.azure.com/models"
         # print(model_id, endpoint)
+        total_time = 0
         start_time = timer()
+
+        system_prompt = self.system_prompt
         try:
             response = self.client.complete(
                 stream=True,
                 messages=[
-                    SystemMessage(content=self.system_prompt),
+                    SystemMessage(content=system_prompt),
                     UserMessage(content=prompt)
                 ],
                 max_tokens=max_output,
-                model=model_id
+                model=model_id,
+                temperature=0.7 # try 0.7 also
             )
-
+            n = 0
             first_token_time = None
             for update in response:
+                # print(update)
                 if update.choices:
                     if first_token_time is None:
                         first_token_time = timer()
@@ -130,33 +137,42 @@ class Azure(ProviderInterface):
                         if verbosity:
                             print(f"##### Time to First Token (TTFT): {ttft:.4f} seconds\n")
                     
+                    if update.choices[0].finish_reason:
+                        total_time = timer() - start_time
+                        print()
+                        print(update)
+
                     time_to_next_token = timer()
                     inter_token_latency = time_to_next_token - prev_token_time
                     prev_token_time = time_to_next_token
                     inter_token_latencies.append(inter_token_latency)
-                    print(update.choices[0].delta.content or "", end="")
-
-            total_time = timer() - start_time
+                    current_token = update.choices[0].delta.content
+                    n += len(str(current_token).split())
+                    # print(str(current_token).split(), n, end="")
+                    print(current_token, end="")
+                    # if len(inter_token_latencies) < 20:
+                    #     print(current_token, end="")  
+                    # elif len(inter_token_latencies) == 21:
+                    #     print("...")
 
             # Calculate total metrics
-
             if verbosity:
                 print(f"\nTotal Response Time: {total_time:.4f} seconds")
                 # print(inter_token_latencies)
 
             # Log metrics
             avg_tbt = sum(inter_token_latencies) / len(inter_token_latencies)
-            print(f"{avg_tbt:.4f}, {len(inter_token_latencies)}")
-            self.log_metrics(model, "timetofirsttoken", ttft)
-            self.log_metrics(model, "response_times", total_time)
-            self.log_metrics(model, "timebetweentokens", avg_tbt)
+            print(f"{avg_tbt:.4f}, {n}")
+            self.log_metrics(model, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "timetofirsttoken", ttft)
+            self.log_metrics(model, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "response_times", total_time)
+            self.log_metrics(model, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "timebetweentokens", avg_tbt)
             self.log_metrics(
-                model, "timebetweentokens_median", np.median(inter_token_latencies)
+                model, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "timebetweentokens_median", np.median(inter_token_latencies)
             )
             self.log_metrics(
-                model, "timebetweentokens_p95", np.percentile(inter_token_latencies, 95)
+                model, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "timebetweentokens_p95", np.percentile(inter_token_latencies, 95)
             )
-            self.log_metrics(model, "totaltokens", len(inter_token_latencies) + 1)
+            self.log_metrics(model, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "totaltokens", n)
 
         except Exception as e:
             print(f"[ERROR] Streaming inference failed for model '{model}': {e}")

@@ -1,0 +1,13 @@
+{
+    "providers": [
+        "AWSBedrock", "TogetherAI", "Azure", "Google", "OpenAI", "Cloudflare"
+    ],
+    "models": [
+        "common-model-small"
+    ],
+    "num_requests": 100,
+    "input_tokens": [10],
+    "streaming": true,
+    "max_output": [100],
+    "verbose": true
+}

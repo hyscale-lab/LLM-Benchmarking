@@ -4,6 +4,7 @@ import requests
 import numpy as np
 from timeit import default_timer as timer
 from providers.provider_interface import ProviderInterface
+import math
 
 # from IPython.display import display, Image, Markdown, Audio
 # import logging
@@ -139,18 +140,33 @@ class Cloudflare(ProviderInterface):
                     f"\nNumber of output tokens/chunks: {len(inter_token_latencies) + 1}, Time to First Token (TTFT): {ttft:.4f} seconds, Total Response Time: {total_time:.4f} seconds"
                 )
 
+            # avg_tbt = sum(inter_token_latencies) / len(inter_token_latencies)
+            # print(f"\nAvg TBT: {avg_tbt:.4f}, {len(inter_token_latencies)}")
+            # self.log_metrics(model, "timetofirsttoken", ttft)
+            # self.log_metrics(model, "response_times", total_time)
+            # self.log_metrics(model, "timebetweentokens", avg_tbt)
+            # median = np.percentile(inter_token_latencies, 50)
+            # p95 = np.percentile(inter_token_latencies, 95)
+            # self.log_metrics(model, "timebetweentokens_median", median)
+            # self.log_metrics(model, "timebetweentokens_p95", p95)
+            # self.log_metrics(model, "totaltokens", len(inter_token_latencies) + 1)
+            # self.log_metrics(model, "tps", (len(inter_token_latencies) + 1) / total_time)
+        
             avg_tbt = sum(inter_token_latencies) / len(inter_token_latencies)
-            print(f"\nAvg TBT: {avg_tbt:.4f}, {len(inter_token_latencies)}")
-            self.log_metrics(model, "timetofirsttoken", ttft)
-            self.log_metrics(model, "response_times", total_time)
-            self.log_metrics(model, "timebetweentokens", avg_tbt)
+            if verbosity:
+
+                print(
+                    f"\nNumber of output tokens/chunks: {len(inter_token_latencies) + 1}, Avg TBT: {avg_tbt:.4f}, Time to First Token (TTFT): {ttft:.4f} seconds, Total Response Time: {total_time:.4f} seconds"
+                )
+            self.log_metrics(model, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "timetofirsttoken", ttft)
+            self.log_metrics(model, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "response_times", total_time)
+            self.log_metrics(model, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "timebetweentokens", avg_tbt)
             median = np.percentile(inter_token_latencies, 50)
             p95 = np.percentile(inter_token_latencies, 95)
-            self.log_metrics(model, "timebetweentokens_median", median)
-            self.log_metrics(model, "timebetweentokens_p95", p95)
-            self.log_metrics(model, "totaltokens", len(inter_token_latencies) + 1)
-            self.log_metrics(model, "tps", (len(inter_token_latencies) + 1) / total_time)
-        
+            self.log_metrics(model, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "timebetweentokens_median", median)
+            self.log_metrics(model, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "timebetweentokens_p95", p95)
+            self.log_metrics(model, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "totaltokens", len(inter_token_latencies) + 1)
+            self.log_metrics(model, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "tps", (len(inter_token_latencies) + 1) / total_time)
         except Exception as e:
             print(f"[ERROR] Streaming inference failed for model '{model}': {e}")
             return None, None

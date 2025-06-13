@@ -4,6 +4,7 @@ import numpy as np
 from timeit import default_timer as timer
 from providers.provider_interface import ProviderInterface
 import json
+import math
 
 class vLLM(ProviderInterface):
     def __init__(self):
@@ -135,18 +136,20 @@ class vLLM(ProviderInterface):
                     f"\nNumber of output tokens/chunks: {len(inter_token_latencies) + 1}, "
                     f"Time to First Token (TTFT): {ttft:.4f} seconds, Avg TBT: {avg_tbt}, Total Response Time: {total_time:.4f} seconds"
                 )
-                print(f"\nGenerated Text: {generated_text}")
+                # print(f"\nGenerated Text: {generated_text}")
 
             # Log metrics
-            self.log_metrics(model, "timetofirsttoken", ttft)
-            self.log_metrics(model, "response_times", total_time)
-            self.log_metrics(model, "timebetweentokens", avg_tbt)
+            
+            self.log_metrics(model_id, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "timetofirsttoken", ttft)
+            self.log_metrics(model_id, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "response_times", total_time)
+            self.log_metrics(model_id, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "timebetweentokens", avg_tbt)
             median = np.percentile(inter_token_latencies, 50)
             p95 = np.percentile(inter_token_latencies, 95)
-            self.log_metrics(model, "timebetweentokens_median", median)
-            self.log_metrics(model, "timebetweentokens_p95", p95)
-            self.log_metrics(model, "totaltokens", len(inter_token_latencies) + 1)
-            self.log_metrics(model, "tps", (len(inter_token_latencies) + 1) / total_time)
+            self.log_metrics(model_id, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "timebetweentokens_median", median)
+            self.log_metrics(model_id, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "timebetweentokens_p95", p95)
+            self.log_metrics(model_id, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "totaltokens", len(inter_token_latencies) + 1)
+            self.log_metrics(model_id, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "tps", (len(inter_token_latencies) + 1) / total_time)
+
 
             return generated_text, total_time
 
