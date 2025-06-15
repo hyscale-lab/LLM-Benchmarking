@@ -20,5 +20,6 @@ class TogetherAI(BaseProvider):
             "meta-llama-3.1-405b-instruct": "meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo",
             "common-model": "meta-llama/Llama-3.3-70B-Instruct-Turbo",
             "common-model-small": "meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo",
+            "common-model-large": "mistralai/Mixtral-8x7B-Instruct-v0.1",
             "deepseek-r1": "deepseek-ai/DeepSeek-R1"
         }

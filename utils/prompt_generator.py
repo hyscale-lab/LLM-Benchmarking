@@ -2,7 +2,7 @@ import pandas as pd
 import random
 
 # Load the CSV of prompts
-df = pd.read_csv('utils/prompts.csv')
+df = pd.read_csv('/home/users/ntu/kavi0008/LLM-Benchmarking/utils/prompts.csv')
 
 def get_prompt(input_size: int) -> str:
     """

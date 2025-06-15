@@ -10,6 +10,12 @@ def get_shared_logger() -> logging.Logger:
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     log_filename = os.path.join(log_dir, f"benchmark_{timestamp}.log")
 
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        uid = uuid.uuid4().hex[:8]              # e.g. '3f9a1b2c'
+        run_id = f"{timestamp}_{uid}"           # e.g. '20250614_143205_3f9a1b2c'
+        log_path = f"logs/experiment_{run_id}.log"
+
+
     logger = logging.getLogger("LLMbenchmark")
     logger.setLevel(logging.INFO)
 

@@ -1,12 +1,12 @@
 {
     "providers": [
-        "vLLM", "Azure", "AWSBedrock", "TogetherAI"
+        "Azure", "AWSBedrock", "TogetherAI"
     ],
     "models": [
-        "common-model-small"
+        "common-model-small", "common-model", "common-model-large"
     ],
-    "num_requests": 100,
-    "input_tokens": [1000, 10000, 100000],
+    "num_requests": 1,
+    "input_tokens": [10],
     "streaming": true,
     "max_output": [100],
     "verbose": true

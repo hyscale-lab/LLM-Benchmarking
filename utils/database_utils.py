@@ -3,10 +3,16 @@ import os
 import json
 
 def create_experiment_folder(base_dir="experiments"):
+    print("HELLOO")
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    exp_id = f"exp_{timestamp}"
+    uid = uuid.uuid4().hex[:8]              # e.g. '3f9a1b2c'
+    run_id = f"{timestamp}_{uid}"           # e.g. '20250614_143205_3f9a1b2c'
+    print(run_id)
+    # exp_id = f"exp_{timestamp}"
+    exp_id = f"exp_{run_id}"
     exp_dir = os.path.join(base_dir, exp_id)
     os.makedirs(exp_dir, exist_ok=True)
+    print(exp_id, exp_dir)
     return exp_id, exp_dir
 
 def save_config(config, exp_dir):

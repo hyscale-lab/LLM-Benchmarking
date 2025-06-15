@@ -2,10 +2,21 @@ from datetime import datetime
 import os
 import json
 import csv
+import uuid
+
+# def create_experiment_folder(base_dir="experiments"):
+#     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+#     exp_id = f"exp_{timestamp}"
+#     exp_dir = os.path.join(base_dir, exp_id)
+#     os.makedirs(exp_dir, exist_ok=True)
+#     return exp_id, exp_dir
 
 def create_experiment_folder(base_dir="experiments"):
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    exp_id = f"exp_{timestamp}"
+    uid = uuid.uuid4().hex[:8]              # e.g. '3f9a1b2c'
+    run_id = f"{timestamp}_{uid}"           # e.g. '20250614_143205_3f9a1b2c'
+    # exp_id = f"exp_{timestamp}"
+    exp_id = f"exp_{run_id}"
     exp_dir = os.path.join(base_dir, exp_id)
     os.makedirs(exp_dir, exist_ok=True)
     return exp_id, exp_dir

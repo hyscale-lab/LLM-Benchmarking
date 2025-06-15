@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import sys
 from dotenv import load_dotenv
 from providers import (
     TogetherAI,
@@ -150,7 +151,7 @@ def validate_selected_models(selected_models, common_models, selected_providers)
 
 # Main function to run the benchmark
 def run_benchmark(config, vllm_ip=None):
-    exp_id, exp_dir = create_experiment_folder()
+    exp_id, exp_dir = create_experiment_folder("/home/users/ntu/kavi0008/loadgen/experiments/aws")
     print(exp_id, exp_dir)
     save_config(config, exp_dir)
     """Runs the benchmark based on the given configuration."""
@@ -234,11 +235,26 @@ def run_benchmark(config, vllm_ip=None):
 
 def main():
     """Main function to parse arguments and run the program."""
+    input_data = sys.stdin.read()
+    request = json.loads(input_data)
+    print(request)
     args = parser.parse_args()
+    
     vllm_ip = getattr(args, "vllm_ip", None)
     # Display available providers and models if --list flag is used
     if args.list:
         display_available_providers()
+    elif request:
+        config = request['context']
+        vllm_ip = request['vllm_ip']
+        print(config, vllm_ip)
+        if config:
+            if "vLLM" in config.get("providers", []) and not vllm_ip:
+                print("\n[ERROR] vLLM provider is selected, but `vllm_ip` is missing!")
+                print("   ➜ Please add `vllm_ip' via CLI using `--vllm_ip <ip-addr>`.")
+                return  # Stop execution
+        
+            run_benchmark(config, vllm_ip)
     elif args.config:
         config = load_config(args.config)
         if config:

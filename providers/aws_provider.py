@@ -33,6 +33,7 @@ class AWSBedrock(ProviderInterface):
             "deepseek-r1": "us.deepseek.r1-v1:0",
             "common-model": "meta.llama3-70b-instruct-v1:0",
             "common-model-small": "meta.llama3-1-8b-instruct-v1:0"
+            "common-model-large": "mistral.mixtral-8x7b-instruct-v0:1"
         }
 
     def get_model_name(self, model):
