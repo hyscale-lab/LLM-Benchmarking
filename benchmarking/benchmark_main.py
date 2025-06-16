@@ -6,7 +6,7 @@ from datetime import datetime
 from matplotlib.ticker import LogLocator, FormatStrFormatter
 import random
 from utils.db_utils import save_flattened_metrics_to_csv
-from utils.prompt_generator import get_prompt
+from utils.prompt_generator import generate_prompt
 
 class Benchmark:
     """
@@ -31,6 +31,7 @@ class Benchmark:
         outputs,
         # prompts,
         inputs,
+        dataset,
         streaming=False,
         verbosity=False,
         vllm_ip=None,
@@ -53,6 +54,7 @@ class Benchmark:
         self.models = models
         # self.prompts = prompts
         self.inputs = inputs
+        self.dataset = dataset
         self.streaming = streaming
         self.outputs = outputs
         self.verbosity = verbosity
@@ -64,11 +66,12 @@ class Benchmark:
 
         self.prompts = {}
         print("PROMPTS")
+
         for input_size in self.inputs:
             self.prompts[input_size] = []
             for n in range(self.num_requests):
                 print(n, input_size)
-                prompt = get_prompt(input_size, n)
+                prompt = generate_prompt(dataset, n, input_size)
                 self.prompts[input_size].append(prompt)
                 print(prompt[:200])
                 print(len(prompt.split()))

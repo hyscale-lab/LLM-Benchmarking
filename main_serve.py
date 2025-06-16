@@ -151,7 +151,8 @@ def validate_selected_models(selected_models, common_models, selected_providers)
 
 # Main function to run the benchmark
 def run_benchmark(config, vllm_ip=None):
-    exp_id, exp_dir = create_experiment_folder("/home/users/ntu/kavi0008/loadgen/experiments/aws")
+    # exp_id, exp_dir = create_experiment_folder("/home/users/ntu/kavi0008/loadgen/experiments/aws")
+    exp_id, exp_dir = create_experiment_folder()
     print(exp_id, exp_dir)
     save_config(config, exp_dir)
     """Runs the benchmark based on the given configuration."""
@@ -165,6 +166,8 @@ def run_benchmark(config, vllm_ip=None):
     outputs = config.get("max_output", [100])
     verbose = config.get("verbose", False)
     backend = config.get("backend", False)
+    dataset = config.get("dataset", "general")
+
     # Select Benchmark class based on backend flag
     if backend:
         from benchmarking.dynamo_bench import Benchmark
@@ -225,6 +228,7 @@ def run_benchmark(config, vllm_ip=None):
         outputs,
         # prompts=prompts,
         inputs=input_tokens,
+        dataset=dataset,
         streaming=streaming,
         verbosity=verbose,
         vllm_ip=vllm_ip,

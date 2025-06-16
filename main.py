@@ -16,7 +16,7 @@ from providers import (
     AWSBedrock,
     vLLM
 )
-from utils.prompt_generator import get_prompt
+# from utils.prompt_generator import get_prompt
 from utils.db_utils import create_experiment_folder, save_config
 
 # Load environment variables
@@ -164,6 +164,7 @@ def run_benchmark(config, vllm_ip=None):
     outputs = config.get("max_output", [100])
     verbose = config.get("verbose", False)
     backend = config.get("backend", False)
+    dataset = config.get("dataset", "general")
     # Select Benchmark class based on backend flag
     if backend:
         from benchmarking.dynamo_bench import Benchmark
@@ -224,6 +225,7 @@ def run_benchmark(config, vllm_ip=None):
         outputs,
         # prompts=prompts,
         inputs=input_tokens,
+        dataset=dataset,
         streaming=streaming,
         verbosity=verbose,
         vllm_ip=vllm_ip,

@@ -2,7 +2,7 @@ import pandas as pd
 import random
 
 # Load the CSV of prompts
-df = pd.read_csv('/home/users/ntu/kavi0008/LLM-Benchmarking/utils/prompts.csv')
+# df = pd.read_csv('/home/users/ntu/kavi0008/LLM-Benchmarking/utils/prompts.csv')
 # print(df[df['prompt_length'] == 100000].shape)
 
 # def get_prompt(input_size: int, index: int) -> str:
@@ -16,11 +16,20 @@ df = pd.read_csv('/home/users/ntu/kavi0008/LLM-Benchmarking/utils/prompts.csv')
 #     # how to return an the row = ((index+1)%100)-1 instead of a random one? [index could be from 0 to 99 or 0 to 199 and df has 100 rows/requests for each input size]
 #     return filtered['prompt'].sample(n=1).iloc[0]
 
-def get_prompt(input_size: int, index: int) -> str:
+def generate_prompt(dataset: str, index: int, input_size: int = 100) -> str:    
     """
     Returns a prompt from the CSV matching the given prompt_length,
     picking row number ((index+1)%100) - 1 instead of at random.
     """
+    if dataset == 'general':
+        df = pd.read_csv('/home/users/ntu/kavi0008/LLM-Benchmarking/utils/prompts.csv')
+        return get_general_prompt(df, input_size, index)
+    elif dataset == "aime":
+        df = pd.read_parquet("hf://datasets/HuggingFaceH4/aime_2024/data/train-00000-of-00001.parquet")
+        return get_aime_prompt(df, index)
+      
+    
+def get_general_prompt(df, input_size, index):
     filtered = df[df['prompt_length'] == input_size].reset_index(drop=True)
     if filtered.empty:
         raise ValueError(f"No prompts found for size {input_size}")
@@ -29,6 +38,15 @@ def get_prompt(input_size: int, index: int) -> str:
     row = ((index + 1) % n) - 1
     # note: when (index+1)%n == 0, row == -1 → picks the last row
     return filtered['prompt'].iloc[row]
+
+def get_aime_prompt(df, index):
+    # print(df.iloc[index]['problem'])
+    n = len(df)
+    row = ((index + 1) % n) - 1
+    print(row)
+    return df.iloc[row]['problem']
+
+# print(generate_prompt("aime", 30))
 
 # Demonstrate the function for each size
 # for size in [10, 100, 1000, 10000, 100000]:
