@@ -1,13 +1,13 @@
 {
     "providers": [
-       "vLLM", "Azure", "AWSBedrock", "TogetherAI"
+       "TogetherAI"
     ],
     "models": [
-        "common-model-small"
+        "deepseek-r1"
     ],
-    "num_requests": 100,
-    "input_tokens": [1000, 10000, 100000],
+    "num_requests": 2,
     "streaming": true,
     "max_output": [100],
-    "verbose": true
+    "verbose": true,
+    "dataset": "aime"
 }

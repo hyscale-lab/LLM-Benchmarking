@@ -44,10 +44,11 @@ def get_aime_prompt(df, index):
     n = len(df)
     row = ((index + 1) % n) - 1
     print(row)
-    return df.iloc[row]['problem']
+    prompt = f"""Answer the following math problem.\nThe last line of your response should be your integer answer within \\boxed{{}}.\n\n{df.iloc[row]['problem']}\n\nPut your final answer within \\boxed{{}}\nThink step by step before answering."""
+    return prompt
 
 # print(generate_prompt("aime", 30))
-
+# 
 # Demonstrate the function for each size
 # for size in [10, 100, 1000, 10000, 100000]:
 # for i in range(100):

@@ -70,12 +70,12 @@ class Benchmark:
         for input_size in self.inputs:
             self.prompts[input_size] = []
             for n in range(self.num_requests):
-                print(n, input_size)
+                # print(n, input_size)
                 prompt = generate_prompt(dataset, n, input_size)
                 self.prompts[input_size].append(prompt)
-                print(prompt[:200])
-                print(len(prompt.split()))
-                print(len(self.prompts[input_size]))
+                # print(prompt[:200])
+                # print(len(prompt.split()))
+                # print(len(self.prompts[input_size]))
 
         base_dir = "streaming" if streaming else "end_to_end"
 
@@ -203,10 +203,11 @@ class Benchmark:
                             #     time.sleep(120)
                             # prompt = get_prompt(input_size)
                             # print(prompt)
-                            if model == "deepseek-r1":
-                                prompt = "Every morning Aya goes for a $9$-kilometer-long walk and stops at a coffee shop afterwards. When she walks at a constant speed of $s$ kilometers per hour, the walk takes her 4 hours, including $t$ minutes spent in the coffee shop. When she walks $s+2$ kilometers per hour, the walk takes her 2 hours and 24 minutes, including $t$ minutes spent in the coffee shop. Suppose Aya walks at $s+\frac{1}{2}$ kilometers per hour. Find the number of minutes the walk takes her, including the $t$ minutes spent in the coffee shop."
-                            else:
-                                prompt = self.prompts[input_size][i]
+                            # if model == "deepseek-r1":
+                            #     prompt = "Every morning Aya goes for a $9$-kilometer-long walk and stops at a coffee shop afterwards. When she walks at a constant speed of $s$ kilometers per hour, the walk takes her 4 hours, including $t$ minutes spent in the coffee shop. When she walks $s+2$ kilometers per hour, the walk takes her 2 hours and 24 minutes, including $t$ minutes spent in the coffee shop. Suppose Aya walks at $s+\frac{1}{2}$ kilometers per hour. Find the number of minutes the walk takes her, including the $t$ minutes spent in the coffee shop."
+                            # else:
+                            #     prompt = self.prompts[input_size][i]
+                            prompt = self.prompts[input_size][i]
                             print(f"{prompt[:200]}")
                             if self.streaming:
                                 if provider_name == "vLLM":
