@@ -3,20 +3,41 @@ import random
 
 # Load the CSV of prompts
 df = pd.read_csv('/home/users/ntu/kavi0008/LLM-Benchmarking/utils/prompts.csv')
+# print(df[df['prompt_length'] == 100000].shape)
 
-def get_prompt(input_size: int) -> str:
+# def get_prompt(input_size: int, index: int) -> str:
+#     """
+#     Returns a random prompt from the CSV matching the given prompt_length.
+#     Raises ValueError if no prompts are found for that size.
+#     """
+#     filtered = df[df['prompt_length'] == input_size]
+#     if filtered.empty:
+#         raise ValueError(f"No prompts found for size {input_size}")
+#     # how to return an the row = ((index+1)%100)-1 instead of a random one? [index could be from 0 to 99 or 0 to 199 and df has 100 rows/requests for each input size]
+#     return filtered['prompt'].sample(n=1).iloc[0]
+
+def get_prompt(input_size: int, index: int) -> str:
     """
-    Returns a random prompt from the CSV matching the given prompt_length.
-    Raises ValueError if no prompts are found for that size.
+    Returns a prompt from the CSV matching the given prompt_length,
+    picking row number ((index+1)%100) - 1 instead of at random.
     """
-    filtered = df[df['prompt_length'] == input_size]
+    filtered = df[df['prompt_length'] == input_size].reset_index(drop=True)
     if filtered.empty:
         raise ValueError(f"No prompts found for size {input_size}")
-    return filtered['prompt'].sample(n=1).iloc[0]
+    n = len(filtered)  # should be 100
+    # compute the row you want: ((index+1) % n) - 1
+    row = ((index + 1) % n) - 1
+    # note: when (index+1)%n == 0, row == -1 → picks the last row
+    return filtered['prompt'].iloc[row]
 
 # Demonstrate the function for each size
 # for size in [10, 100, 1000, 10000, 100000]:
-#     print(f"Random prompt for size {size} tokens:\n{get_prompt(size)}\n{'-'*80}\n")
+# for i in range(100):
+#     size = 100000
+#     prompt = get_prompt(size)
+    # print(len(prompt.split()))
+    # print(f"Random prompt for size {size} tokens:\n{prompt}\n{'-'*80}\n")
+    
 
 # # PROMPT_100_TOKENS = "Tell me a long story based on the following story description: \
 # # In a future world where emotions are regulated by technology, \

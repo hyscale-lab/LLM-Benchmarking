@@ -32,7 +32,7 @@ class AWSBedrock(ProviderInterface):
             "mistral-124b-instruct-v0.1": "mistral.mistral-large-2402-v1:0",
             "deepseek-r1": "us.deepseek.r1-v1:0",
             "common-model": "meta.llama3-70b-instruct-v1:0",
-            "common-model-small": "meta.llama3-1-8b-instruct-v1:0"
+            "common-model-small": "meta.llama3-1-8b-instruct-v1:0",
             "common-model-large": "mistral.mixtral-8x7b-instruct-v0:1"
         }
 

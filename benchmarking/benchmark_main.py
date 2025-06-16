@@ -68,7 +68,7 @@ class Benchmark:
             self.prompts[input_size] = []
             for n in range(self.num_requests):
                 print(n, input_size)
-                prompt = get_prompt(input_size)
+                prompt = get_prompt(input_size, n)
                 self.prompts[input_size].append(prompt)
                 print(prompt[:200])
                 print(len(prompt.split()))
