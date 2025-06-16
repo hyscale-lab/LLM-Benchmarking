@@ -33,7 +33,8 @@ class Azure(ProviderInterface):
             "meta-llama-3.1-405b-instruct": "Meta-Llama-3.1-405B-Instruct",
             "common-model": "Llama-3.3-70B-Instruct",
             "common-model-small": "Meta-Llama-3.1-8B-Instruct",
-            "deepseek-r1": "DeepSeek-R1"
+            "deepseek-r1": "DeepSeek-R1",
+            # "common-model-large": ""
         }
 
         # Define API keys for each model
@@ -96,7 +97,7 @@ class Azure(ProviderInterface):
             return None, None
 
     def perform_inference_streaming(
-        self, model, prompt, max_output=100, verbosity=True
+        self, model, prompt, max_output=100, verbosity=True, correct_answer=''
     ):
         """Performs streaming inference request to Azure."""
         model_id = self.get_model_name(model)
@@ -111,6 +112,8 @@ class Azure(ProviderInterface):
         # endpoint = f"https://ai-kavifyp0693ai007107396570.services.ai.azure.com/models"
         # print(model_id, endpoint)
         total_time = 0
+        score = -1
+        generated_text = ""
         start_time = timer()
 
         system_prompt = self.system_prompt
@@ -150,6 +153,7 @@ class Azure(ProviderInterface):
                     n += len(str(current_token).split())
                     # print(str(current_token).split(), n, end="")
                     print(current_token, end="")
+                    generated_text += str(current_token)
                     # if len(inter_token_latencies) < 20:
                     #     print(current_token, end="")  
                     # elif len(inter_token_latencies) == 21:
@@ -173,6 +177,21 @@ class Azure(ProviderInterface):
                 model, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "timebetweentokens_p95", np.percentile(inter_token_latencies, 95)
             )
             self.log_metrics(model, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "totaltokens", n)
+
+
+            print(generated_text, type(generated_text))
+            print("-----------------")
+            extracted_answer = self.extract_answer_aime(generated_text)
+
+            print(extracted_answer)
+            print("-----------------")
+            print(correct_answer)
+            print("-----------------")
+            score = self.calculate_score_aime(extracted_answer, correct_answer)
+            print(score)
+            print("-----------------")
+            if score > -1:
+                self.log_metrics(model, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "accuracy", score)
 
         except Exception as e:
             print(f"[ERROR] Streaming inference failed for model '{model}': {e}")

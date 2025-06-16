@@ -1,13 +1,13 @@
 {
     "providers": [
-       "TogetherAI"
+       "AWSBedrock"
     ],
     "models": [
         "deepseek-r1"
     ],
-    "num_requests": 2,
+    "num_requests": 5,
     "streaming": true,
-    "max_output": [100],
+    "max_output": [32000],
     "verbose": true,
     "dataset": "aime"
 }

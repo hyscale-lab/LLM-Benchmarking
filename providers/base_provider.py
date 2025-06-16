@@ -48,11 +48,13 @@ class BaseProvider(ProviderInterface):
             return None
 
     def perform_inference_streaming(
-        self, model, prompt, max_output=100, verbosity=True
+        self, model, prompt, max_output=100, verbosity=True, correct_answer=""
     ):
         # print(model, prompt, max_output, verbosity)
         # print("PROMPT")
         # print(prompt)
+        score = -1
+        generated_text = ""
         try:
             model_id = self.get_model_name(model)
             if model_id is None:
@@ -61,7 +63,7 @@ class BaseProvider(ProviderInterface):
             inter_token_latencies = []
             start = timer()
             print(model_id)
-            print("STARTING GROQ REQ")
+            # print("STARTING GROQ REQ")
             response = self.client.chat.completions.create(
                 model=model_id,
                 messages=[
@@ -72,7 +74,7 @@ class BaseProvider(ProviderInterface):
                 max_tokens=max_output,
                 # timeout=(10, 100)
             )
-            print("HERE?")
+            # print("HERE?")
             print(response)
 
             for chunk in response:
@@ -95,6 +97,8 @@ class BaseProvider(ProviderInterface):
                 prev_token_time = time_to_next_token
 
                 inter_token_latencies.append(inter_token_latency)
+                token_text = chunk.choices[0].delta.content
+                generated_text += token_text
                 if verbosity:
                     # print(chunk.choices[0].delta.content or "", end="", flush=True)
                     if len(inter_token_latencies) < 20:
@@ -117,6 +121,20 @@ class BaseProvider(ProviderInterface):
             self.log_metrics(model, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "timebetweentokens_p95", p95)
             self.log_metrics(model, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "totaltokens", len(inter_token_latencies) + 1)
             self.log_metrics(model, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "tps", (len(inter_token_latencies) + 1) / elapsed)
+
+            print(generated_text, type(generated_text))
+            print("-----------------")
+            extracted_answer = self.extract_answer_aime(generated_text)
+
+            print(extracted_answer)
+            print("-----------------")
+            print(correct_answer)
+            print("-----------------")
+            score = self.calculate_score_aime(extracted_answer, correct_answer)
+            print(score)
+            print("-----------------")
+            if score > -1:
+                self.log_metrics(model, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "accuracy", score)
 
         except Exception as e:
             print(f"[ERROR] Streaming inference failed for model '{model}': {e}")

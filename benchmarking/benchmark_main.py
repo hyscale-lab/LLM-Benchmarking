@@ -65,15 +65,24 @@ class Benchmark:
         self.base_timeout = 10
 
         self.prompts = {}
+        self.answers = {}
         print("PROMPTS")
 
         for input_size in self.inputs:
             self.prompts[input_size] = []
+            self.answers[input_size] = []
             for n in range(self.num_requests):
                 # print(n, input_size)
-                prompt = generate_prompt(dataset, n, input_size)
+                if dataset == "aime":
+                    prompt, correct_answer = generate_prompt(dataset, n, input_size)
+                else:
+                    prompt = generate_prompt(dataset, n, input_size)
                 self.prompts[input_size].append(prompt)
-                # print(prompt[:200])
+                if self.dataset == "aime":
+                    self.answers[input_size].append(correct_answer)
+                
+                print(prompt[:200])
+                # print(correct_answer[:200])
                 # print(len(prompt.split()))
                 # print(len(self.prompts[input_size]))
 
@@ -104,37 +113,39 @@ class Benchmark:
             provider_name = provider.__class__.__name__
             save_flattened_metrics_to_csv(provider, metric, f"{self.exp_dir}/{metric}_logs.csv")
             print(provider.metrics[metric].items())
+            all_lats = []
             for model, input_dict in provider.metrics[metric].items():
                 for input_size, output_dict in input_dict.items():
                     for max_output, latencies in output_dict.items():
                         # Convert to milliseconds and sort for CDF
                         print(model, input_size, len(latencies))
-                        latencies_sorted = np.sort(latencies) * 1000
-                        cdf = np.arange(1, len(latencies_sorted) + 1) / len(latencies_sorted)
-                        model_name = provider.get_model_name(model)
-
-                        if provider_name.lower() == "vllm":
-                            plt.plot(
-                                latencies_sorted,
-                                cdf,
-                                marker="o",
-                                linestyle="-",
-                                markersize=6,  # Slightly larger marker size
-                                color="black",  # Black color for the marker
-                                # label=f"{provider_name} - {model_name}",
-                                label=f"{provider_name}",
-                                linewidth=2,  # Bold line
-                            )
-                        else:
-                            plt.plot(
-                                latencies_sorted,
-                                cdf,
-                                marker="o",
-                                linestyle="-",
-                                markersize=5,
-                                # label=f"{provider_name} - {model_name}",
-                                label=f"{provider_name} - {max_output}",
-                            )
+                        all_lats.extend(latencies)
+                        
+            latencies_sorted = np.sort(np.array(all_lats)) * 1000
+            cdf = np.arange(1, len(latencies_sorted) + 1) / len(latencies_sorted)
+                    # model_name = provider.get_model_name(model)
+            if provider_name.lower() == "vllm":
+                plt.plot(
+                    latencies_sorted,
+                    cdf,
+                    marker="o",
+                    linestyle="-",
+                    markersize=6,  # Slightly larger marker size
+                    color="black",  # Black color for the marker
+                    # label=f"{provider_name} - {model_name}",
+                    label=f"{provider_name}",
+                    linewidth=2,  # Bold line
+                )
+            else:
+                plt.plot(
+                    latencies_sorted,
+                    cdf,
+                    marker="o",
+                    linestyle="-",
+                    markersize=5,
+                    # label=f"{provider_name} - {model_name}",
+                    label=f"{provider_name}",
+                )
                     
         plt.xlabel("Latency (ms)", fontsize=12)
         plt.ylabel("Portion of requests", fontsize=12)
@@ -181,6 +192,7 @@ class Benchmark:
             provider_name = provider.__class__.__name__
             # logging.debug(f"{provider_name}")
             # print(f"{provider_name}")
+            
             for model in self.models:
                 model_name = provider.get_model_name(model)
                 # print(f"Model: {model_name}")
@@ -195,9 +207,9 @@ class Benchmark:
                                 print(f"Request {i + 1}/{self.num_requests}")
                                 print(f"{provider_name}" + f" Model: {model_name}")
 
-                            # if provider_name == "AWSBedrock" and (i % 40) == 0:
-                            #     print("[DEBUG] Sleeping for 10 mins to bypass rate limit...")
-                            #     time.sleep(600)
+                            if provider_name == "AWSBedrock" and (i % 10) == 0:
+                                print("[DEBUG] Sleeping for 10s to bypass rate limit...")
+                                time.sleep(10)
                             #     print("[DEBUG] Finished.")
                             # if ((i+1) % 58) == 0:
                             #     time.sleep(120)
@@ -208,15 +220,20 @@ class Benchmark:
                             # else:
                             #     prompt = self.prompts[input_size][i]
                             prompt = self.prompts[input_size][i]
-                            print(f"{prompt[:200]}")
+                            if self.dataset == "aime":
+                                correct_answer = self.answers[input_size][i]
+                                print(prompt[:200])
+                                print(correct_answer[:200])
+
+                            # print(f"{prompt[:200]}")
                             if self.streaming:
                                 if provider_name == "vLLM":
                                     provider.perform_inference_streaming(
-                                        model, prompt, self.vllm_ip, max_output, self.verbosity
+                                        model, prompt, self.vllm_ip, max_output, self.verbosity, correct_answer
                                     )
                                 else:
                                     provider.perform_inference_streaming(
-                                        model, prompt, max_output, self.verbosity
+                                        model, prompt, max_output, self.verbosity, correct_answer
                                     )
                             else:
                                 if provider_name == "vLLM":
@@ -290,3 +307,4 @@ class Benchmark:
             self.plot_metrics("timebetweentokens_median", "timebetweentokens_median")
             self.plot_metrics("timebetweentokens_p95", "timebetweentokens_p95")
             self.plot_metrics("totaltokens", "totaltokens")
+            self.plot_metrics("accuracy", "accuracy")

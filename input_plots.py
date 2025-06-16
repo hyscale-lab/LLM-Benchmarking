@@ -14,8 +14,11 @@ import re
 # graph_dir = "experiments/exp_20250611_204817"
 # csv_files = glob.glob("experiments/exp_20250611_204817/*.csv")
 
-graph_dir = "experiments/exp_20250613_122819"
-csv_files = glob.glob("experiments/exp_20250613_122819/*.csv")
+# graph_dir = "experiments/exp_20250613_122819"
+# csv_files = glob.glob("experiments/exp_20250613_122819/*.csv")
+
+graph_dir = "experiments/exp_20250616_141947_71969dba"
+csv_files = glob.glob(f"{graph_dir}/*.csv")
 
 
 dfs_all = [pd.read_csv(f) for f in csv_files]
@@ -122,7 +125,7 @@ for i, df in enumerate(dfs_all):
         plt.subplots_adjust(right=0.75)  # Make room for legends on the right
     plt.show()
     current_time = datetime.now().strftime("%y%m%d_%H%M")
-    filename = f"{df['metric'].unique()[0]}_{current_time}.png"
+    filename = f"{df['metric'].unique()[0]}_{current_time}.pdf"
     filepath = os.path.join(graph_dir, filename)
     plt.savefig(filepath)
     plt.close()

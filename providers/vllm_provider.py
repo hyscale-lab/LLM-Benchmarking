@@ -66,7 +66,7 @@ class vLLM(ProviderInterface):
             return None
 
     def perform_inference_streaming(
-        self, model, prompt, vllm_ip, max_output=100, verbosity=True
+        self, model, prompt, vllm_ip, max_output=100, verbosity=True, correct_answer=""
     ):
         """
         Sends a streaming inference request to the vLLM API server and parses token streams.
@@ -75,6 +75,7 @@ class vLLM(ProviderInterface):
         model_id = self.get_model_name(model)
         formatted_prompt = f"System: {self.system_prompt} \n User: {prompt}"
         generated_text = ""
+        score = -1
 
         try:
             start_time = time.perf_counter()
@@ -150,6 +151,19 @@ class vLLM(ProviderInterface):
             self.log_metrics(model_id, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "totaltokens", len(inter_token_latencies) + 1)
             self.log_metrics(model_id, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "tps", (len(inter_token_latencies) + 1) / total_time)
 
+            print(generated_text, type(generated_text))
+            print("-----------------")
+            extracted_answer = self.extract_answer_aime(generated_text)
+
+            print(extracted_answer)
+            print("-----------------")
+            print(correct_answer)
+            print("-----------------")
+            score = self.calculate_score_aime(extracted_answer, correct_answer)
+            print(score)
+            print("-----------------")
+            if score > -1:
+                self.log_metrics(model, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "accuracy", score)
 
             return generated_text, total_time
 

@@ -96,7 +96,7 @@ class AWSBedrock(ProviderInterface):
             return None, None
 
     def perform_inference_streaming(
-        self, model, prompt, max_output=100, verbosity=True
+        self, model, prompt, max_output=100, verbosity=True, correct_answer=''
     ):
         """
         Performs a streaming inference using AWS Bedrock.
@@ -147,6 +147,8 @@ class AWSBedrock(ProviderInterface):
         ttft = None
         total_tokens = 0
         c = 0
+        score = -1
+        generated_text = ""
         # print(prompt)
         start_time = time.perf_counter()
         try:
@@ -203,7 +205,7 @@ class AWSBedrock(ProviderInterface):
 
                     if "text" in delta:
                         text = delta["text"]
-                        
+                        generated_text += str(text)
                         print(f"{text}", end="")
                 
                         if first_token_time is None:
@@ -300,6 +302,20 @@ class AWSBedrock(ProviderInterface):
             self.log_metrics(
                 model, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "tps", (len(inter_token_latencies) + 1) / total_time
             )
+
+            print(generated_text, type(generated_text))
+            print("-----------------")
+            extracted_answer = self.extract_answer_aime(generated_text)
+
+            print(extracted_answer)
+            print("-----------------")
+            print(correct_answer)
+            print("-----------------")
+            score = self.calculate_score_aime(extracted_answer, correct_answer)
+            print(score)
+            print("-----------------")
+            if score > -1:
+                self.log_metrics(model, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "accuracy", score)
 
             return total_time, inter_token_latencies
 
