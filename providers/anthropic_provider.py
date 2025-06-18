@@ -97,6 +97,7 @@ class Anthropic(ProviderInterface):
             first_token_time = None
             inter_token_latencies = []
             c = 0
+            generated_text = ""
             start = timer()
             print("ENTERING")
             with self.client.messages.stream(
@@ -139,6 +140,7 @@ class Anthropic(ProviderInterface):
                     inter_token_latencies.extend([avg_latency] * token_count)
                     prev_token_time = time_to_next_token
                     print(chunk, end="", flush=True)
+                    generated_text += chunk
                     # inter_token_latencies.append(inter_token_latency)
                     # if verbosity:
                     #     if len(inter_token_latencies) < 20:

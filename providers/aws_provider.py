@@ -206,8 +206,12 @@ class AWSBedrock(ProviderInterface):
                     if "text" in delta:
                         text = delta["text"]
                         generated_text += str(text)
-                        print(f"{text}", end="")
-                
+                        # print(f"{text}", end="")
+                        if len(inter_token_latencies) < 20:
+                            print(f"{text}", end="")
+                        elif len(inter_token_latencies) == 21:
+                            print("...")
+                    
                         if first_token_time is None:
                             current_time = time.perf_counter()
                             first_token_time = current_time
@@ -312,7 +316,7 @@ class AWSBedrock(ProviderInterface):
 
 
             if correct_answer:
-                print(generated_text, type(generated_text))
+                # print(generated_text, type(generated_text))
                 print("-----------------")
                 extracted_answer = self.extract_answer_aime(generated_text)
 

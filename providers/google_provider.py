@@ -98,7 +98,7 @@ class GoogleGemini(ProviderInterface):
         prev_token_time = start_time
         streamed_output = []
         total_tokens = 0
-
+        generated_text = ""
         for chunk in response:
             current_time = timer()
 
@@ -168,7 +168,7 @@ class GoogleGemini(ProviderInterface):
         self.log_metrics(model, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "totaltokens", len(inter_token_latencies) + 1)
         self.log_metrics(model, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "tps", (len(inter_token_latencies) + 1) / total_time)
         self.log_metrics(
-            model, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "dpsk_output", generated_text
+            model, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "dpsk_output", streamed_output
         )
 
         return streamed_output

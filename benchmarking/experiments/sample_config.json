@@ -1,11 +1,11 @@
 {
     "providers": [
-        "Azure"
+        "Cloudflare"
     ],
     "models": [
-        "deepseek-r1"
+        "common-model-small"
     ],
-    "num_requests": 1,
+    "num_requests": 100,
     "input_tokens": [
         100
     ],
@@ -13,6 +13,5 @@
     "max_output": [
         100
     ],
-    "verbose": true,
-    "dataset": "aime"
+    "verbose": true
 }

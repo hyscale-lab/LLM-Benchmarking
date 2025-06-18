@@ -219,6 +219,9 @@ class Benchmark:
                             if provider_name == "AWSBedrock" and ((i+1) % 10) == 0:
                                 print("[DEBUG] Sleeping for 10s to bypass rate limit...")
                                 time.sleep(10)
+                            
+                            if provider_name == "TogetherAI" and self.dataset == 'aime':
+                                time.sleep(60)
                             #     print("[DEBUG] Finished.")
                             # if ((i+1) % 58) == 0:
                             #     time.sleep(120)

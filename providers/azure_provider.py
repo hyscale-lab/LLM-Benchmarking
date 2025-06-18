@@ -152,12 +152,12 @@ class Azure(ProviderInterface):
                     current_token = update.choices[0].delta.content
                     n += len(str(current_token).split())
                     # print(str(current_token).split(), n, end="")
-                    print(current_token, end="")
+                    # print(current_token, end="")
                     generated_text += str(current_token)
-                    # if len(inter_token_latencies) < 20:
-                    #     print(current_token, end="")  
-                    # elif len(inter_token_latencies) == 21:
-                    #     print("...")
+                    if len(inter_token_latencies) < 20:
+                        print(current_token, end="")  
+                    elif len(inter_token_latencies) == 21:
+                        print("...")
 
             # Calculate total metrics
             if verbosity:
@@ -186,7 +186,7 @@ class Azure(ProviderInterface):
             )
 
             if correct_answer:
-                print(generated_text, type(generated_text))
+                # print(generated_text, type(generated_text))
                 print("-----------------")
                 extracted_answer = self.extract_answer_aime(generated_text)
                 self.log_metrics(

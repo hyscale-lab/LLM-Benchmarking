@@ -110,6 +110,7 @@ class Cloudflare(ProviderInterface):
             )
 
             first_token_time = None
+            generated_text = ""
             for line in response.iter_lines():
                 if line:
                     if first_token_time is None:
@@ -134,6 +135,7 @@ class Cloudflare(ProviderInterface):
 
                     inter_token_latencies.append(inter_token_latency)
                     print(line_str[19:].split('"')[0], end='')
+                    generated_text += line_str[19:].split('"')[0]
 
             if verbosity:
                 print(
