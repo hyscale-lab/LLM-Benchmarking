@@ -55,7 +55,7 @@ graph_dir = "experiments/exp_20250604_055539"
 for i, df in enumerate(dfs_all):
     print(df.head(1))
 
-    plt.figure(figsize=(7, 3.5))
+    plt.figure(figsize=(6.5, 3))
 
     linestyles = {
         500: 'solid',
@@ -104,14 +104,34 @@ for i, df in enumerate(dfs_all):
         linestyle_legend_elements = [Line2D([0], [0], color='black', linestyle=style, lw=2, label=f'{size:,}') 
                                    for size, style in linestyles.items()]
         
-        legend1 = plt.legend(handles=color_legend_elements, title='Provider', 
-                            loc='center left', bbox_to_anchor=(1.02, 0.7), 
-                            fontsize=10, title_fontsize=11, frameon=True, 
-                            fancybox=False, shadow=False, framealpha=1.0)
+        legend1 = plt.legend(
+            handles=color_legend_elements,
+            title='Provider',
+            loc='upper left',
+            # x0, y0, width, height  (in axes‐fraction coords)
+            bbox_to_anchor=(1.0, 0.7, 0.5, 0.3),
+            fontsize=14,
+            title_fontsize=15,
+            frameon=True,
+            borderpad=0.5,     # space between text and frame
+            labelspacing=0.4,  # vertical space between entries
+            columnspacing=0.6, # horizontal space between columns
+            handlelength=1.0,  # length of the little line in the legend
+            handletextpad=0.5, # space between line and label text
+            fancybox=False,
+            shadow=False,
+            framealpha=1.0
+            # mode='expand'      # stretch entries to fill the width
+        )
+  
         
-        legend2 = plt.legend(handles=linestyle_legend_elements, title='Output Length', 
-                            loc='center left', bbox_to_anchor=(1.02, 0.3), 
-                            fontsize=10, title_fontsize=11, frameon=True,
+        legend2 = plt.legend(handles=linestyle_legend_elements, title='Input Size', 
+                            loc='center left', bbox_to_anchor=(1.02, 0.1), 
+                            fontsize=14, title_fontsize=15, frameon=True, borderpad=0.5,     # space between text and frame
+            labelspacing=0.4,  # vertical space between entries
+            columnspacing=0.6, # horizontal space between columns
+            handlelength=1.0,  # length of the little line in the legend
+            handletextpad=0.5,
                             fancybox=False, shadow=False, framealpha=1.0)
         
         # Add the first legend back (matplotlib removes it when adding the second)
@@ -132,10 +152,10 @@ for i, df in enumerate(dfs_all):
     # Adjust layout to accommodate external legends only for first plot
     plt.tight_layout()
     if i == 0:
-        plt.subplots_adjust(right=0.75)  # Make room for legends on the right
+        plt.subplots_adjust(right=0.68)  # Make room for legends on the right
     plt.show()
     current_time = datetime.now().strftime("%y%m%d_%H%M")
-    filename = f"{df['metric'].unique()[0]}_{current_time}.pdf"
+    filename = f"{df['metric'].unique()[0]}_{current_time}.png"
     filepath = os.path.join(graph_dir, filename)
     plt.savefig(filepath)
     plt.close()

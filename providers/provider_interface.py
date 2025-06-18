@@ -24,7 +24,10 @@ class ProviderInterface(ABC):
             "timebetweentokens": {},
             "timebetweentokens_median": {},
             "timebetweentokens_p95": {},
-            "accuracy": {}
+            "timebetweentokens_p99": {},
+            "timebetweentokens_avg": {},
+            "accuracy": {},
+            "dpsk_output": {}
         }
 
     # def log_metrics(self, model_name, input_size, metric, value):
@@ -70,7 +73,7 @@ class ProviderInterface(ABC):
                         or None if no valid answer is found
         """
         if content is None:
-            logger.error("[red]AIME extract_answer: Content is None.[/red]")
+            print("[red]AIME extract_answer: Content is None.[/red]")
             return None
 
         # Regex to find \boxed{NUMBER} pattern, accepting any number
@@ -95,7 +98,7 @@ class ProviderInterface(ABC):
                     break
 
         if not matches:
-            logger.error(f"[red]No \\boxed{{}} answer found in content.[/red]")
+            print(f"[red]No \\boxed{{}} answer found in content.[/red]")
             return None
 
         # Get the last match found
@@ -107,7 +110,7 @@ class ProviderInterface(ABC):
             num = int(extracted_number)
             return str(num)
         except ValueError:
-            logger.error(f"[red]Invalid number format in AIME answer: {extracted_number}.[/red]")
+            print(f"[red]Invalid number format in AIME answer: {extracted_number}.[/red]")
             return None
 
     def calculate_score_aime(self, extracted_answer: Optional[str], correct_answer: str) -> int:
@@ -122,7 +125,7 @@ class ProviderInterface(ABC):
         """
         # Handle None or invalid extracted answer
         if extracted_answer is None:
-            logger.error(f"[red]No valid AIME answer found in extracted_answer.[/red]")
+            print(f"[red]No valid AIME answer found in extracted_answer.[/red]")
             return 0
             
         try:
@@ -135,7 +138,7 @@ class ProviderInterface(ABC):
             
         except ValueError:
             # Handle case where either string isn't a valid integer
-            logger.error(f"[red]Invalid AIME numbers: extracted={extracted_answer}, correct={correct_answer}.[/red]")
+            print(f"[red]Invalid AIME numbers: extracted={extracted_answer}, correct={correct_answer}.[/red]")
             return 0 
 
 

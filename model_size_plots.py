@@ -3,20 +3,55 @@ import glob
 import os
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.ticker import ScalarFormatter, LogLocator, FuncFormatter
+from matplotlib.ticker import ScalarFormatter, LogLocator
 from matplotlib.lines import Line2D
 from datetime import datetime
 
-graph_dir = "experiments/zexp_5.2_deepseek_plots/results"
-# os.makedirs(graph_dir, exist_ok=True)
+graph_dir = "experiments/zexp_5.2_modelsize_plots/results/results_together"
 
-# azure_dir = "experiments/exp_20250606_144619"
+# azure_dir_dpsk = "experiments/exp_20250617_183833_8f80f131"
+# csv_azure_dpsk = glob.glob(f"{azure_dir_dpsk}/*.csv")
+# dfs_azure_dpsk = [pd.read_csv(f) for f in csv_azure_dpsk]
+# dfs_azure_dpsk = [df[df['model'] != 'common-model-small'].copy() for df in dfs_azure_dpsk]
+# total_tokens = dfs_azure_dpsk.pop(3)   
+# accuracy = dfs_azure_dpsk.pop(3)
+
+# azure_dir_70b = "experiments/exp_20250617_174825_899edf8b"
+# csv_azure_70b = glob.glob(f"{azure_dir_70b}/*.csv")
+# dfs_azure_70b = [pd.read_csv(f) for f in csv_azure_70b]
+# total_tokens = dfs_azure_70b.pop(3)
+# accuracy = dfs_azure_70b.pop(3)
+
+# azure_dir_8b = "experiments/exp_20250617_170301_df6d1feb"
+# csv_azure_8b = glob.glob(f"{azure_dir_8b}/*.csv")
+# dfs_azure_8b = [pd.read_csv(f) for f in csv_azure_8b]
+# total_tokens = dfs_azure_8b.pop(3)
+# accuracy = dfs_azure_8b.pop(3)
+
+
+together_dir_dpsk = "experiments/exp_20250606_051340"
+csv_together_dpsk = glob.glob(f"{together_dir_dpsk}/*.csv")
+dfs_together_dpsk = [pd.read_csv(f) for f in csv_together_dpsk]
+dfs_together_dpsk = [df[df['model'] != 'common-model-small'].copy() for df in dfs_together_dpsk]
+
+total_tokens = dfs_together_dpsk.pop(3)
+accuracy = dfs_together_dpsk.pop(3)
+
+# azure_dir = "experiments/exp_20250617_174825_899edf8b"
 # csv_azure = glob.glob(f"{azure_dir}/*.csv")
 # dfs_azure = [pd.read_csv(f) for f in csv_azure]
 
-# together_dir = "experiments/exp_20250606_051340"
-# csv_together = glob.glob(f"{together_dir}/*.csv")
-# dfs_together = [pd.read_csv(f) for f in csv_together]
+together_dir_70b = "experiments/exp_20250617_174639_880fbe3e"
+csv_together_70b = glob.glob(f"{together_dir_70b}/*.csv")
+dfs_together_70b = [pd.read_csv(f) for f in csv_together_70b]
+total_tokens = dfs_together_70b.pop(3)
+accuracy = dfs_together_70b.pop(3)
+
+together_dir_8b = "experiments/exp_20250617_171300_794a57cb"
+csv_together_8b = glob.glob(f"{together_dir_8b}/*.csv")
+dfs_together_8b = [pd.read_csv(f) for f in csv_together_8b]
+total_tokens = dfs_together_8b.pop(3)
+accuracy = dfs_together_8b.pop(3)
 
 # aws_dir_1 = "experiments/exp_20250607_170514"
 # csv_aws_1 = glob.glob(f"{aws_dir_1}/*.csv")
@@ -26,36 +61,17 @@ graph_dir = "experiments/zexp_5.2_deepseek_plots/results"
 # csv_aws_2 = glob.glob(f"{aws_dir_2}/*.csv")
 # dfs_aws_2 = [pd.read_csv(f) for f in csv_aws_2]
 
-vllm_dir = "experiments/exp_20250616_223309_22c4d77e"
-csv_vllm = glob.glob(f"{vllm_dir}/*.csv")
-dfs_vllm = [pd.read_csv(f) for f in csv_vllm]
+aws_dir_dpsk = "experiments/exp_20250618_094839_615c9c22"
+csv_aws_dpsk = glob.glob(f"{aws_dir_dpsk}/*.csv")
+dfs_aws_dpsk = [pd.read_csv(f) for f in csv_aws_dpsk]
 
-for i, df in enumerate(dfs_vllm):
-    print(df.head(1))
-
-together_dir = "experiments/exp_20250618_051258_b1b4aa55"
-csv_together = glob.glob(f"{together_dir}/*.csv")
-dfs_together = [pd.read_csv(f) for f in csv_together]
-
-others_dir = "experiments/exp_20250617_121335_bdf9e287"
-csv_others = glob.glob(f"{others_dir}/*.csv")
-dfs_others = [pd.read_csv(f) for f in csv_others]
-dfs_others = [df[df['provider'] != 'TogetherAI'].copy() for df in dfs_others]
-
-# dfs_aws = [
+# dfs_aws_dpsk = [
 #     pd.concat([df1, df2], ignore_index=True) 
 #     for df1, df2 in zip(dfs_aws_1, dfs_aws_2)
 # ]
 
-dfs_all = [
-    pd.concat([df1, df2, df3], ignore_index=True)
-    for df1, df2, df3 in zip(dfs_vllm, dfs_together, dfs_others)
-]
-
-total_tokens = dfs_all.pop(3)
-accuracy = dfs_all.pop(3)
-
-for i, df in enumerate(dfs_all):
+dfs_aws_dpsk = [df[df['model'] != 'common-model-small'].copy() for df in dfs_aws_dpsk]
+for i, df in enumerate(dfs_aws_dpsk):
     print(df.head(1))
 #     # want to remove entries with model = "common-model-small"
     print(df['metric'].unique())
@@ -64,76 +80,119 @@ for i, df in enumerate(dfs_all):
     print(df['max_output'].unique())
     print(f"combined #{i}: {df.shape}")
 
+total_tokens = dfs_aws_dpsk.pop(3)
 
-colors = {
-    'vLLM':       'black',
-    'Azure':      '#FF8000',
-    'AWSBedrock': 'teal',
-    'TogetherAI': 'purple'
-}
+# aws_dir_70b = "experiments/exp_20250617_174754_b332014b"
+# csv_aws_70b = glob.glob(f"{aws_dir_70b}/*.csv")
+# dfs_aws_70b = [pd.read_csv(f) for f in csv_aws_70b]
+# total_tokens = dfs_aws_70b.pop(3)
+# accuracy = dfs_aws_70b.pop(3)
 
-plt.rcParams.update({
-    'axes.labelsize': 18,   # X/Y label font size
-    'xtick.labelsize': 18,  # X‐tick label font size
-    'ytick.labelsize': 18   # Y‐tick label font size
-    })
+# aws_dir_8b = "experiments/exp_20250617_170324_4cdde8b5"
+# csv_aws_8b = glob.glob(f"{aws_dir_8b}/*.csv")
+# dfs_aws_8b = [pd.read_csv(f) for f in csv_aws_8b]
+# total_tokens = dfs_aws_8b.pop(3)
+# accuracy = dfs_aws_8b.pop(3)
 
+# dfs_all_together = [
+#     pd.concat([df1, df2, df3], ignore_index=True)
+#     for df1, df2, df3 in zip(dfs_together_8b, dfs_together_70b, dfs_together_dpsk)
+# ] 
 
-plt.figure(figsize=(7, 5))
+# dfs_all_azure = [
+#     pd.concat([df1, df2, df3], ignore_index=True)
+#     for df1, df2, df3 in zip(dfs_azure_8b, dfs_azure_70b, dfs_azure_dpsk)
+# ] 
 
+# dfs_all_aws = [
+#     pd.concat([df1, df2, df3], ignore_index=True)
+#     for df1, df2, df3 in zip(dfs_aws_8b, dfs_aws_70b, dfs_aws_dpsk)
+# ] 
 
-# Loop over each provider
-for provider in total_tokens['provider'].unique():
-    subset = total_tokens[total_tokens['provider'] == provider]
-    if subset.empty:
-        continue
-
-    # Sort token counts and compute CDF
-    tokens = np.sort(subset['value'].values)
-    cdf    = np.arange(1, len(tokens) + 1) / len(tokens)
-
-    # Plot—use thicker line for vLLM if you like
-    lw = 2.4 if provider == 'vLLM' else 1.8
-    plt.plot(tokens, cdf,
-             color=colors.get(provider, 'gray'),
-             linewidth=lw,
-             label=provider)
-
-# Axis labels and grid
-plt.xlabel("Total Tokens", fontsize=18)
-plt.ylabel("CDF", fontsize=18)
-plt.grid(True, which='both', ls='--', alpha=0.3)
-plt.gca().xaxis.set_major_formatter(FuncFormatter(lambda x, p: f'{x/1000:.0f}K'))
-
-# Legend inside the plot (upper left corner here)
-plt.legend(title="Provider", loc="best", fontsize=14, title_fontsize=14)
-plt.tight_layout()
-current_time = datetime.now().strftime("%y%m%d_%H%M")
-filename = f"{total_tokens['metric'].unique()[0]}_{current_time}.pdf"
-filepath = os.path.join(graph_dir, filename)
-plt.savefig(filepath)
-plt.close()
-
-print(f"Saved graph: {filepath}")
-
-
-# for idx in range(len(dfs_all)):
-#     print(dfs_all[idx].iloc[0]['metric'])
+# # for idx in range(len(dfs_all)):
+# #     print(dfs_all[idx].iloc[0]['metric'])
 # #     print(dfs_all[idx].head(1))
 # #     print(dfs_all[idx].shape)
 # #     dfs_all[idx] = dfs_all[idx].loc[pure_exp.index]
 # #     print(dfs_all[idx].shape)
-# # dfs_all = [df[df['model'] != 'common-model-small'].copy() for df in dfs_all]
 
-# for i, df in enumerate(dfs_all):
+# for i, df in enumerate(dfs_all_together):
 #     print(df.head(1))
-#     # want to remove entries with model = "common-model-small"
+# #     # want to remove entries with model = "common-model-small"
+#     print(df['metric'].unique())
 #     print(df['provider'].unique())
 #     print(df['model'].unique())
 #     print(df['max_output'].unique())
 #     print(f"combined #{i}: {df.shape}")
 
-# for i, df in enumerate(dfs_all):
+# display_names = {
+#     'common-model-small':        'Meta LLama 3.1 8B',
+#     'common-model':  'Meta LLama 3.3 70B',
+#     'deepseek-r1':       'Deepseek R1 671B'
+# }
+
+# for i, df in enumerate(dfs_all_together):
+#     print(df.head(1))
+#     plt.figure(figsize=(6, 3.5))
+#     plt.rcParams.update({
+#         'axes.labelsize': 18,
+#         'xtick.labelsize': 18,
+#         'ytick.labelsize': 18
+#     })
+
+#     # Loop over each model (not provider) and use default colors
+#     for model in df['model'].unique():
+#         subset = df[df['model'] == model]
+#         if subset.empty:
+#             continue
+
+#         # choose values (convert to ms if needed)
+#         vals = subset['value'].values
+#         if df['metric'].iloc[0] != "totaltokens":
+#             vals = vals * 1000
+
+#         sorted_vals = np.sort(vals)
+#         cdf = np.arange(1, len(sorted_vals) + 1) / len(sorted_vals)
+
+#         # thicker line for vLLM if you want, otherwise default line width
+#         lw = 2.2 if model == 'vLLM' else 1.5
+
+#         # **no color=…** so default cycle is used
+#         pretty = display_names.get(model, model)
+#         plt.plot(sorted_vals, cdf,
+#                  linewidth=lw,
+#                  label=pretty)
+
+#     # simple legend inside plot
+#     if df['metric'].iloc[0] == "timetofirsttoken":
+#         plt.legend(
+#             title="Model",
+#             loc="best",
+#             fontsize=14,
+#             title_fontsize=14,
+#             frameon=True,
+#             borderpad=0.5
+#         )
+
+#     # axes, grid, save...
+#     xlabel = "Latency (ms)" if df['metric'].iloc[0] != "totaltokens" else "Total Tokens"
+#     plt.xlabel(xlabel)
+#     plt.ylabel("CDF")
+#     if df['metric'].iloc[0] != "totaltokens":
+#         plt.xscale("log")
+#     plt.grid(True, alpha=0.3)
+#     plt.tight_layout()
+
+#     ts = datetime.now().strftime("%y%m%d_%H%M")
+#     fname = f"{df['metric'].unique()[0]}_{ts}.pdf"
+#     out = os.path.join(graph_dir, fname)
+#     plt.savefig(out)
+#     plt.show()
+#     plt.close()
+#     print("Saved graph:", out)
+
+# ---------
+# for i, df in enumerate(dfs_all_together):
 #     print(df.head(1))
 
 #     plt.figure(figsize=(7, 3.5))
@@ -158,10 +217,11 @@ print(f"Saved graph: {filepath}")
 #     'ytick.labelsize': 18   # Y‐tick label font size
 #     })
 
-#     for provider in df['provider'].unique():
+#     # for provider in df['provider'].unique():
+#     for model in df['model'].unique():
 #         # for max_output in sorted(df['max_output'].unique()):
 #         subset = df[
-#             (df['provider'] == provider) 
+#             (df['model'] == model) 
 #         ]
 #         if subset.empty:
 #             continue
@@ -242,9 +302,10 @@ print(f"Saved graph: {filepath}")
 #     #     plt.subplots_adjust(right=0.75)  # Make room for legends on the right
 #     plt.show()
 #     current_time = datetime.now().strftime("%y%m%d_%H%M")
-#     filename = f"{df['metric'].unique()[0]}_{current_time}.pdf"
+#     filename = f"{df['metric'].unique()[0]}_{current_time}.png"
 #     filepath = os.path.join(graph_dir, filename)
 #     plt.savefig(filepath)
 #     plt.close()
 
 #     print(f"Saved graph: {filepath}")
+

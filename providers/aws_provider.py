@@ -96,7 +96,7 @@ class AWSBedrock(ProviderInterface):
             return None, None
 
     def perform_inference_streaming(
-        self, model, prompt, max_output=100, verbosity=True, correct_answer=''
+        self, model, prompt, max_output=100, verbosity=True, correct_answer=None
     ):
         """
         Performs a streaming inference using AWS Bedrock.
@@ -290,32 +290,40 @@ class AWSBedrock(ProviderInterface):
                 avg_tbt = sum(inter_token_latencies) / len(inter_token_latencies)
                 median = np.percentile(inter_token_latencies, 50)
                 p95 = np.percentile(inter_token_latencies, 95)
+                p99 = np.percentile(inter_token_latencies, 99)
                 # print("[INFO] avg_tbt - ", avg_tbt, median, p95, len(inter_token_latencies))
             # print(prompt, 10 ** math.ceil(math.log10(10 ** math.ceil(math.log10(len(prompt.split(" ")))))))
             self.log_metrics(model_name=model, input_size=10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output=max_output, metric="timetofirsttoken", value=ttft)
             self.log_metrics(model, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "response_times", total_time)
-            self.log_metrics(model, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "timebetweentokens", avg_tbt)
+            self.log_metrics(model, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "timebetweentokens", inter_token_latencies)
+            self.log_metrics(model, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "timebetweentokens_avg", avg_tbt)
+
             # print(median, p95)
             self.log_metrics(model, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "timebetweentokens_median", median)
             self.log_metrics(model, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "timebetweentokens_p95", p95)
+            self.log_metrics(model, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "timebetweentokens_p99", p99)
             self.log_metrics(model, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "totaltokens", total_tokens)
             self.log_metrics(
                 model, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "tps", (len(inter_token_latencies) + 1) / total_time
             )
+            self.log_metrics(
+                model, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "dpsk_output", generated_text
+            )
 
-            print(generated_text, type(generated_text))
-            print("-----------------")
-            extracted_answer = self.extract_answer_aime(generated_text)
+            if correct_answer:
+                print(generated_text, type(generated_text))
+                print("-----------------")
+                extracted_answer = self.extract_answer_aime(generated_text)
 
-            print(extracted_answer)
-            print("-----------------")
-            print(correct_answer)
-            print("-----------------")
-            score = self.calculate_score_aime(extracted_answer, correct_answer)
-            print(score)
-            print("-----------------")
-            if score > -1:
-                self.log_metrics(model, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "accuracy", score)
+                print(extracted_answer)
+                print("-----------------")
+                print(correct_answer)
+                print("-----------------")
+                score = self.calculate_score_aime(extracted_answer, correct_answer)
+                print(score)
+                print("-----------------")
+                if score > -1:
+                    self.log_metrics(model, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "accuracy", score)
 
             return total_time, inter_token_latencies
 

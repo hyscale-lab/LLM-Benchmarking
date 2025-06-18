@@ -21,7 +21,8 @@ class vLLM(ProviderInterface):
 
         # Define available models
         self.model_map = {
-            "common-model": "./../scratch/models--meta-llama--Llama-3.3-70B-Instruct/snapshots/6f6073b423013f6a7d4d9f39144961bfbfbc386b",
+            # "common-model": "./../scratch/models--meta-llama--Llama-3.3-70B-Instruct/snapshots/6f6073b423013f6a7d4d9f39144961bfbfbc386b",
+            "common-model": "meta-llama/Llama-3.3-70B-Instruct",
             "common-model-small": "meta-llama/Llama-3.1-8B-Instruct"
         }
 
@@ -66,7 +67,7 @@ class vLLM(ProviderInterface):
             return None
 
     def perform_inference_streaming(
-        self, model, prompt, vllm_ip, max_output=100, verbosity=True, correct_answer=""
+        self, model, prompt, vllm_ip, max_output=100, verbosity=True, correct_answer=None
     ):
         """
         Sends a streaming inference request to the vLLM API server and parses token streams.
@@ -143,27 +144,33 @@ class vLLM(ProviderInterface):
             
             self.log_metrics(model_id, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "timetofirsttoken", ttft)
             self.log_metrics(model_id, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "response_times", total_time)
-            self.log_metrics(model_id, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "timebetweentokens", avg_tbt)
+            self.log_metrics(model, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "timebetweentokens", inter_token_latencies)
+            self.log_metrics(model, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "timebetweentokens_avg", avg_tbt)                    
             median = np.percentile(inter_token_latencies, 50)
             p95 = np.percentile(inter_token_latencies, 95)
+            p99 = np.percentile(inter_token_latencies, 99)
             self.log_metrics(model_id, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "timebetweentokens_median", median)
             self.log_metrics(model_id, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "timebetweentokens_p95", p95)
+            self.log_metrics(model_id, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "timebetweentokens_p99", p99)
             self.log_metrics(model_id, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "totaltokens", len(inter_token_latencies) + 1)
             self.log_metrics(model_id, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "tps", (len(inter_token_latencies) + 1) / total_time)
+            self.log_metrics(
+                model, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "dpsk_output", generated_text
+            )
+            if correct_answer:
+                print(generated_text, type(generated_text))
+                print("-----------------")
+                extracted_answer = self.extract_answer_aime(generated_text)
 
-            print(generated_text, type(generated_text))
-            print("-----------------")
-            extracted_answer = self.extract_answer_aime(generated_text)
-
-            print(extracted_answer)
-            print("-----------------")
-            print(correct_answer)
-            print("-----------------")
-            score = self.calculate_score_aime(extracted_answer, correct_answer)
-            print(score)
-            print("-----------------")
-            if score > -1:
-                self.log_metrics(model, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "accuracy", score)
+                print(extracted_answer)
+                print("-----------------")
+                print(correct_answer)
+                print("-----------------")
+                score = self.calculate_score_aime(extracted_answer, correct_answer)
+                print(score)
+                print("-----------------")
+                if score > -1:
+                    self.log_metrics(model, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "accuracy", score)
 
             return generated_text, total_time
 

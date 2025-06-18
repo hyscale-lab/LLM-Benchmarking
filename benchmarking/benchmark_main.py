@@ -74,6 +74,7 @@ class Benchmark:
             for n in range(self.num_requests):
                 # print(n, input_size)
                 if dataset == "aime":
+                    print(n)
                     prompt, correct_answer = generate_prompt(dataset, n, input_size)
                 else:
                     prompt = generate_prompt(dataset, n, input_size)
@@ -111,7 +112,10 @@ class Benchmark:
 
         for provider in self.providers:
             provider_name = provider.__class__.__name__
+            print(metric)
             save_flattened_metrics_to_csv(provider, metric, f"{self.exp_dir}/{metric}_logs.csv")
+            if metric == "dpsk_output":
+                continue
             print(provider.metrics[metric].items())
             all_lats = []
             for model, input_dict in provider.metrics[metric].items():
@@ -119,7 +123,12 @@ class Benchmark:
                     for max_output, latencies in output_dict.items():
                         # Convert to milliseconds and sort for CDF
                         print(model, input_size, len(latencies))
-                        all_lats.extend(latencies)
+                        if metric == "timebetweentokens":
+                            for sub in latencies:
+                                print(sub)
+                                all_lats.extend(sub)
+                        else:
+                            all_lats.extend(latencies)
                         
             latencies_sorted = np.sort(np.array(all_lats)) * 1000
             cdf = np.arange(1, len(latencies_sorted) + 1) / len(latencies_sorted)
@@ -207,7 +216,7 @@ class Benchmark:
                                 print(f"Request {i + 1}/{self.num_requests}")
                                 print(f"{provider_name}" + f" Model: {model_name}")
 
-                            if provider_name == "AWSBedrock" and (i % 10) == 0:
+                            if provider_name == "AWSBedrock" and ((i+1) % 10) == 0:
                                 print("[DEBUG] Sleeping for 10s to bypass rate limit...")
                                 time.sleep(10)
                             #     print("[DEBUG] Finished.")
@@ -215,10 +224,11 @@ class Benchmark:
                             #     time.sleep(120)
                             # prompt = get_prompt(input_size)
                             # print(prompt)
-                            # if model == "deepseek-r1":
+
                             #     prompt = "Every morning Aya goes for a $9$-kilometer-long walk and stops at a coffee shop afterwards. When she walks at a constant speed of $s$ kilometers per hour, the walk takes her 4 hours, including $t$ minutes spent in the coffee shop. When she walks $s+2$ kilometers per hour, the walk takes her 2 hours and 24 minutes, including $t$ minutes spent in the coffee shop. Suppose Aya walks at $s+\frac{1}{2}$ kilometers per hour. Find the number of minutes the walk takes her, including the $t$ minutes spent in the coffee shop."
                             # else:
                             #     prompt = self.prompts[input_size][i]
+                            correct_answer = None
                             prompt = self.prompts[input_size][i]
                             if self.dataset == "aime":
                                 correct_answer = self.answers[input_size][i]
@@ -306,5 +316,8 @@ class Benchmark:
             self.plot_metrics("timebetweentokens", "timebetweentokens")
             self.plot_metrics("timebetweentokens_median", "timebetweentokens_median")
             self.plot_metrics("timebetweentokens_p95", "timebetweentokens_p95")
+            self.plot_metrics("timebetweentokens_p99", "timebetweentokens_p99")
+            self.plot_metrics("timebetweentokens_avg", "timebetweentokens_avg")
             self.plot_metrics("totaltokens", "totaltokens")
             self.plot_metrics("accuracy", "accuracy")
+            self.plot_metrics("dpsk_output", "dpsk_output")

@@ -1,13 +1,17 @@
 {
     "providers": [
-       "AWSBedrock"
+        "Azure"
     ],
     "models": [
-        "deepseek-r1"
+        "common-model-small"
     ],
-    "num_requests": 5,
+    "num_requests": 1,
+    "input_tokens": [
+        100
+    ],
     "streaming": true,
-    "max_output": [32000],
-    "verbose": true,
-    "dataset": "aime"
+    "max_output": [
+        100
+    ],
+    "verbose": true
 }

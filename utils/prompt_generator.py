@@ -48,7 +48,7 @@ def get_aime_prompt(df, index):
     correct_answer = df.iloc[row]['answer']
     return prompt, correct_answer
 
-print(generate_prompt("aime", 30))
+# print(generate_prompt("aime", 30))
 # 
 # Demonstrate the function for each size
 # for size in [10, 100, 1000, 10000, 100000]:
