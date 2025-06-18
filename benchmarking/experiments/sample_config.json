@@ -3,7 +3,7 @@
         "Azure"
     ],
     "models": [
-        "common-model-small"
+        "deepseek-r1"
     ],
     "num_requests": 1,
     "input_tokens": [
@@ -13,5 +13,6 @@
     "max_output": [
         100
     ],
-    "verbose": true
+    "verbose": true,
+    "dataset": "aime"
 }

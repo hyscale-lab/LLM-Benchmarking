@@ -114,7 +114,7 @@ class Benchmark:
             provider_name = provider.__class__.__name__
             print(metric)
             save_flattened_metrics_to_csv(provider, metric, f"{self.exp_dir}/{metric}_logs.csv")
-            if metric == "dpsk_output":
+            if metric == "dpsk_output" or metric == "extracted_answer" or metric == "correct_answer":
                 continue
             print(provider.metrics[metric].items())
             all_lats = []
@@ -321,3 +321,5 @@ class Benchmark:
             self.plot_metrics("totaltokens", "totaltokens")
             self.plot_metrics("accuracy", "accuracy")
             self.plot_metrics("dpsk_output", "dpsk_output")
+            self.plot_metrics("extracted_answer","extracted_answer")
+            self.plot_metrics("correct_answer", "correct_answer")

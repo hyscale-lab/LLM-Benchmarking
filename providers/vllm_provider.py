@@ -163,8 +163,14 @@ class vLLM(ProviderInterface):
                 extracted_answer = self.extract_answer_aime(generated_text)
 
                 print(extracted_answer)
+                self.log_metrics(
+                    model, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "extracted_answer", extracted_answer
+                )
                 print("-----------------")
                 print(correct_answer)
+                self.log_metrics(
+                    model, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "correct_answer", correct_answer
+                )
                 print("-----------------")
                 score = self.calculate_score_aime(extracted_answer, correct_answer)
                 print(score)

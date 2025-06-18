@@ -27,7 +27,9 @@ class ProviderInterface(ABC):
             "timebetweentokens_p99": {},
             "timebetweentokens_avg": {},
             "accuracy": {},
-            "dpsk_output": {}
+            "dpsk_output": {},
+            "extracted_answer": {},
+            "correct_answer": {}
         }
 
     # def log_metrics(self, model_name, input_size, metric, value):
