@@ -99,6 +99,10 @@ class BaseProvider(ProviderInterface):
                 inter_token_latencies.append(inter_token_latency)
                 token_text = chunk.choices[0].delta.content
                 generated_text += token_text
+                # print(token_text)
+                # print(token_text.split())
+                # print(inter_token_latency, len(token_text.split()))
+                # print("---------")
                 if verbosity:
                     # print(chunk.choices[0].delta.content or "", end="", flush=True)
                     if len(inter_token_latencies) < 20:

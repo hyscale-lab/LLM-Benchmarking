@@ -136,7 +136,7 @@ class AWSBedrock(ProviderInterface):
 
         native_request = {
             # "prompt": formatted_prompt,
-            # max_tokens_config: max_output,
+            # max_tokens_config: max_output
             "maxTokens": max_output,
         }
         print(max_output)
@@ -153,7 +153,7 @@ class AWSBedrock(ProviderInterface):
         start_time = time.perf_counter()
         try:
             # streaming_response = self.bedrock_client.invoke_model_with_response_stream(
-            #     modelId="us.deepseek.r1-v1:0", body=request_body
+            #     modelId=model_id, body=request_body
             # )
             
             streaming_response = self.bedrock_client.converse_stream(
@@ -165,7 +165,7 @@ class AWSBedrock(ProviderInterface):
 
             print(streaming_response)
             for event in streaming_response['stream']:
-                
+                # print(event)
                 # print(f"{event}")
                 if 'metadata' in event:
                     # print(event['metadata']['usage']['outputTokens'])
@@ -226,68 +226,21 @@ class AWSBedrock(ProviderInterface):
                         # inter_token_latency = time_to_next_token - prev_token_time
                         elapsed = time_to_next_token - prev_token_time
                         token_count = len(text.split())
+                        print(text.split())
+                        
                         c += token_count
                         avg_latency = elapsed / max(1, token_count)
                         # print(f"Len: {token_count}, {text}", end="~")
-
+                        # print("Time between prev chunk and this chunk:", elapsed, "Number of tokens in this chunk:", token_count, "time/#tokens:", avg_latency, "TBT list:", inter_token_latencies)
+                        # print("----------")
                         # record one latency entry *per* token
                         inter_token_latencies.extend([avg_latency] * token_count)
                         prev_token_time = time_to_next_token
                         # inter_token_latencies.append(inter_token_latency)
 
-                            
-            # Process the streaming response
-            # for event in streaming_response["body"]:
-            #     if event:
-            #         # print(event)
-            #         try:
-            #             # print(f"[DEBUG] {event}")
-            #             chunk = json.loads(event["chunk"]["bytes"].decode("utf-8"))
-            #             # print(chunk)
-            #         except Exception:
-            #             # print(f"[DEBUG] Failed to decode chunk: {e}")
-            #             continue
-                    
-            #         if chunk.get("stop_reason") == "length" or chunk.get("outputs", [{}])[0].get("stop_reason") == "length":
-            #             total_time = time.perf_counter() - start_time
-            #             # print(chunk)
-            #             total_tokens = chunk['generation_token_count']
-            #             print(f"Total tokens (real): {chunk['generation_token_count']}")
-            #             break
-                    
-            #         if "outputs" in chunk or 'generation' in chunk:
-            #             if "outputs" in chunk :
-            #                 current_token = chunk["outputs"][0]['text']
-            #             if 'generation' in chunk:
-            #                 current_token = chunk["generation"]
-            #             # print(current_token)
-            #             # Calculate timing
-            #             current_time = time.perf_counter()
-            #             if first_token_time is None:
-            #                 first_token_time = current_time
-            #                 ttft = first_token_time - start_time
-            #                 prev_token_time = first_token_time
-            #                 print(
-            #                     f"\n##### Time to First Token (TTFT): {ttft:.4f} seconds"
-            #                 )
-            #                 continue
-
-            #             # Capture token timing
-            #             time_to_next_token = time.perf_counter()
-            #             inter_token_latency = time_to_next_token - prev_token_time
-            #             prev_token_time = time_to_next_token
-            #             inter_token_latencies.append(inter_token_latency)
-            #             print(current_token, end=" | ")
-
-                        # if verbosity:
-                        #     if len(inter_token_latencies) < 20:
-                        #         print(current_token, end="")
-                        #     elif len(inter_token_latencies) == 21:
-                        #         print("...")
-    
-
             # Measure total response time
-            # total_time = time.perf_counter() - start_time
+            total_time = time.perf_counter() - start_time
+            print(f"Total time: {total_time}s. Total tokens: {total_tokens}, {c}, {len(inter_token_latencies)}.")
             if verbosity:
                 print(f"\n##### Total Response Time: {total_time:.4f} seconds")
                 print(f"Total tokens: {total_tokens}, {c}, {len(inter_token_latencies)}.")
@@ -295,7 +248,7 @@ class AWSBedrock(ProviderInterface):
                 median = np.percentile(inter_token_latencies, 50)
                 p95 = np.percentile(inter_token_latencies, 95)
                 p99 = np.percentile(inter_token_latencies, 99)
-                # print("[INFO] avg_tbt - ", avg_tbt, median, p95, len(inter_token_latencies))
+                print("[INFO] avg_tbt - ", avg_tbt, median, p95, len(inter_token_latencies))
             # print(prompt, 10 ** math.ceil(math.log10(10 ** math.ceil(math.log10(len(prompt.split(" ")))))))
             self.log_metrics(model_name=model, input_size=10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output=max_output, metric="timetofirsttoken", value=ttft)
             self.log_metrics(model, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "response_times", total_time)

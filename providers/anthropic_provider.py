@@ -99,7 +99,6 @@ class Anthropic(ProviderInterface):
             c = 0
             generated_text = ""
             start = timer()
-            print("ENTERING")
             with self.client.messages.stream(
                 model=model_id,
                 max_tokens=max_output,
@@ -139,14 +138,15 @@ class Anthropic(ProviderInterface):
                     # record one latency entry *per* token
                     inter_token_latencies.extend([avg_latency] * token_count)
                     prev_token_time = time_to_next_token
-                    print(chunk, end="", flush=True)
+                    # print(chunk)
+                    # print(elapsed, c, token_count,inter_token_latencies)
+                    # print("-----------")
                     generated_text += chunk
-                    # inter_token_latencies.append(inter_token_latency)
-                    # if verbosity:
-                    #     if len(inter_token_latencies) < 20:
-                    #         print(chunk, end="", flush=True)
-                    #     elif len(inter_token_latencies) == 20:
-                    #         print("...")
+                    if verbosity:
+                        if len(inter_token_latencies) < 20:
+                            print(chunk, end="", flush=True)
+                        elif len(inter_token_latencies) == 20:
+                            print("...")
 
                 elapsed = timer() - start
                 if verbosity:
@@ -156,23 +156,7 @@ class Anthropic(ProviderInterface):
                     #     f"\nNumber of output tokens/chunks: {len(inter_token_latencies) + 1}, Avg TBT: {avg_tbt:.4f}, Time to First Token (TTFT): {ttft:.4f} seconds, Total Response Time: {elapsed:.4f} seconds"
                     # )
 
-            # Log remaining metrics
-            # avg_tbt = sum(inter_token_latencies) / len(inter_token_latencies)
-            # avg_tbt = sum(inter_token_latencies) / max_output
-
-            # self.log_metrics(model, "response_times", elapsed)
-            # self.log_metrics(model, "timebetweentokens", avg_tbt)
-            # self.log_metrics(model, "totaltokens", len(inter_token_latencies) + 1)
-            # self.log_metrics(model, "tps", (len(inter_token_latencies) + 1) / elapsed)
-            # self.log_metrics(
-            #     model, "timebetweentokens_median", np.percentile(inter_token_latencies, 50)
-            # )
-            # self.log_metrics(
-            #     model, "timebetweentokens_p95", np.percentile(inter_token_latencies, 95)
-            # )
-
             avg_tbt = sum(inter_token_latencies) / len(inter_token_latencies)
-            print("HI!!!!")
             if verbosity:
 
                 print(

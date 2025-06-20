@@ -116,7 +116,7 @@ class Benchmark:
             save_flattened_metrics_to_csv(provider, metric, f"{self.exp_dir}/{metric}_logs.csv")
             if metric == "dpsk_output" or metric == "extracted_answer" or metric == "correct_answer":
                 continue
-            print(provider.metrics[metric].items())
+            # print(provider.metrics[metric].items())
             all_lats = []
             for model, input_dict in provider.metrics[metric].items():
                 for input_size, output_dict in input_dict.items():
@@ -125,7 +125,6 @@ class Benchmark:
                         print(model, input_size, len(latencies))
                         if metric == "timebetweentokens":
                             for sub in latencies:
-                                print(sub)
                                 all_lats.extend(sub)
                         else:
                             all_lats.extend(latencies)
@@ -222,6 +221,7 @@ class Benchmark:
                             
                             if provider_name == "TogetherAI" and self.dataset == 'aime':
                                 time.sleep(60)
+
                             #     print("[DEBUG] Finished.")
                             # if ((i+1) % 58) == 0:
                             #     time.sleep(120)

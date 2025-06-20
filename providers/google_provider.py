@@ -120,6 +120,7 @@ class GoogleGemini(ProviderInterface):
                     inter_token_latencies.append(inter_token_latency)
 
             prev_token_time = current_time
+            # print(chunk.text)
             if verbosity and chunk.text:
                 print(chunk.text, end="", flush=True)
             streamed_output.append(chunk.text)
