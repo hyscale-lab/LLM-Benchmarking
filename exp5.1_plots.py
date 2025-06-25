@@ -7,53 +7,131 @@ from matplotlib.ticker import ScalarFormatter, LogLocator
 from matplotlib.lines import Line2D
 from datetime import datetime
 import re
+import ast
 
-# Your existing data loading code...
-google_dir = "experiments/exp_20250617_165546_65f9e12f"
-csv_google = glob.glob(f"{google_dir}/*.csv")
-dfs_google = [pd.read_csv(f) for f in csv_google]
+graph_dir = "experiments/zexp_5.1_plots/results"
 
-openai_dir = "experiments/exp_20250617_170202_639f18be"
-csv_openai = glob.glob(f"{openai_dir}/*.csv")
-dfs_openai = [pd.read_csv(f) for f in csv_openai]
+# 1) Map each “provider” key to its experiment folder
+exp_dirs = {
+    "google":      "experiments/exp_20250618_164751_262ed75f",
+    "openai":      "experiments/exp_20250618_164830_e51d23bd",
+    "anthropic":   "experiments/exp_20250619_192224_1a594ae5",
+    "azure":       "experiments/exp_20250618_164345_f0bbdb78",
+    # "azure":       "experiments/exp_20250623_172221_2ec88f3f",
+    "aws":         "experiments/exp_20250618_164129_04a19ed7",
+    # "aws":         "experiments/exp_20250623_172333_96426214",
+    # "aws_2":         "experiments/exp_20250620_014003_b1b5a923"
+    "togetherai":  "experiments/exp_20250618_184735_750e2005",
+    # "togetherai":  "experiments/exp_20250623_172417_3fece75c"
+    "cloudflare":  "experiments/exp_20250618_165521_fcdfe7ed",
+    "vllm":        "experiments/exp_20250618_165035_d0f540aa",
+}
 
-anthropic_dir = "experiments/exp_20250617_170037_99af90fe"
-csv_anthropic = glob.glob(f"{anthropic_dir}/*.csv")
-dfs_anthropic = [pd.read_csv(f) for f in csv_anthropic]
+# 2) Read each folder’s CSVs into a dict of lists-of-DataFrames
+dfs = {}
+all_dfs = {}
+skip_idxs = {0, 3, 7}
+for name, folder in exp_dirs.items():
+    pattern = os.path.join(folder, "*.csv")
+    paths   = glob.glob(pattern)
+    all_dfs[name] = [pd.read_csv(p) for p in paths]
+    dfs[name] = [
+        df
+        for idx, df in enumerate(all_dfs[name])
+        if idx not in skip_idxs
+    ]
+    for i, df in enumerate(dfs[name]):
+        print(i, df['metric'].unique(), df.shape)
+    print(f"{name}: loaded {len(dfs[name])} CSV(s) from {folder}")
 
-azure_dir = "experiments/exp_20250617_170301_df6d1feb"
-csv_azure = glob.glob(f"{azure_dir}/*.csv")
-dfs_azure = [pd.read_csv(f) for f in csv_azure]
+# 3) Build dfs_all by zipping in the same provider-order
+provider_order = list(exp_dirs.keys())  # e.g. ["google", "openai", …, "vllm"]
+# get list-of-lists in order:
+list_of_df_lists = [dfs[p] for p in provider_order]
 
-aws_dir = "experiments/exp_20250617_170324_4cdde8b5"
-csv_aws = glob.glob(f"{aws_dir}/*.csv")
-dfs_aws = [pd.read_csv(f) for f in csv_aws]
-
-togetherai_dir = "experiments/exp_20250617_171300_794a57cb"
-csv_togetherai = glob.glob(f"{togetherai_dir}/*.csv")
-dfs_togetherai = [pd.read_csv(f) for f in csv_togetherai]
-
-cloudflare_dir = "experiments/exp_20250617_165722_5794c09e"
-csv_cloudflare = glob.glob(f"{cloudflare_dir}/*.csv")
-dfs_cloudlare = [pd.read_csv(f) for f in csv_cloudflare]
-
-vllm_dir = "experiments/exp_20250617_170227_15dc44bd"
-csv_vllm = glob.glob(f"{vllm_dir}/*.csv")
-dfs_vllm = [pd.read_csv(f) for f in csv_vllm]
-
-graph_dir = "experiments/zexp_5.1_plots"
-
+# 4) Concatenate the i-th file of each provider across all providers
 dfs_all = [
-    pd.concat([df1, df2, df3, df4, df5, df6, df7, df8], ignore_index=True)
-    for df1, df2, df3, df4, df5, df6, df7, df8 in zip(dfs_google, dfs_openai, dfs_anthropic, dfs_azure, dfs_aws, dfs_togetherai, dfs_cloudlare, dfs_vllm)
+    pd.concat(dfs_tuple, ignore_index=True)
+    for dfs_tuple in zip(*list_of_df_lists)
 ]
 
+print(f"Built {len(dfs_all)} combined DataFrames in dfs_all")
+
 # Remove total_tokens and accuracy as before
-total_tokens = dfs_all.pop(3)
-accuracy = dfs_all.pop(3)
+total_tokens = dfs_all.pop(4)
+dpsk_output = dfs_all.pop(6)
+for i, df in enumerate(dfs_all):
+    print(df.head(1))
+# want to remove entries with model = "common-model-small"
+    print(df['metric'].unique())
+    print(df['provider'].unique())
+    print(df['model'].unique())
+    print(df['max_output'].unique())
+    print(f"combined #{i}: {df.shape}")
+    print("-----------------")
+
+# 1) Build a dict of your metric‐DataFrames by name
+metric_dfs = { df['metric'].iloc[0] : df for df in dfs_all }
+
+# 2) Pull out the median & p99 frames
+df_med  = metric_dfs['timebetweentokens_median'].reset_index(drop=True)
+df_p99  = metric_dfs['timebetweentokens_p99'].reset_index(drop=True)
+
+# 3) Make sure they align on the same “keys”:
+#    if each row is a distinct request you can join on index…
+ratio_df = pd.DataFrame({
+    'provider': df_med['provider'],
+    'model':    df_med['model'],
+    'input_size': df_med['input_size'],
+    'median':   df_med['value'],
+    'p99':      df_p99['value']
+})
+
+# 4) Compute the ratio (p99 over median)
+ratio_df['p99_to_median'] = ratio_df['p99'] / ratio_df['median']
+
+# 5) (Optional) Inspect it
+print(ratio_df.head())
+print(ratio_df.groupby('provider')['p99'].describe()['mean'])
+print(ratio_df.groupby('provider')['median'].describe()['mean'])
+print(ratio_df.groupby('provider')['p99_to_median'].describe()['mean'])
+
+ratio_summary = (
+    ratio_df
+    .groupby('provider', as_index=False)['p99_to_median']
+    .mean()
+    .rename(columns={'p99_to_median':'mean_p99_to_median'})
+)
+print(ratio_summary)
+
+# out_path = os.path.join(graph_dir, "tmr_df.csv")
+# ratio_df.groupby('provider')['p99_to_median'].describe().to_csv(out_path, index=False)
+# print(f"Saved full ratio table to {out_path}")
+# i want to for each request a ratio between maybe as another df - df['timebetweentokens_median'] and df['timebetweentokens_p99'] 
+
+# accuracy = dfs_all.pop(3)
+# 1) Group by provider and compute the two means
+summary = (
+    ratio_df
+    .groupby('provider', as_index=False)
+    .agg(
+        p99_mean_tbt    = ('p99',    'mean'),
+        median_mean_tbt = ('median', 'mean')
+    )
+)
+
+# 2) Compute the “p99:median ratio” of those means
+summary['tmr'] = summary['p99_mean_tbt'] / summary['median_mean_tbt']
+
+# 3) (Optional) Pretty–print as Markdown
+print(summary.to_markdown(index=False))
+# out_path = os.path.join(graph_dir, "tmr_df.csv")
+# summary.to_csv(out_path, index=False)
+# print(f"Saved full ratio table to {out_path}")
 
 # Filter to only include the desired metrics
-desired_metrics = ['timetofirsttoken', 'timebetweentokens_p95', 'response_times']
+desired_metrics = ["timetofirsttoken","timebetweentokens", "response_times"]
+# desired_metrics = ["timebetweentokens"]
 dfs_filtered = []
 
 for df in dfs_all:
@@ -63,7 +141,6 @@ for df in dfs_all:
 
 # Use filtered dataframes
 dfs_all = dfs_filtered
-
 colors = {
     'vLLM': 'black',
     'AWSBedrock': 'teal',
@@ -76,7 +153,7 @@ colors = {
 }
 
 # Create figure with horizontal subplots (now only 3 subplots)
-fig, axes = plt.subplots(1, len(dfs_all), figsize=(13, 5), sharey=True)
+fig, axes = plt.subplots(1, len(dfs_all), figsize=(13, 3.5), sharey=True)
 
 # Set global font sizes
 plt.rcParams.update({
@@ -85,33 +162,83 @@ plt.rcParams.update({
     'ytick.labelsize': 18
 })
 
+display_titles = {
+    'timebetweentokens': 'TBT',
+    'timetofirsttoken': 'TTFT',
+    'response_times': 'TRT'
+}
+
 # Plot each metric in its own subplot
 for i, (ax, df) in enumerate(zip(axes, dfs_all)):
     print(f"Processing subplot {i}: {df['metric'].iloc[0]}")
     
     for provider in df['provider'].unique():
+    # for model in df['model'].unique():
         subset = df[df['provider'] == provider]
+        # subset = df[df['model'] == model]
         if subset.empty:
             continue
+
+        values = subset['value'].values
+
+        if df['metric'].iloc[0] == "timebetweentokens":
+            flattened_values = []
+            print(len(values[0]))
+            for sublist in values:
+                if isinstance(sublist, str):
+                    try:
+                        # Safely evaluate string as Python literal
+                        parsed_list = ast.literal_eval(sublist)
+                        flattened_values.extend([float(x) for x in parsed_list])
+                    except (ValueError, SyntaxError) as e:
+                        print(f"Error parsing: {sublist[:50]}... Error: {e}")
+                        continue
+                else:
+                    flattened_values.extend([float(x) for x in sublist])
             
-        values = subset['value'].values * 1000  # convert to ms
+            values = np.array(flattened_values) * 1000
+        else:
+            values = subset['value'].values * 1000 
+
+        if df['metric'].iloc[0] == "timetofirsttoken" or df['metric'].iloc[0] == "response_times":
+            # print("STATS: ")
+            # print(df['metric'].iloc[0])
+            # print(provider)
+            # vals_ = subset['value'].values
+            # # print(vals_[0])
+            # vals = np.sort(vals_)
+            # # print(vals[-1])
+            # median = np.percentile(vals, 50)
+            # p95 = np.percentile(vals, 95)
+            # p99 = np.percentile(vals, 99)
+            # print("Median: ", median, "p95: ", p95, "p99: ", p99)
+            # print("---------------")
+             
+            stats = (
+                df[df['metric'].isin(["timetofirsttoken","response_times"])]
+                .groupby(['provider','input_size'])['value']
+                .quantile([0.5, 0.95, 0.99])
+                .unstack(level=-1)
+                .rename(columns={0.5:'median',0.95:'p95',0.99:'p99'})
+            )
+            print(stats)
+              
         sorted_vals = np.sort(values)
         cdf = np.arange(1, len(sorted_vals) + 1) / len(sorted_vals)
-        
+
         # Plot with different line widths for vLLM
         if provider == 'vLLM':
             ax.plot(sorted_vals, cdf, color=colors[provider], linewidth=2.4, label=provider)
         else:
             ax.plot(sorted_vals, cdf, color=colors[provider], linewidth=1.8, label=provider)
     
-    # Set x-axis to log scale if not timebetweentokens
-    if df['metric'].iloc[0] != "timebetweentokens":
-        ax.set_xscale("log")
+    # Set x-axis to log scale
+    ax.set_xscale("log")
     
     # Generate clean title
     metric_raw = df['metric'].iloc[0]
     metric = re.sub(r'([a-z])([A-Z])', r'\1 \2', metric_raw.replace('_', ' ')).title()
-    ax.set_title(metric, fontsize=16, pad=20)
+    ax.set_title(display_titles.get(metric_raw, metric_raw), fontsize=16, pad=20)
     
     # Set x-label
     ax.set_xlabel("Latency (ms)", fontsize=16)
@@ -126,31 +253,21 @@ for i, (ax, df) in enumerate(zip(axes, dfs_all)):
         ax.set_ylabel("CDF", fontsize=18)
 
 # Set y-axis limits for all subplots
-axes[0].set_ylim(0, 1.02)
+axes[0].set_ylim(0, 1.01)
 
 # Create legend outside the plot area
 # Get handles and labels from the first subplot (they should be the same for all)
 handles, labels = axes[0].get_legend_handles_labels()
 
-# Create legend below the subplots
-# fig.legend(handles, labels, 
-#           loc='best', 
-#           bbox_to_anchor=(0.5, 0.95),
-#           ncol=len(colors), 
-#           fontsize=14,
-#           frameon=True,
-#           borderpad=0.5,
-#           columnspacing=1.0,
-#           handlelength=2.0,
-#           handletextpad=0.5)
 color_legend_elements = [Line2D([0], [0], color=color, lw=2, label=provider) 
                                for provider, color in colors.items()]
         
-legend1 = plt.legend(
+legend1 = fig.legend(
     handles=color_legend_elements,
     title='Provider',
-    # loc='upper left',
-    loc="best",
+    loc='center left',
+    bbox_to_anchor=(0.86, 0.5),
+    # loc="best",
     # x0, y0, width, height  (in axes‐fraction coords)
     # bbox_to_anchor=(1.0, 0.7, 0.5, 0.3),
     # bbox_to_ancho / .r=(0.1, 0.5),
@@ -169,236 +286,16 @@ legend1 = plt.legend(
 )
 
 # Adjust layout to prevent overlap
+
 plt.tight_layout()
-# plt.subplots_adjust(top=0.85)  # Make room for legend at top
+plt.subplots_adjust(right=0.85)
 
 # Save the combined plot
 current_time = datetime.now().strftime("%y%m%d_%H%M")
-filename = f"selected_metrics_{current_time}.png"
+filename = f"selected_metrics_{current_time}.pdf"
 filepath = os.path.join(graph_dir, filename)
 plt.savefig(filepath, dpi=300, bbox_inches='tight')
 plt.show()
 
 print(f"Saved selected metrics graph: {filepath}")
 print(f"Included metrics: {[df['metric'].iloc[0] for df in dfs_all]}")
-
-# ---------
-
-# import pandas as pd
-# import glob
-# import os
-# import matplotlib.pyplot as plt
-# import numpy as np
-# from matplotlib.ticker import ScalarFormatter, LogLocator
-# from matplotlib.lines import Line2D
-# from datetime import datetime
-# import re
-
-# # df1_dir = "experiments/exp_20250611_175022"
-# # csv_df1 = glob.glob(f"{df1_dir}/*.csv")
-# # dfs_df1 = [pd.read_csv(f) for f in csv_df1]
-
-# # anthropic_dir = "experiments/exp_20250611_215533"
-# # csv_anthropic = glob.glob(f"{anthropic_dir}/*.csv")
-# # dfs_anthropic = [pd.read_csv(f) for f in csv_anthropic]
-
-# # vllm_dir = "experiments/exp_20250612_234701"
-# # csv_vllm = glob.glob(f"{vllm_dir}/*.csv")
-# # dfs_vllm = [pd.read_csv(f) for f in csv_vllm]
-
-# google_dir = "experiments/exp_20250617_165546_65f9e12f"
-# csv_google = glob.glob(f"{google_dir}/*.csv")
-# dfs_google = [pd.read_csv(f) for f in csv_google]
-
-# openai_dir = "experiments/exp_20250617_170202_639f18be"
-# csv_openai = glob.glob(f"{openai_dir}/*.csv")
-# dfs_openai = [pd.read_csv(f) for f in csv_openai]
-
-# anthropic_dir = "experiments/exp_20250617_170037_99af90fe"
-# csv_anthropic = glob.glob(f"{anthropic_dir}/*.csv")
-# dfs_anthropic = [pd.read_csv(f) for f in csv_anthropic]
-
-# azure_dir = "experiments/exp_20250617_170301_df6d1feb"
-# csv_azure = glob.glob(f"{azure_dir}/*.csv")
-# dfs_azure = [pd.read_csv(f) for f in csv_azure]
-
-# aws_dir = "experiments/exp_20250617_170324_4cdde8b5"
-# csv_aws = glob.glob(f"{aws_dir}/*.csv")
-# dfs_aws = [pd.read_csv(f) for f in csv_aws]
-
-# togetherai_dir = "experiments/exp_20250617_171300_794a57cb"
-# csv_togetherai = glob.glob(f"{togetherai_dir}/*.csv")
-# dfs_togetherai = [pd.read_csv(f) for f in csv_togetherai]
-
-# cloudflare_dir = "experiments/exp_20250617_165722_5794c09e"
-# csv_cloudflare = glob.glob(f"{cloudflare_dir}/*.csv")
-# dfs_cloudlare = [pd.read_csv(f) for f in csv_cloudflare]
-
-# vllm_dir = "experiments/exp_20250617_170227_15dc44bd"
-# csv_vllm = glob.glob(f"{vllm_dir}/*.csv")
-# dfs_vllm = [pd.read_csv(f) for f in csv_vllm]
-
-# graph_dir = "experiments/zexp_5.1_plots"
-
-# # for dfs in [dfs_google, dfs_openai, dfs_anthropic, dfs_azure, dfs_aws, dfs_togetherai, dfs_cloudlare, dfs_vllm]:
-# #     for i, df in enumerate(dfs):
-# #         print(df.head(1))
-
-# dfs_all = [
-#     pd.concat([df1, df2, df3, df4, df5, df6, df7, df8], ignore_index=True)
-#     for df1, df2, df3, df4, df5, df6, df7, df8 in zip(dfs_google, dfs_openai, dfs_anthropic, dfs_azure, dfs_aws, dfs_togetherai, dfs_cloudlare, dfs_vllm)
-# ]
-
-# # print(dfs_all)
-
-# # for i, df in enumerate(dfs_all):
-# #     print(df.head(1))
-# #     print(df['provider'].unique())
-# #     print(df['max_output'].unique())
-# #     print(f"combined #{i}: {df.shape}")
-
-# total_tokens = dfs_all.pop(3)
-# accuracy = dfs_all.pop(3)
-
-# # for i, df in enumerate(dfs_all):
-# #     print(df.head(1)['metric'])
-# #     # print(df['provider'].unique())
-# #     # print(df['max_output'].unique())
-# #     # print(f"combined #{i}: {df.shape}")
-
-# # provider_colors = {
-# #     'vLLM':    'black',
-# #     'AWSBedrock':  'teal',
-# #     'Azure':     '#FF8000',
-# #     'Cloudflare': 'green',
-# #     'Open AI':  '#D22F2D',
-# #     'TogetherAI':  'purple',
-# #     'Anthropic': '#FF0095',
-# #     'Google': '#007FFF'
-# # }
-
-# for i, df in enumerate(dfs_all):
-#     print(i, df.head(1))
-
-#     plt.figure(figsize=(6.5, 4))
-
-#     # linestyles = {
-#     #     500: 'solid',
-#     #     1000: 'dashed',
-#     #     5000: 'dashdot',
-#     #     10000: ':'
-#     # }
-
-#     colors = {
-#     'vLLM':    'black',
-#     'AWSBedrock':  'teal',
-#     'Azure':     '#FF8000',
-#     'Cloudflare': 'green',
-#     'Open_AI':  '#D22F2D',
-#     'TogetherAI':  'purple',
-#     'Anthropic': '#e377c2',
-#     'GoogleGemini': '#007FFF'
-#     }
-
-# #     provider_colors = {
-# #     'vLLM':         '#1f77b4',  # blue
-# #     'AWSBedrock':   '#ff7f0e',  # orange
-# #     'Azure':        '#2ca02c',  # green
-# #     'Cloudflare':   '#d62728',  # red
-# #     'Open AI':      '#9467bd',  # purple
-# #     'TogetherAI':   '#8c564b',  # brown
-# #     'Anthropic':    '#e377c2',  # pink
-# #     'Google':       '#7f7f7f',  # gray
-# # }
-
-#     plt.rcParams.update({
-#     'axes.labelsize': 18,   # X/Y label font size
-#     'xtick.labelsize': 18,  # X‐tick label font size
-#     'ytick.labelsize': 18   # Y‐tick label font size
-#     })
-
-#     for provider in df['provider'].unique():
-#         # for max_output in sorted(df['max_output'].unique()):
-#             subset = df[
-#                 (df['provider'] == provider) 
-#                 # (df['max_output'] == max_output)
-#             ]
-#             if subset.empty:
-#                 continue
-#             values = subset['value'].values * 1000  # convert to ms
-#             sorted_vals = np.sort(values)
-#             cdf = np.arange(1, len(sorted_vals) + 1) / len(sorted_vals)
-            
-#             # Plot without label to avoid cluttered legend
-#             if provider == 'vLLM':
-#                 plt.plot(sorted_vals, cdf, color=colors[provider], linewidth=2.4)
-#             else:
-#                 plt.plot(sorted_vals, cdf, color=colors[provider], linewidth=1.8)
-
-#     # Create custom legends only for the first plot (for research paper)
-#     if df['metric'].unique()[0] == "timebetweentokens_p95":  # Only add legends to the first plot
-#         # Color legend (for providers)
-#         print("HELLOO")
-#         print("----------")
-#         color_legend_elements = [Line2D([0], [0], color=color, lw=2, label=provider) 
-#                                for provider, color in colors.items()]
-        
-#         # linestyle_legend_elements = [Line2D([0], [0], color='black', linestyle=style, lw=2, label=f'{size:,}') 
-#         #                            for size, style in linestyles.items()]
-        
-#         plt.ylim(0, 1)  
-#         legend1 = plt.legend(
-#             handles=color_legend_elements,
-#             title='Provider',
-#             # loc='upper left',
-#             loc="best",
-#             # x0, y0, width, height  (in axes‐fraction coords)
-#             # bbox_to_anchor=(1.0, 0.7, 0.5, 0.3),
-#             bbox_to_anchor=(0.4, 0.98),
-#             fontsize=13,
-#             title_fontsize=14,
-#             frameon=True,
-#             borderpad=0.5,     # space between text and frame
-#             labelspacing=0.4,  # vertical space between entries
-#             columnspacing=0.6, # horizontal space between columns
-#             handlelength=1.0,  # length of the little line in the legend
-#             handletextpad=0.5, # space between line and label text
-#             fancybox=False,
-#             shadow=False,
-#             framealpha=1.0
-#             # mode='expand'      # stretch entries to fill the width
-#         )
-        
-#         # legend2 = plt.legend(handles=linestyle_legend_elements, title='Output Length', 
-#         #                     loc='center left', bbox_to_anchor=(1.02, 0.3), 
-#         #                     fontsize=10, title_fontsize=11, frameon=True,
-#         #                     fancybox=False, shadow=False, framealpha=1.0)
-        
-#         # Add the first legend back (matplotlib removes it when adding the second)
-#         plt.gca().add_artist(legend1)
-
-#     plt.xlabel("Latency (ms)")
-#     plt.ylabel("CDF")
-    
-#     # Smart title generation for compound words and underscores
-#     metric_raw = df['metric'].iloc[0]
-#     # Split on underscores and add spaces before capital letters in compound words
-#     metric = re.sub(r'([a-z])([A-Z])', r'\1 \2', metric_raw.replace('_', ' ')).title()
-#     # plt.title(f"{metric} CDF by Provider and Output Length")
-#     if df['metric'].iloc[0] != "timebetweentokens":
-#         plt.xscale("log")
-#     plt.grid(True, alpha=0.3)
-    
-#     # Adjust layout to accommodate external legends only for first plot
-#     plt.tight_layout()
-#     # if df['metric'].unique()[0] == "timebetweentokens_p95":
-#     #     plt.subplots_adjust(right=0.68)  # Make room for legends on the right
-#     plt.show()
-#     current_time = datetime.now().strftime("%y%m%d_%H%M")
-#     filename = f"{df['metric'].unique()[0]}_{current_time}.png"
-#     filepath = os.path.join(graph_dir, filename)
-#     plt.savefig(filepath)
-#     plt.close()
-
-#     print(f"Saved graph: {filepath}")
-        

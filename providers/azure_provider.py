@@ -126,7 +126,7 @@ class Azure(ProviderInterface):
                 ],
                 max_tokens=max_output,
                 model=model_id,
-                temperature=0.7 # try 0.7 also
+                temperature=0.7
             )
             n = 0
             first_token_time = None
@@ -166,7 +166,7 @@ class Azure(ProviderInterface):
 
             # Log metrics
             avg_tbt = sum(inter_token_latencies) / len(inter_token_latencies)
-            print(f"{avg_tbt:.4f}, {n}")
+            print(f"{avg_tbt:.4f}, {n}, {len(inter_token_latencies)}s")
             self.log_metrics(model, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "timetofirsttoken", ttft)
             self.log_metrics(model, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "response_times", total_time)
             self.log_metrics(model, 10 ** math.ceil(math.log10(len(prompt.split(" ")))), max_output, "timebetweentokens", inter_token_latencies)

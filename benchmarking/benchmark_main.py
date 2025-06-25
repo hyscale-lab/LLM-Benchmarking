@@ -195,7 +195,7 @@ class Benchmark:
         This method sends a number of requests to each model for each provider, collects
         performance metrics, and generates plots based on those metrics.
         """
-        
+        print("running here!!!!")
         for provider in self.providers:
             provider_name = provider.__class__.__name__
             # logging.debug(f"{provider_name}")

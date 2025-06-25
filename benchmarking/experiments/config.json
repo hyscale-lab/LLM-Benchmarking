@@ -1,0 +1,17 @@
+{
+    "providers": [
+        "AWSBedrock"
+    ],
+    "models": [
+        "common-model-small"
+    ],
+    "num_requests": 100,
+    "input_tokens": [
+        100
+    ],
+    "streaming": true,
+    "max_output": [
+        500, 1000, 5000, 10000
+    ],
+    "verbose": true
+}

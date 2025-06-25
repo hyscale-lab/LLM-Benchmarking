@@ -1,6 +1,6 @@
 {
     "providers": [
-        "Cloudflare"
+        "TogetherAI"
     ],
     "models": [
         "common-model-small"
@@ -11,7 +11,7 @@
     ],
     "streaming": true,
     "max_output": [
-        100
+        100, 500, 1000, 5000
     ],
     "verbose": true
 }
