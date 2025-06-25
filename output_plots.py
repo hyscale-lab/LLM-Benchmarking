@@ -111,7 +111,7 @@ metric_dfs = { df['metric'].iloc[0] : df for df in dfs_all }
 
 # 2) Pull out the median & p99 frames
 df_med  = metric_dfs['timebetweentokens_median'].reset_index(drop=True)
-df_p99  = metric_dfs['timebetweentokens_p99'].reset_index(drop=True)
+df_p95  = metric_dfs['timebetweentokens_p95'].reset_index(drop=True)
 
 # 3) Make sure they align on the same “keys”:
 #    if each row is a distinct request you can join on index…
@@ -120,23 +120,23 @@ ratio_df = pd.DataFrame({
     'model':    df_med['model'],
     'max_output': df_med['max_output'],
     'median':   df_med['value'],
-    'p99':      df_p99['value']
+    'p95':      df_p95['value']
 })
 
 # 4) Compute the ratio (p99 over median)
-ratio_df['p99_to_median'] = ratio_df['p99'] / ratio_df['median']
+ratio_df['p95_to_median'] = ratio_df['p95'] / ratio_df['median']
 
 # 5) (Optional) Inspect it
 print(ratio_df.head())
-print(ratio_df.groupby(['provider','max_output'])['p99'].describe()['mean'])
+print(ratio_df.groupby(['provider','max_output'])['p95'].describe()['mean'])
 print(ratio_df.groupby(['provider','max_output'])['median'].describe()['mean'])
-print(ratio_df.groupby(['provider','max_output'])['p99_to_median'].describe()['mean'])
+print(ratio_df.groupby(['provider','max_output'])['p95_to_median'].describe()['mean'])
 
 ratio_summary = (
     ratio_df
-    .groupby('provider', as_index=False)['p99_to_median']
+    .groupby('provider', as_index=False)['p95_to_median']
     .mean()
-    .rename(columns={'p99_to_median':'mean_p99_to_median'})
+    .rename(columns={'p95_to_median':'mean_p95_to_median'})
 )
 print(ratio_summary)
 
@@ -151,13 +151,13 @@ summary = (
     ratio_df
     .groupby('provider', as_index=False)
     .agg(
-        p99_mean_tbt    = ('p99',    'mean'),
+        p95_mean_tbt    = ('p95',    'mean'),
         median_mean_tbt = ('median', 'mean')
     )
 )
 
 # 2) Compute the “p99:median ratio” of those means
-summary['tmr'] = summary['p99_mean_tbt'] / summary['median_mean_tbt']
+summary['tmr'] = summary['p95_mean_tbt'] / summary['median_mean_tbt']
 
 # 3) (Optional) Pretty–print as Markdown
 print(summary.to_markdown(index=False))
@@ -167,21 +167,21 @@ summary_by_output = (
     ratio_df
     .groupby(['provider','max_output'], as_index=False)
     .agg(
-        p99_mean_tbt    = ('p99',    'mean'),
+        p95_mean_tbt    = ('p95',    'mean'),
         median_mean_tbt = ('median', 'mean')
     )
 )
 
 # 2) Compute the “p99:median ratio” of those means
 summary_by_output['tmr'] = (
-    summary_by_output['p99_mean_tbt'] 
+    summary_by_output['p95_mean_tbt'] 
   / summary_by_output['median_mean_tbt']
 )
 
 # 3) Print as Markdown table
 print(summary_by_output.to_markdown(index=False))
 
-print(ratio_df[['provider','max_output','p99_to_median']].head())
+print(ratio_df[['provider','max_output','p95_to_median']].head())
 
 # out_path = os.path.join(graph_dir, "tmr_df.csv")
 # summary.to_csv(out_path, index=False)
