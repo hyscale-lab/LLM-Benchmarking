@@ -69,52 +69,68 @@ metric_dfs = { df['metric'].iloc[0] : df for df in dfs_all }
 df_med  = metric_dfs['timebetweentokens_median'].reset_index(drop=True)
 df_p95  = metric_dfs['timebetweentokens_p95'].reset_index(drop=True)
 
-# 3) Make sure they align on the same “keys”:
-#    if each row is a distinct request you can join on index…
-ratio_df = pd.DataFrame({
-    'provider': df_med['provider'],
-    'model':    df_med['model'],
-    'input_size': df_med['input_size'],
-    'median':   df_med['value'],
-    'p95':      df_p95['value']
-})
+# 3) Group and compute mean values
+med_means = df_med.groupby('provider')['value'].mean().rename('median_mean_tbt')
+p95_means = df_p95.groupby('provider')['value'].mean().rename('p95_mean_tbt')
 
-# 4) Compute the ratio (p99 over median)
-ratio_df['p95_to_median'] = ratio_df['p95'] / ratio_df['median']
-
-# 5) (Optional) Inspect it
-# print(ratio_df.head())
-# print(ratio_df.groupby('provider')['p95'].describe()['mean'])
-# print(ratio_df.groupby('provider')['median'].describe()['mean'])
-# print(ratio_df.groupby('provider')['p95_to_median'].describe()['mean'])
-
-ratio_summary = (
-    ratio_df
-    .groupby('provider', as_index=False)['p95_to_median']
-    .mean()
-    .rename(columns={'p95_to_median':'mean_p95_to_median'})
-)
-# print(ratio_summary)
-
-# 1) Group by provider and compute the two means
-summary = (
-    ratio_df
-    .groupby('provider', as_index=False)
-    .agg(
-        p95_mean_tbt    = ('p95',    'mean'),
-        median_mean_tbt = ('median', 'mean')
-    )
-)
-
-# 2) Compute the “p99:median ratio” of those means
+# 4) Combine and compute ratio
+summary = pd.concat([p95_means, med_means], axis=1).reset_index()
 summary['tmr'] = summary['p95_mean_tbt'] / summary['median_mean_tbt']
 
-# 3) (Optional) Pretty–print as Markdown
-print("TMR TABLE")
+# 5) Output
+print("TMR Table")
 print(summary.to_markdown(index=False))
-out_path = os.path.join(graph_dir, "tmr_df.csv")
-summary.to_csv(out_path, index=False)
-print(f"Saved full ratio table to {out_path}")
+
+# Optional: save
+os.makedirs(graph_dir, exist_ok=True)
+summary.to_csv(os.path.join(graph_dir, "tmr_df.csv"), index=False)
+
+# # 3) Make sure they align on the same “keys”:
+# #    if each row is a distinct request you can join on index…
+# ratio_df = pd.DataFrame({
+#     'provider': df_med['provider'],
+#     'model':    df_med['model'],
+#     'input_size': df_med['input_size'],
+#     'median':   df_med['value'],
+#     'p95':      df_p95['value']
+# })
+
+# # 4) Compute the ratio (p99 over median)
+# ratio_df['p95_to_median'] = ratio_df['p95'] / ratio_df['median']
+
+# # 5) (Optional) Inspect it
+# # print(ratio_df.head())
+# # print(ratio_df.groupby('provider')['p95'].describe()['mean'])
+# # print(ratio_df.groupby('provider')['median'].describe()['mean'])
+# # print(ratio_df.groupby('provider')['p95_to_median'].describe()['mean'])
+
+# ratio_summary = (
+#     ratio_df
+#     .groupby('provider', as_index=False)['p95_to_median']
+#     .mean()
+#     .rename(columns={'p95_to_median':'mean_p95_to_median'})
+# )
+# # print(ratio_summary)
+
+# # 1) Group by provider and compute the two means
+# summary = (
+#     ratio_df
+#     .groupby('provider', as_index=False)
+#     .agg(
+#         p95_mean_tbt    = ('p95',    'mean'),
+#         median_mean_tbt = ('median', 'mean')
+#     )
+# )
+
+# # 2) Compute the “p99:median ratio” of those means
+# summary['tmr'] = summary['p95_mean_tbt'] / summary['median_mean_tbt']
+
+# # 3) (Optional) Pretty–print as Markdown
+# print("TMR TABLE")
+# print(summary.to_markdown(index=False))
+# out_path = os.path.join(graph_dir, "tmr_df.csv")
+# summary.to_csv(out_path, index=False)
+# print(f"Saved full ratio table to {out_path}")
 
 
 desired_metrics = ["timetofirsttoken", "response_times", "timebetweentokens"]
@@ -229,6 +245,8 @@ for i, (ax, df) in enumerate(zip(axes, dfs_all)):
 
     # Set x-label
     ax.set_xlabel("Latency (ms)", fontsize=16)
+    ax.tick_params(axis='x', labelsize=15)
+    ax.tick_params(axis='y', labelsize=15)
 
     # Add grid
     ax.grid(True, alpha=0.3)
