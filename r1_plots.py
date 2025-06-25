@@ -83,10 +83,10 @@ ratio_df = pd.DataFrame({
 ratio_df['p95_to_median'] = ratio_df['p95'] / ratio_df['median']
 
 # 5) (Optional) Inspect it
-print(ratio_df.head())
-print(ratio_df.groupby('provider')['p95'].describe()['mean'])
-print(ratio_df.groupby('provider')['median'].describe()['mean'])
-print(ratio_df.groupby('provider')['p95_to_median'].describe()['mean'])
+# print(ratio_df.head())
+# print(ratio_df.groupby('provider')['p95'].describe()['mean'])
+# print(ratio_df.groupby('provider')['median'].describe()['mean'])
+# print(ratio_df.groupby('provider')['p95_to_median'].describe()['mean'])
 
 ratio_summary = (
     ratio_df
@@ -94,7 +94,7 @@ ratio_summary = (
     .mean()
     .rename(columns={'p95_to_median':'mean_p95_to_median'})
 )
-print(ratio_summary)
+# print(ratio_summary)
 
 # 1) Group by provider and compute the two means
 summary = (
@@ -110,6 +110,7 @@ summary = (
 summary['tmr'] = summary['p95_mean_tbt'] / summary['median_mean_tbt']
 
 # 3) (Optional) Pretty–print as Markdown
+print("TMR TABLE")
 print(summary.to_markdown(index=False))
 out_path = os.path.join(graph_dir, "tmr_df.csv")
 summary.to_csv(out_path, index=False)

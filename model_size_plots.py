@@ -136,10 +136,10 @@ ratio_df = pd.DataFrame({
 ratio_df['p95_to_median'] = ratio_df['p95'] / ratio_df['median']
 
 # 5) (Optional) Inspect it
-print(ratio_df.head())
-print(ratio_df.groupby(['provider','model'])['p95'].describe()['mean'])
-print(ratio_df.groupby(['provider','model'])['median'].describe()['mean'])
-print(ratio_df.groupby(['provider','model'])['p95_to_median'].describe()['mean'])
+# print(ratio_df.head())
+# print(ratio_df.groupby(['provider','model'])['p95'].describe()['mean'])
+# print(ratio_df.groupby(['provider','model'])['median'].describe()['mean'])
+# print(ratio_df.groupby(['provider','model'])['p95_to_median'].describe()['mean'])
 
 ratio_summary = (
     ratio_df
@@ -147,7 +147,7 @@ ratio_summary = (
     .mean()
     .rename(columns={'p95_to_median':'mean_p95_to_median'})
 )
-print(ratio_summary)
+# print(ratio_summary)
 
 # out_path = os.path.join(graph_dir, "tmr_df.csv")
 # ratio_df.groupby('provider')['p99_to_median'].describe().to_csv(out_path, index=False)
@@ -169,7 +169,7 @@ summary = (
 summary['tmr'] = summary['p95_mean_tbt'] / summary['median_mean_tbt']
 
 # 3) (Optional) Pretty–print as Markdown
-print(summary.to_markdown(index=False))
+# print(summary.to_markdown(index=False))
 
 # 1) Group by provider AND max_output, computing the two means
 summary_by_output = (
@@ -188,9 +188,13 @@ summary_by_output['tmr'] = (
 )
 
 # 3) Print as Markdown table
+print("TMR Table")
 print(summary_by_output.to_markdown(index=False))
+out_path = os.path.join(graph_dir, "tmr_df.csv")
+summary_by_output.to_csv(out_path, index=False)
+print(f"Saved full ratio table to {out_path}")
 
-print(ratio_df[['provider','model','p95_to_median']].head())
+# print(ratio_df[['provider','model','p95_to_median']].head())
 
 # Filter for desired metrics
 desired_metrics = ['timetofirsttoken', 'response_times', "timebetweentokens"]
