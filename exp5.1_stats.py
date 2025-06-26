@@ -3,6 +3,7 @@
 import pandas as pd
 import glob
 import os
+import ast
 
 graph_dir = "experiments/zexp_5.1_plots/results"
 # print("here")
@@ -85,21 +86,50 @@ summary['tmr'] = summary['p95_mean_tbt'] / summary['median_mean_tbt']
 print("TMR Table")
 print(summary.to_markdown(index=False))
 
+# Extract the raw TBT DataFrame
 df_tbt = metric_dfs['timebetweentokens'].reset_index(drop=True)
-df_tbt['value'] = pd.to_numeric(df_tbt['value'], errors='coerce')
-#df_tbt = df_tbt.dropna(subset=['value'])
-# Compute mean and std from raw TBT values
-cv_stats = (
-    df_tbt
-    .groupby('provider')['value']
-    .agg(['mean', 'std'])
-)
-cv_stats['cv'] = cv_stats['std'] / cv_stats['mean']
-cv_stats = cv_stats.rename(columns={'mean': 'mean_tbt', 'std': 'std_tbt'})
 
-# Join with TMR summary
+# Initialize list to store parsed durations with providers
+flattened = []
+
+# Loop through each row, parse value list, associate with provider
+for i, row in df_tbt.iterrows():
+    val = row['value']
+    provider = row['provider']
+
+    if isinstance(val, str):
+        try:
+            parsed_list = ast.literal_eval(val)
+            flattened.extend([(provider, float(x)) for x in parsed_list])
+        except (ValueError, SyntaxError) as e:
+            print(f"Error parsing row {i}: {val[:50]}... Error: {e}")
+            continue
+    elif isinstance(val, list):
+        flattened.extend([(provider, float(x)) for x in val])
+    else:
+        print(f"Skipping row {i}: unsupported type {type(val)}")
+
+# Convert to DataFrame
+df_flat = pd.DataFrame(flattened, columns=['provider', 'tbt'])
+
+# Convert to milliseconds (if needed)
+df_flat['tbt'] = df_flat['tbt'] * 1000
+
+# Compute mean, std, CV per provider
+cv_stats = (
+    df_flat
+    .groupby('provider')['tbt']
+    .agg(['mean', 'std'])
+    .rename(columns={'mean': 'mean_tbt', 'std': 'std_tbt'})
+)
+cv_stats['cv'] = cv_stats['std_tbt'] / cv_stats['mean_tbt']
+
+# Join with your TMR summary
 summary = summary.set_index('provider').join(cv_stats).reset_index()
+
+# Show result
 print(summary.to_markdown(index=False))
+
 
 # Optional: save
 os.makedirs(graph_dir, exist_ok=True)
