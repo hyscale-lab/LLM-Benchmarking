@@ -128,6 +128,7 @@ cv_stats['cv'] = cv_stats['std_tbt'] / cv_stats['mean_tbt']
 summary = summary.set_index('provider').join(cv_stats).reset_index()
 
 # Show result
+print("TBT TMR and CV")
 print(summary.to_markdown(index=False))
 
 
@@ -156,5 +157,6 @@ agg_stats['cv'] = agg_stats['std'] / agg_stats['mean']
 
 # Merge CV into stats
 stats = stats.join(agg_stats)
-
+print()
+print("TTFT TMR and CV")
 print(stats)
