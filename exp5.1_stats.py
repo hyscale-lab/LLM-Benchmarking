@@ -5,7 +5,7 @@ import glob
 import os
 
 graph_dir = "experiments/zexp_5.1_plots/results"
-
+# print("here")
 # 1) Map each “provider” key to its experiment folder
 exp_dirs = {
     "google":      "experiments/exp_20250618_164751_262ed75f",
@@ -85,6 +85,22 @@ summary['tmr'] = summary['p95_mean_tbt'] / summary['median_mean_tbt']
 print("TMR Table")
 print(summary.to_markdown(index=False))
 
+df_tbt = metric_dfs['timebetweentokens'].reset_index(drop=True)
+df_tbt['value'] = pd.to_numeric(df_tbt['value'], errors='coerce')
+#df_tbt = df_tbt.dropna(subset=['value'])
+# Compute mean and std from raw TBT values
+cv_stats = (
+    df_tbt
+    .groupby('provider')['value']
+    .agg(['mean', 'std'])
+)
+cv_stats['cv'] = cv_stats['std'] / cv_stats['mean']
+cv_stats = cv_stats.rename(columns={'mean': 'mean_tbt', 'std': 'std_tbt'})
+
+# Join with TMR summary
+summary = summary.set_index('provider').join(cv_stats).reset_index()
+print(summary.to_markdown(index=False))
+
 # Optional: save
 os.makedirs(graph_dir, exist_ok=True)
 summary.to_csv(os.path.join(graph_dir, "tmr_tbt.csv"), index=False)
@@ -92,13 +108,23 @@ summary.to_csv(os.path.join(graph_dir, "tmr_tbt.csv"), index=False)
 df = metric_dfs['timetofirsttoken'].reset_index(drop=True)
 
 stats = (
-    df[df['metric'].isin(["timetofirsttoken","response_times"])]
-    .groupby(['provider','input_size'])['value']
+    df.groupby(['provider','input_size'])['value']
     .quantile([0.5, 0.95, 0.99])
     .unstack(level=-1)
     .rename(columns={0.5:'median',0.95:'p95',0.99:'p99'})
 )
 
 stats['tmr'] = stats['p95'] / stats['median']
+
+# Compute coefficient of variation
+agg_stats = (
+    df
+    .groupby(['provider', 'input_size'])['value']
+    .agg(['mean', 'std'])
+)
+agg_stats['cv'] = agg_stats['std'] / agg_stats['mean']
+
+# Merge CV into stats
+stats = stats.join(agg_stats)
 
 print(stats)
