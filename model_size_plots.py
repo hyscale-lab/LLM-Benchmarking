@@ -435,13 +435,13 @@ for i, (ax, df) in enumerate(zip(axes, dfs_all)):
                 plt.subplots_adjust(right=0.85)
             # Set labels and formatting for each subplot
             xlabel = "Latency (ms)" if df['metric'].iloc[0] != "totaltokens" else "Total Tokens"
-            ax.set_xlabel(xlabel)
+            ax.set_xlabel(xlabel, fontsize=16)
             ax.tick_params(axis='x', labelsize=15)
             ax.tick_params(axis='y', labelsize=15)
         
         # Only set ylabel on the leftmost subplot
             if i == 0:
-                ax.set_ylabel("CDF")
+                ax.set_ylabel("CDF", fontsize=16)
         
         # Set title for each subplot
             metric_name = df['metric'].iloc[0]
@@ -489,7 +489,7 @@ plt.subplots_adjust(right=0.85)
 
 # Save the combined figure
 ts = datetime.now().strftime("%y%m%d_%H%M")
-fname = f"combined_metrics_{ts}.png"
+fname = f"combined_metrics_{ts}.pdf"
 out = os.path.join(graph_dir, fname)
 plt.savefig(out)
 plt.show()

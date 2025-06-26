@@ -16,7 +16,7 @@ exp_dirs = {
     "vllm_azure": "experiments/exp_20250620_013929_b5497e18",
     "azure_5k": "experiments/azure_5k_new",
     "azure_10k": "experiments/azure_10k_new",
-    "togetherai": "experiments/exp_20250620_052224_67850b68",
+    "togetherai": "experiments/exp_20250626_050759_3bb60a5c",
     "togetherai_5k": "experiments/togetherai_5k",
     "togetherai_10k": "experiments/togetherai_10k"
 }
@@ -121,7 +121,9 @@ df_combined = pd.merge(
     on=['provider', 'model', 'max_output'],
     suffixes=('_median', '_p95')
 )
-
+print(df_combined[['value_p95', 'value_median']].dtypes)
+df_combined['value_p95'] = pd.to_numeric(df_combined['value_p95'], errors='coerce')
+print(df_combined[['value_p95', 'value_median']].dtypes)
 # 4) Per-request ratio
 df_combined['p95_to_median'] = df_combined['value_p95'] / df_combined['value_median']
 
@@ -418,7 +420,7 @@ plt.subplots_adjust(right=0.85)  # Make room for legend at top
 
 # Save the combined plot
 current_time = datetime.now().strftime("%y%m%d_%H%M")
-filename = f"selected_metrics_{current_time}.png"
+filename = f"selected_metrics_{current_time}.pdf"
 filepath = os.path.join(graph_dir, filename)
 plt.savefig(filepath, dpi=300, bbox_inches='tight')
 plt.show()

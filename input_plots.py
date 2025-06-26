@@ -21,6 +21,7 @@ dfs = {}
 all_dfs = {}
 skip_idxs = {0, 3, 7}
 for name, folder in exp_dirs.items():
+    print(name)
     pattern = os.path.join(folder, "*.csv")
     paths   = glob.glob(pattern)
     all_dfs[name] = [pd.read_csv(p) for p in paths]
@@ -29,7 +30,12 @@ for name, folder in exp_dirs.items():
         for idx, df in enumerate(all_dfs[name])
         if idx not in skip_idxs
     ]
+    #for i, df in enumerate(dfs[name]):
+        #print(i, df['metric'].unique())
     for i, df in enumerate(dfs[name]):
+        if 'metric' not in df.columns:
+           print(f"Warning: df[{i}] is missing 'metric'. Columns: {df.columns.tolist()}")
+           continue
         print(i, df['metric'].unique())
     print(f"{name}: loaded {len(dfs[name])} CSV(s) from {folder}")
 
