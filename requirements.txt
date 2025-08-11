@@ -7,7 +7,7 @@ requests==2.32.3
 matplotlib==3.9.2
 numpy==1.26.2
 pytest==8.3.3
-pytest-cov==5.0.0
+pytest-cov==6.2.1
 flake8==7.1.1
 pylint==3.3.1
 autoflake==2.3.1
