@@ -11,6 +11,9 @@ class Azure(ProviderInterface):
         """Initialize AzureProvider with required API information."""
         super().__init__()
 
+        self.endpoint = os.environ["AZURE_AI_ENDPOINT"].rstrip("/")
+        self.api_key  = os.environ["AZURE_AI_API_KEY"]
+
         # Map model names to Azure model IDs
         self.model_map = {
             # "mistral-7b-instruct-v0.1": "mistral-7b-instruct-v0.1",
@@ -20,45 +23,27 @@ class Azure(ProviderInterface):
             "common-model": "Mistral-Large-2411-yatcd",
         }
 
-        # Define API keys for each model
-        self.model_api_keys = {
-            # "mistral-7b-instruct-v0.1": os.environ.get("MISTRAL_API_KEY"),
-            "meta-llama-3.1-8b-instruct": os.environ.get("AZURE_LLAMA_8B_API"),
-            "meta-llama-3.1-70b-instruct": os.environ.get("AZURE_LLAMA_3.1_70B_API"),
-            "mistral-large": os.environ.get("MISTRAL_LARGE_API"),
-            "common-model": os.environ.get("MISTRAL_LARGE_API")
-        }
-
     def get_model_name(self, model):
         """Retrieve the model name based on the input key."""
         return self.model_map.get(model, None)
-
-    def get_model_api_key(self, model):
-        """Retrieve the API key for a specific model."""
-        api_key = self.model_api_keys.get(model)
-        if not api_key:
-            raise ValueError(
-                f"No API key found for model '{model}'. Ensure it is set in environment variables."
-            )
-        return api_key
 
     def perform_inference(self, model, prompt, max_output=100, verbosity=True):
         """Performs non-streaming inference request to Azure."""
         try:
             model_id = self.get_model_name(model)
-            api_key = self.get_model_api_key(model)
             if model_id is None:
                 print(f"Model {model} not available.")
                 return None
             start_time = timer()
-            endpoint = f"https://{model_id}.eastus.models.ai.azure.com/chat/completions"
+            endpoint = f"{self.endpoint}/chat/completions"
             response = requests.post(
                 f"{endpoint}",
                 headers={
-                    "Authorization": f"Bearer {api_key}",
+                    "Authorization": f"Bearer {self.api_key}",
                     "Content-Type": "application/json",
                 },
                 json={
+                    "model": model_id,
                     "messages": [
                         {"role": "system", "content": self.system_prompt},
                         {"role": "user", "content": prompt},
@@ -74,8 +59,19 @@ class Azure(ProviderInterface):
 
             # Parse and display response
             inference = response.json()
+
+            usage = inference.get("usage")
+            total_tokens = usage.get("completion_tokens")
+            tbt = elapsed / max(total_tokens, 1)
+            tps = (total_tokens / elapsed) if elapsed > 0 else 0.0
+
             self.log_metrics(model, "response_times", elapsed)
+            self.log_metrics(model, "totaltokens", total_tokens)
+            self.log_metrics(model, "timebetweentokens", tbt)
+            self.log_metrics(model, "tps", tps)
+
             if verbosity:
+                print(f"Tokens: {total_tokens}, Avg TBT: {tbt:.4f}s, TPS: {tps:.2f}")
                 print(f"Response: {inference['choices'][0]['message']['content']}")
             return inference
         

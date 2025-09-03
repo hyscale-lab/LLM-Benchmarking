@@ -34,11 +34,25 @@ class BaseProvider(ProviderInterface):
                     {"role": "user", "content": prompt},
                 ],
                 max_tokens=max_output,
-                timeout=(1, 2)
+                timeout=10
             )
             elapsed = timer() - start
+
+            total_tokens = None
+            usage = getattr(response, "usage", None)
+            if usage is not None:
+                total_tokens = getattr(usage, "completion_tokens", None) or getattr(usage, "output_tokens", None)
+
+            tbt = elapsed / max(total_tokens, 1)
+            tps = (total_tokens / elapsed) if elapsed > 0 else 0.0
+
             self.log_metrics(model, "response_times", elapsed)
+            self.log_metrics(model, "totaltokens", total_tokens)
+            self.log_metrics(model, "timebetweentokens", tbt)
+            self.log_metrics(model, "tps", tps)
+
             if verbosity:
+                print(f"Tokens: {total_tokens}, Avg TBT: {tbt:.4f}s, TPS: {tps:.2f}")
                 self.display_response(response, elapsed)
             return elapsed
             
