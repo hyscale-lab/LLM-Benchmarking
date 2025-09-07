@@ -72,10 +72,10 @@ class AWSBedrock(ProviderInterface):
             model_response = json.loads(response["body"].read())
             generated_text = model_response.get("generation", "")
 
-            total_tokens = model_response.get("generation_token_count")
+            total_tokens = model_response.get("generation_token_count") or 0
 
             tbt = total_time / max(total_tokens, 1)
-            tps = (total_tokens / total_time) if total_time > 0 else 0.0
+            tps = (total_tokens / total_time)
 
             self.log_metrics(model, "totaltokens", total_tokens)
             self.log_metrics(model, "timebetweentokens", tbt)

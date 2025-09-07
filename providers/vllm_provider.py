@@ -49,10 +49,20 @@ class vLLM(ProviderInterface):
             )
             elapsed = timer() - start_time
 
-            # Log response times metric
+            data = response.json()
+            usage = data.get("usage") or {}
+            total_tokens = usage.get("completion_tokens")
+
+            tbt = elapsed / max(total_tokens, 1)
+            tps = (total_tokens / elapsed)
+
+            self.log_metrics(model, "totaltokens", total_tokens)
+            self.log_metrics(model, "timebetweentokens", tbt)
+            self.log_metrics(model, "tps", tps)
             self.log_metrics(model, "response_times", elapsed)
 
             if verbosity:
+                print(f"Tokens: {total_tokens}, Avg TBT: {tbt:.4f}s, TPS: {tps:.2f}")
                 print(f"#### _Generated in *{elapsed:.2f}* seconds_")
             
             print(response)

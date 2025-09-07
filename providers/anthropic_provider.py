@@ -70,10 +70,10 @@ class Anthropic(ProviderInterface):
             elapsed = timer() - start
 
             usage = getattr(response, "usage", None)
-            total_tokens = getattr(usage, "output_tokens", None)
+            total_tokens = (getattr(usage, "output_tokens", 0) or 0) if usage else 0
 
             tbt = elapsed / max(total_tokens, 1)
-            tps = (total_tokens / elapsed) if elapsed > 0 else 0.0
+            tps = (total_tokens / elapsed)
 
             self.log_metrics(model, "response_times", elapsed)
             self.log_metrics(model, "totaltokens", total_tokens)

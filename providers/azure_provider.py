@@ -11,8 +11,8 @@ class Azure(ProviderInterface):
         """Initialize AzureProvider with required API information."""
         super().__init__()
 
-        self.endpoint = os.environ["AZURE_AI_ENDPOINT"].rstrip("/")
-        self.api_key  = os.environ["AZURE_AI_API_KEY"]
+        self.endpoint = os.getenv("AZURE_AI_ENDPOINT")
+        self.api_key = os.getenv("AZURE_AI_ENDPOINT")
 
         # Map model names to Azure model IDs
         self.model_map = {
@@ -34,12 +34,13 @@ class Azure(ProviderInterface):
             if model_id is None:
                 print(f"Model {model} not available.")
                 return None
+            endpoint = (self.endpoint or "https://example.invalid").rstrip("/")
+            api_key = self.api_key
             start_time = timer()
-            endpoint = f"{self.endpoint}/chat/completions"
             response = requests.post(
                 f"{endpoint}",
                 headers={
-                    "Authorization": f"Bearer {self.api_key}",
+                    "Authorization": f"Bearer {api_key}",
                     "Content-Type": "application/json",
                 },
                 json={
@@ -61,9 +62,9 @@ class Azure(ProviderInterface):
             inference = response.json()
 
             usage = inference.get("usage")
-            total_tokens = usage.get("completion_tokens")
+            total_tokens = usage.get("completion_tokens") or 0
             tbt = elapsed / max(total_tokens, 1)
-            tps = (total_tokens / elapsed) if elapsed > 0 else 0.0
+            tps = (total_tokens / elapsed)
 
             self.log_metrics(model, "response_times", elapsed)
             self.log_metrics(model, "totaltokens", total_tokens)
