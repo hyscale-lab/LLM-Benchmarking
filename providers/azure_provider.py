@@ -12,7 +12,7 @@ class Azure(ProviderInterface):
         super().__init__()
 
         self.endpoint = os.getenv("AZURE_AI_ENDPOINT")
-        self.api_key = os.getenv("AZURE_AI_ENDPOINT")
+        self.api_key = os.getenv("AZURE_AI_API_KEY")
 
         # Map model names to Azure model IDs
         self.model_map = {
