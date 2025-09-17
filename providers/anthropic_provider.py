@@ -68,9 +68,20 @@ class Anthropic(ProviderInterface):
                 timeout=500,
             )
             elapsed = timer() - start
+
+            usage = getattr(response, "usage", None)
+            total_tokens = (getattr(usage, "output_tokens", 0) or 0) if usage else 0
+
+            tbt = elapsed / max(total_tokens, 1)
+            tps = (total_tokens / elapsed)
+
             self.log_metrics(model, "response_times", elapsed)
+            self.log_metrics(model, "totaltokens", total_tokens)
+            self.log_metrics(model, "timebetweentokens", tbt)
+            self.log_metrics(model, "tps", tps)
             # Process and display the response
             if verbosity:
+                print(f"Tokens: {total_tokens}, Avg TBT: {tbt:.4f}s, TPS: {tps:.2f}")
                 self.display_response(response, elapsed)
             return elapsed
 

@@ -61,14 +61,25 @@ class Cloudflare(ProviderInterface):
             )
 
             elapsed = timer() - start_time
-            # print("request sucess")
-            # log response times metric
-            self.log_metrics(model, "response_times", elapsed)
 
             inference = response.json()
+
+            meta = inference.get("result", {})
+            usage = meta.get("usage", {})
+            total_tokens = usage.get("completion_tokens") or 0
+
+            tbt = elapsed / max(total_tokens, 1)
+            tps = (total_tokens / elapsed)
+
+            self.log_metrics(model, "response_times", elapsed)
+            self.log_metrics(model, "totaltokens", total_tokens)
+            self.log_metrics(model, "timebetweentokens", tbt)
+            self.log_metrics(model, "tps", tps)
+            
             print(inference)
             # logging.debug(inference["result"]["response"])
             if verbosity:
+                print(f"Tokens: {total_tokens}, Avg TBT: {tbt:.4f}s, TPS: {tps:.2f}")
                 print(inference["result"]["response"][:50])
 
                 print(f"#### _Generated in *{elapsed:.2f}* seconds_")

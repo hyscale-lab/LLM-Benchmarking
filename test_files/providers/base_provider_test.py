@@ -23,6 +23,7 @@ def test_perform_inference(
     mock_response = MagicMock()
     mock_response.choices = [MagicMock()]
     mock_response.choices[0].message.content = "Test response content."
+    mock_response.usage.completion_tokens = 100
     base_provider.client.chat.completions.create.return_value = mock_response
 
     # Call perform_inference

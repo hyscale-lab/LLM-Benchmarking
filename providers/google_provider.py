@@ -60,8 +60,19 @@ class GoogleGemini(ProviderInterface):
             )
             elapsed = timer() - start_time
 
+            usage = getattr(response, "usage_metadata", None)
+            total_tokens = (getattr(usage, "candidates_token_count", 0) or 0) if usage else 0
+
+            tbt = elapsed / max(total_tokens, 1)
+            tps = (total_tokens / elapsed)
+
             self.log_metrics(model, "response_times", elapsed)
+            self.log_metrics(model, "totaltokens", total_tokens)
+            self.log_metrics(model, "timebetweentokens", tbt)
+            self.log_metrics(model, "tps", tps)
+
             if verbosity:
+                print(f"Tokens: {total_tokens}, Avg TBT: {tbt:.4f}s, TPS: {tps:.2f}")
                 print(response.text)
                 print(f"\nGenerated in {elapsed:.2f} seconds")
             return elapsed

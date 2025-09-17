@@ -46,13 +46,13 @@ PERPLEXITY_AI_API="your-perplexity-ai-api-key"
 HYPERBOLIC_API="your-hyperbolic-api-key"
 GROQ_API_KEY="your-groq-api-key"
 GEMINI_API_KEY="your-gemini-api-key"
-AZURE_LLAMA_8B_API="your-azure-llama-8b-api-key"
-AZURE_LLAMA_3.1_70B_API="your-azure-llama-70b-api-key"
 MISTRAL_LARGE_API="your-mistral-large-api-key"
 AWS_BEDROCK_ACCESS_KEY_ID="your-aws-bedrock-access-key-id"
 AWS_BEDROCK_SECRET_ACCESS_KEY="your-aws-bedrock-secret-key"
 AWS_BEDROCK_REGION="your-aws-bedrock-region"
 DYNAMODB_ENDPOINT_URL="your-dynamodb-endpoint-url"
+AZURE_AI_ENDPOINT="your-azure-ai-endpoint"
+AZURE_AI_API_KEY="your-azure-ai-api-key"
 ```
 
 ## **Usage**
