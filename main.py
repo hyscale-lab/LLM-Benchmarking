@@ -16,6 +16,8 @@ from providers import (
     AWSBedrock,
     vLLM
 )
+from proxy import ProxyServer
+from loadgenerator import LoadGenerator
 from utils.prompt_generator import get_prompt
 
 # Load environment variables
@@ -29,6 +31,9 @@ parser = argparse.ArgumentParser(
 )
 parser.add_argument(
     "-c", "--config", type=str, help="Path to the JSON configuration file"
+)
+parser.add_argument(
+    "-t", "--trace", action="store_true", help="Enable trace mode"
 )
 parser.add_argument(
     "--list", action="store_true", help="List available providers and models"
@@ -148,7 +153,7 @@ def validate_selected_models(selected_models, common_models, selected_providers)
 
 
 # Main function to run the benchmark
-def run_benchmark(config, vllm_ip=None):
+def run_benchmark(config, vllm_ip=None, proxy_server=None, load_generator=None):
     """Runs the benchmark based on the given configuration."""
     providers = config.get("providers", [])
     num_requests = config.get("num_requests", 1)
@@ -175,39 +180,39 @@ def run_benchmark(config, vllm_ip=None):
     common_models = (
         get_common_models(selected_providers) if len(selected_providers) > 1 else []
     )
-    if not common_models and len(selected_providers) > 1:
+    if not proxy_server and not common_models and len(selected_providers) > 1:
         # logging.error("No common models found among selected providers.")
         print("No common models found among selected providers.")
         return
 
     # Validate models
     valid_models = validate_selected_models(models, common_models, selected_providers)
-    if not valid_models:
-        print(
-            "No valid/common models selected. Ensure models are available across providers."
-        )
-        display_available_providers()
-        return
+    if not proxy_server:
+        if not valid_models:
+            print(
+                "No valid/common models selected. Ensure models are available across providers."
+            )
+            display_available_providers()
+            return
 
-    # logging.info(f"Selected Models: {valid_models}")
-    print(f"Selected Models: {valid_models}")
+        # logging.info(f"Selected Models: {valid_models}")
+        print(f"Selected Models: {valid_models}")
 
-    # handling input tokens
-    if input_tokens not in input_sizes:
-        print(f"Please enter an input token from the following choices: {input_sizes}")
-        return
+        # handling input tokens
+        if input_tokens not in input_sizes:
+            print(f"Please enter an input token from the following choices: {input_sizes}")
+            return
 
+        if max_output < OUTPUT_SIZE_LOWER_LIMIT or max_output > OUTPUT_SIZE_UPPER_LIMIT:
+            print(
+                f"Please enter an output token length between \
+                {OUTPUT_SIZE_LOWER_LIMIT} and {OUTPUT_SIZE_UPPER_LIMIT}."
+            )
+            return
+    
     prompt = get_prompt(input_tokens)
     # print(f"Prompt: {prompt}")
-
-    if max_output < OUTPUT_SIZE_LOWER_LIMIT or max_output > OUTPUT_SIZE_UPPER_LIMIT:
-        print(
-            f"Please enter an output token length between \
-            {OUTPUT_SIZE_LOWER_LIMIT} and {OUTPUT_SIZE_UPPER_LIMIT}."
-        )
-        return
-
-    print("\nRunning benchmark...")
+    
     benchmark = Benchmark(
         selected_providers,
         num_requests,
@@ -217,8 +222,15 @@ def run_benchmark(config, vllm_ip=None):
         streaming=streaming,
         verbosity=verbose,
         vllm_ip=vllm_ip,
+        proxy_server=proxy_server,
+        load_generator=load_generator
     )
-    benchmark.run()
+    if proxy_server:
+        print("\nRunning trace mode...")
+        benchmark.run_trace_mode()
+    else:
+        print("\nRunning benchmark...")
+        benchmark.run()
 
 
 def main():
@@ -235,8 +247,19 @@ def main():
                 print("\n[ERROR] vLLM provider is selected, but `vllm_ip` is missing!")
                 print("   ➜ Please add `vllm_ip' via CLI using `--vllm_ip <ip-addr>`.")
                 return  # Stop execution
-        
-            run_benchmark(config, vllm_ip)
+            
+            if args.trace: # trace mode
+                print("Using trace mode.")
+                print("Starting proxy server...")
+                proxy_server = ProxyServer()
+                proxy_server.start()
+                while not proxy_server.server.started: # Wait for server startup
+                    pass
+                print("Loading load generator...")
+                load_generator = LoadGenerator(proxy_server.get_url())
+                run_benchmark(config, vllm_ip, proxy_server, load_generator)
+            else:
+                run_benchmark(config, vllm_ip)
     else:
         parser.print_help()
 
