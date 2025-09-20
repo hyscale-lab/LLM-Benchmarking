@@ -1,0 +1,39 @@
+[
+    {
+        "Content-Type": "application/json"
+    },
+    {
+        "timestamp": "00:00:00.000000",
+        "data": {
+            "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+            "messages": [
+                {"role": "user", "content": "Hello!"}
+            ],
+            "max_tokens": 100,
+            "stream": false
+        }
+    },
+    {
+        "timestamp": "00:00:01.000000",
+        "data": {
+            "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+            "messages": [
+                {"role": "user", "content": "Hello!"}
+            ],
+            "max_tokens": 100,
+            "stream": true
+        }
+    },
+    {
+        "timestamp": "00:00:02.000000",
+        "data": {
+            "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+            "messages": [
+                {"role": "system", "content": "You are a math tutor."},
+                {"role": "user", "content": "Hello!"}
+            ],
+            "max_tokens": 100,
+            "stream": true
+        }
+    }
+]
