@@ -29,7 +29,9 @@ class Benchmark:
         prompt,
         streaming=False,
         verbosity=False,
-        vllm_ip=None
+        vllm_ip=None,
+        proxy_server=None,
+        load_generator=None
     ):
         """
         Initializes the Benchmark instance with provided parameters.
@@ -51,6 +53,8 @@ class Benchmark:
         self.max_output = max_output
         self.verbosity = verbosity
         self.vllm_ip = vllm_ip
+        self.proxy_server = proxy_server
+        self.load_generator = load_generator
 
         base_dir = "streaming" if streaming else "end_to_end"
 
@@ -59,7 +63,10 @@ class Benchmark:
         )
         provider_dir_name = "_".join(provider_names)
 
-        self.graph_dir = os.path.join("benchmark_graph", base_dir, provider_dir_name)
+        if self.proxy_server: # trace mode
+            self.graph_dir = os.path.join("benchmark_graph", "trace", provider_dir_name)
+        else:
+            self.graph_dir = os.path.join("benchmark_graph", base_dir, provider_dir_name)
 
         # Create directories if they don't exist
         if not os.path.exists(self.graph_dir):
@@ -188,3 +195,23 @@ class Benchmark:
             self.plot_metrics("timebetweentokens", "timebetweentokens")
             self.plot_metrics("timebetweentokens_median", "timebetweentokens_median")
             self.plot_metrics("timebetweentokens_p95", "timebetweentokens_p95")
+    
+    def run_trace_mode(self):
+        """
+        Runs the benchmark for the selected providers and models, and plots the results.
+
+        This method sends a number of requests to each model for each provider, collects
+        performance metrics, and generates plots based on those metrics.
+        """
+        for provider in self.providers:
+            provider_name = provider.__class__.__name__
+            print(f"\n[{provider_name}]")
+
+            if provider_name == "vLLM":
+                provider.perform_trace_mode(self.proxy_server, self.load_generator, self.num_requests, self.verbosity, self.vllm_ip)
+            else:
+                provider.perform_trace_mode(self.proxy_server, self.load_generator, self.num_requests, self.verbosity)
+
+        self.plot_metrics("response_times", "response_times")
+        self.plot_metrics("timebetweentokens", "timebetweentokens")
+        self.plot_metrics("tps", "tps")
