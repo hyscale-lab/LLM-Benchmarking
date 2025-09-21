@@ -50,7 +50,7 @@ class LoadGenerator():
             cmd.extend(["-upscale", upscale])
 
         try:
-            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+            subprocess.run(cmd, capture_output=True, text=True, check=True)
             # print(f'LoadGenerator result: {result}')
         except subprocess.CalledProcessError as e:
             print(f"LoadGenerator failed: {e}, stderr: {e.stderr}")

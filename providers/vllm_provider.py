@@ -65,7 +65,7 @@ class vLLM(ProviderInterface):
             if verbosity:
                 print(f"Tokens: {total_tokens}, Avg TBT: {tbt:.4f}s, TPS: {tps:.2f}")
                 print(f"#### _Generated in *{elapsed:.2f}* seconds_")
-            
+
             print(response)
             inference = response.json()
             print(inference)
@@ -130,7 +130,7 @@ class vLLM(ProviderInterface):
                         time_to_next_token = time.perf_counter()
                         inter_token_latency = time_to_next_token - prev_token_time
                         prev_token_time = time_to_next_token
-                         
+
                         chunk = line_str[6:]  # Remove "data: " prefix
                         chunk_json = json.loads(chunk)
                         token_text = chunk_json["choices"][0]["text"]
@@ -141,7 +141,7 @@ class vLLM(ProviderInterface):
 
             avg_tbt = sum(inter_token_latencies) / len(inter_token_latencies)
             if verbosity:
-    
+
                 print(
                     f"\nNumber of output tokens/chunks: {len(inter_token_latencies) + 1}, "
                     f"Time to First Token (TTFT): {ttft:.4f} seconds, Avg TBT: {avg_tbt}, Total Response Time: {total_time:.4f} seconds"
@@ -164,14 +164,14 @@ class vLLM(ProviderInterface):
         except Exception as e:
             print(f"Error during streaming inference: {e}")
             return None, None
-        
+
     def perform_trace_mode(self, proxy_server, load_generator, num_requests, verbosity, vllm_ip):
         # Set handler for proxy
         async def data_handler(data, streaming):
             if streaming:
                 print("\nRequest not sent. Streaming not allowed in trace mode.")
                 return [{"error": "Streaming not allowed in trace mode."}]
-            
+
             def inference_sync():
                 try:
                     model_id = data.get('model')
@@ -207,14 +207,14 @@ class vLLM(ProviderInterface):
                         print(f"Response: {response.text}")
 
                     return response
-                
+
                 except Exception as e:
                     print(f"\nInference failed: {e}")
                     return [{"error": f"Inference failed: {e}"}] if streaming else {"error": f"Inference failed: {e}"}
-            
-            response = await asyncio.to_thread(inference_sync)            
+
+            response = await asyncio.to_thread(inference_sync)
             return response
-        
+
         proxy_server.set_handler(data_handler)
 
         # Start load generator
@@ -227,4 +227,3 @@ class vLLM(ProviderInterface):
             max_drift=100,
             upscale='ars'
         )
-

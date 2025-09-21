@@ -248,12 +248,12 @@ def main():
                 print("   ➜ Please add `vllm_ip' via CLI using `--vllm_ip <ip-addr>`.")
                 return  # Stop execution
             
-            if args.trace: # trace mode
+            if args.trace:  # trace mode
                 print("Using trace mode.")
                 print("Starting proxy server...")
                 proxy_server = ProxyServer()
                 proxy_server.start()
-                while not proxy_server.server.started: # Wait for server startup
+                while not proxy_server.server.started:  # Wait for server startup
                     pass
                 print("Loading load generator...")
                 load_generator = LoadGenerator(proxy_server.get_url())
