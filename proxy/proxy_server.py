@@ -18,13 +18,16 @@ class ProxyServer(threading.Thread):
             if not self._on_receive:
                 return {"status": "error", "message": "handler not set"}
             
-            data = await request.json()
+            data = await request.json() # dict
+            # Log relayed data
+            with open('./proxy/received', 'a') as f:
+                f.write(f'[Client] {json.dumps(data)}\n')
+
             streaming = data.get("stream", False)
             response = await self._on_receive[0](data, streaming) # List[dict] if streaming, else dict
             
-            # PROXY DEBUG
+            # Log response
             with open('./proxy/received', 'a') as f:
-                f.write(f'[Client] {json.dumps(data)}\n')
                 if streaming:
                     for line in response:
                         f.write(f'[Server] {json.dumps(line)}\n')
