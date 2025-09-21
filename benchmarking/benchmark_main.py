@@ -211,6 +211,7 @@ class Benchmark:
                 provider.perform_trace_mode(self.proxy_server, self.load_generator, self.num_requests, self.verbosity, self.vllm_ip)
             else:
                 provider.perform_trace_mode(self.proxy_server, self.load_generator, self.num_requests, self.verbosity)
+        print()
 
         self.plot_metrics("response_times", "response_times")
         self.plot_metrics("timebetweentokens", "timebetweentokens")
