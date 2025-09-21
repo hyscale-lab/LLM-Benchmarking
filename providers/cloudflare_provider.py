@@ -1,9 +1,9 @@
 import os
 import time
-import requests
-import numpy as np
 import asyncio
 from timeit import default_timer as timer
+import requests
+import numpy as np
 from providers.provider_interface import ProviderInterface
 
 # from IPython.display import display, Image, Markdown, Audio
@@ -76,7 +76,7 @@ class Cloudflare(ProviderInterface):
             self.log_metrics(model, "totaltokens", total_tokens)
             self.log_metrics(model, "timebetweentokens", tbt)
             self.log_metrics(model, "tps", tps)
-            
+
             print(inference)
             # logging.debug(inference["result"]["response"])
             if verbosity:
@@ -89,7 +89,7 @@ class Cloudflare(ProviderInterface):
         except Exception as e:
             print(f"[ERROR] Inference failed for model '{model}': {e}")
             return None, None
-            
+
     def perform_inference_streaming(
         self, model, prompt, max_output=100, verbosity=True
     ):
@@ -159,18 +159,18 @@ class Cloudflare(ProviderInterface):
             self.log_metrics(model, "timebetweentokens_p95", p95)
             self.log_metrics(model, "totaltokens", len(inter_token_latencies) + 1)
             self.log_metrics(model, "tps", (len(inter_token_latencies) + 1) / total_time)
-        
+
         except Exception as e:
             print(f"[ERROR] Streaming inference failed for model '{model}': {e}")
             return None, None
-        
+
     def perform_trace_mode(self, proxy_server, load_generator, num_requests, verbosity):
         # Set handler for proxy
         async def data_handler(data, streaming):
             if streaming:
                 print("\nRequest not sent. Streaming not allowed in trace mode.")
                 return [{"error": "Streaming not allowed in trace mode."}]
-            
+
             def inference_sync():
                 try:
                     model_id = data.pop('model')
@@ -178,7 +178,7 @@ class Cloudflare(ProviderInterface):
                         raise Exception(f"Model {model_id} not found in model map.")
                     model = next((k for k, v in self.model_map.items() if v == model_id))
 
-                    # Non-streaming inference                    
+                    # Non-streaming inference
                     start_time = timer()
                     response = requests.post(
                         f"https://api.cloudflare.com/client/v4/accounts/{self.cloudflare_account_id}/ai/run/{model_id}",
@@ -205,16 +205,16 @@ class Cloudflare(ProviderInterface):
                         print(f"##### Generated in {elapsed_time:.2f} seconds")
                         print(f"##### Tokens: {total_tokens}, Avg TBT: {tbt:.4f}s, TPS: {tps:.2f}")
                         print(f"Response: {response['result']['response']}")
-                    
+
                     return response
-                
+
                 except Exception as e:
                     print(f"\nInference failed: {e}")
                     return [{"error": f"Inference failed: {e}"}] if streaming else {"error": f"Inference failed: {e}"}
-            
-            response = await asyncio.to_thread(inference_sync)            
+
+            response = await asyncio.to_thread(inference_sync)
             return response
-        
+
         proxy_server.set_handler(data_handler)
 
         # Start load generator

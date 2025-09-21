@@ -1,11 +1,11 @@
-import boto3
 import os
 import time
 from timeit import default_timer as timer
+import asyncio
 import json
 import numpy as np
-import asyncio
 from dotenv import load_dotenv
+import boto3
 from providers.provider_interface import ProviderInterface
 
 
@@ -133,7 +133,7 @@ class AWSBedrock(ProviderInterface):
                     except Exception:
                         # print(f"[DEBUG] Failed to decode chunk: {e}")
                         continue
-                    
+
                     if chunk["stop_reason"] == 'length':
                         total_time = time.perf_counter() - start_time
                         print(chunk)
@@ -189,14 +189,14 @@ class AWSBedrock(ProviderInterface):
         except Exception as e:
             print(f"[ERROR] Streaming inference failed: {e}")
             return None, None
-        
+
     def perform_trace_mode(self, proxy_server, load_generator, num_requests, verbosity):
         # Set handler for proxy
         async def data_handler(data, streaming):
             if streaming:
                 print("\nRequest not sent. Streaming not allowed in trace mode.")
                 return [{"error": "Streaming not allowed in trace mode."}]
-            
+
             def inference_sync():
                 try:
                     data.pop('stream')
@@ -228,14 +228,14 @@ class AWSBedrock(ProviderInterface):
                         print(f"Response: {response.get('generation', '')}")
 
                     return response
-                
+
                 except Exception as e:
                     print(f"\nInference failed: {e}")
                     return [{"error": f"Inference failed: {e}"}] if streaming else {"error": f"Inference failed: {e}"}
-            
-            response = await asyncio.to_thread(inference_sync)            
+
+            response = await asyncio.to_thread(inference_sync)
             return response
-        
+
         proxy_server.set_handler(data_handler)
 
         # Start load generator

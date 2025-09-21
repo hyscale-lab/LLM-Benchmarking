@@ -1,11 +1,11 @@
 import os
-import numpy as np
 import asyncio
-from providers.base_provider import ProviderInterface
 from time import perf_counter as timer
+import numpy as np
 from azure.ai.inference import ChatCompletionsClient
 from azure.ai.inference.models import SystemMessage, UserMessage, AssistantMessage
 from azure.core.credentials import AzureKeyCredential
+from providers.base_provider import ProviderInterface
 
 
 class Azure(ProviderInterface):
@@ -89,7 +89,7 @@ class Azure(ProviderInterface):
                 print(f"Tokens: {total_tokens}, Avg TBT: {tbt:.4f}s, TPS: {tps:.2f}")
                 print(f"Response: {response['choices'][0]['message']['content']}")
             return response
-        
+
         except Exception as e:
             print(f"[ERROR] Inference failed for model '{model}': {e}")
             return None, None
@@ -161,14 +161,14 @@ class Azure(ProviderInterface):
         except Exception as e:
             print(f"[ERROR] Streaming inference failed for model '{model}': {e}")
             return None, None
-        
+
     def perform_trace_mode(self, proxy_server, load_generator, num_requests, verbosity):
         # Set handler for proxy
         async def data_handler(data, streaming):
             if streaming:
                 print("\nRequest not sent. Streaming not allowed in trace mode.")
                 return [{"error": "Streaming not allowed in trace mode."}]
-            
+
             def inference_sync():
                 try:
                     model_id = data.get('model')
@@ -187,7 +187,7 @@ class Azure(ProviderInterface):
                                 data['messages'][i] = UserMessage(m['content'])
                             case _:
                                 raise Exception(f"Role {m['role']} not supported.")
-                                        
+
                     # Non-streaming inference
                     self._ensure_client()
                     start_time = timer()
@@ -208,16 +208,16 @@ class Azure(ProviderInterface):
                         print(f"##### Generated in {elapsed_time:.2f} seconds")
                         print(f"##### Tokens: {total_tokens}, Avg TBT: {tbt:.4f}s, TPS: {tps:.2f}")
                         print(f"Response: {response}")
-                        
+
                     return response.to_dict()
-                
+
                 except Exception as e:
                     print(f"\nInference failed: {e}")
                     return [{"error": f"Inference failed: {e}"}] if streaming else {"error": f"Inference failed: {e}"}
-            
-            response = await asyncio.to_thread(inference_sync)            
+
+            response = await asyncio.to_thread(inference_sync)
             return response
-        
+
         proxy_server.set_handler(data_handler)
 
         # Start load generator

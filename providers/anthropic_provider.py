@@ -1,9 +1,9 @@
 # anthropic_provider.py
 import os
-import anthropic
-import numpy as np
 import asyncio
 from timeit import default_timer as timer
+import numpy as np
+import anthropic
 from providers.provider_interface import ProviderInterface
 
 
@@ -24,7 +24,7 @@ class Anthropic(ProviderInterface):
 
         # Model mapping for Anthropic models
         self.model_map = {
-            
+
             "claude-3.5-sonnet": "claude-3-5-sonnet-20241022",  # approx 70b
             "claude-3-opus": "claude-3-opus-20240229",  # approx 2T
             "claude-3-haiku": "claude-3-5-haiku-20241022",  # approx 20b
@@ -164,14 +164,14 @@ class Anthropic(ProviderInterface):
         except Exception as e:
             print(f"[ERROR] Streaming inference failed for model '{model}': {e}")
             return None, None
-        
+
     def perform_trace_mode(self, proxy_server, load_generator, num_requests, verbosity):
         # Set handler for proxy
         async def data_handler(data, streaming):
             if streaming:
                 print("\nRequest not sent. Streaming not allowed in trace mode.")
                 return [{"error": "Streaming not allowed in trace mode."}]
-            
+
             def inference_sync():
                 try:
                     data.pop('stream')
@@ -181,7 +181,7 @@ class Anthropic(ProviderInterface):
                     model = next((k for k, v in self.model_map.items() if v == model_id))
                     if 'timeout' not in data:
                         data['timeout'] = 500
-                    
+
                     # Non-streaming inference
                     start_time = timer()
                     response = self.client.messages.create(**data)
@@ -200,19 +200,19 @@ class Anthropic(ProviderInterface):
                         print()
                         print(f"##### Generated in {elapsed_time:.2f} seconds")
                         print(f"##### Tokens: {total_tokens}, Avg TBT: {tbt:.4f}s, TPS: {tps:.2f}")
-                        print(f"Response: ", end="")
+                        print("Response: ", end="")
                         for block in response.content:
                             print(block.text)
 
                     return response.model_dump()
-                
+
                 except Exception as e:
                     print(f"\nInference failed: {e}")
                     return [{"error": f"Inference failed: {e}"}] if streaming else {"error": f"Inference failed: {e}"}
-            
-            response = await asyncio.to_thread(inference_sync)            
+
+            response = await asyncio.to_thread(inference_sync)
             return response
-        
+
         proxy_server.set_handler(data_handler)
 
         # Start load generator
@@ -225,7 +225,7 @@ class Anthropic(ProviderInterface):
             max_drift=100,
             upscale='ars'
         )
-            
+
     def display_response(self, response, elapsed):
         """
         Prints the response content and the time taken to generate it.

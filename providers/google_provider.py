@@ -1,9 +1,9 @@
 import os
-from providers.provider_interface import ProviderInterface
-import google.generativeai as genai
+import asyncio
 from timeit import default_timer as timer
 import numpy as np
-import asyncio
+import google.generativeai as genai
+from providers.provider_interface import ProviderInterface
 
 
 class GoogleGemini(ProviderInterface):
@@ -65,7 +65,7 @@ class GoogleGemini(ProviderInterface):
             total_tokens = (getattr(usage, "candidates_token_count", 0) or 0) if usage else 0
 
             tbt = elapsed / max(total_tokens, 1)
-            tps = (total_tokens / elapsed)
+            tps = total_tokens / elapsed
 
             self.log_metrics(model, "response_times", elapsed)
             self.log_metrics(model, "totaltokens", total_tokens)
@@ -77,7 +77,7 @@ class GoogleGemini(ProviderInterface):
                 print(response.text)
                 print(f"\nGenerated in {elapsed:.2f} seconds")
             return elapsed
-        
+
         except Exception as e:
             print(f"[ERROR] Inference failed for model '{model}': {e}")
             return None, None
@@ -160,14 +160,14 @@ class GoogleGemini(ProviderInterface):
         )
 
         return streamed_output
-    
+
     def perform_trace_mode(self, proxy_server, load_generator, num_requests, verbosity):
         # Set handler for proxy
         async def data_handler(data, streaming):
             if streaming:
                 print("\nRequest not sent. Streaming not allowed in trace mode.")
                 return [{"error": "Streaming not allowed in trace mode."}]
-            
+
             def inference_sync():
                 try:
                     model_id = data.pop('model')
@@ -175,7 +175,7 @@ class GoogleGemini(ProviderInterface):
                         raise Exception(f"Model {model_id} not found in model map.")
                     model = next((k for k, v in self.model_map.items() if v == model_id))
                     self._initialize_model(model_id)
-                                        
+
                     # Non-streaming inference
                     start_time = timer()
                     response = self.model.generate_content(
@@ -199,16 +199,16 @@ class GoogleGemini(ProviderInterface):
                         print(f"##### Generated in {elapsed_time:.2f} seconds")
                         print(f"##### Tokens: {total_tokens}, Avg TBT: {tbt:.4f}s, TPS: {tps:.2f}")
                         print(f"Response: {response.text}")
-                        
+
                     return response.to_dict()
-                
+
                 except Exception as e:
                     print(f"\nInference failed: {e}")
                     return [{"error": f"Inference failed: {e}"}] if streaming else {"error": f"Inference failed: {e}"}
-            
-            response = await asyncio.to_thread(inference_sync)            
+
+            response = await asyncio.to_thread(inference_sync)
             return response
-        
+
         proxy_server.set_handler(data_handler)
 
         # Start load generator

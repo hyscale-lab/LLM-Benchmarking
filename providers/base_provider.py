@@ -1,7 +1,8 @@
 # base_provider.py for chat completions api
 from timeit import default_timer as timer
+import asyncio
+import json
 import numpy as np
-import asyncio, json
 from providers.provider_interface import ProviderInterface
 
 
@@ -45,7 +46,7 @@ class BaseProvider(ProviderInterface):
                 total_tokens = getattr(usage, "completion_tokens", None) or getattr(usage, "output_tokens", None) or 0
 
             tbt = elapsed / max(total_tokens, 1)
-            tps = (total_tokens / elapsed)
+            tps = total_tokens / elapsed
 
             self.log_metrics(model, "totaltokens", total_tokens)
             self.log_metrics(model, "timebetweentokens", tbt)
@@ -56,7 +57,7 @@ class BaseProvider(ProviderInterface):
                 print(f"Tokens: {total_tokens}, Avg TBT: {tbt:.4f}s, TPS: {tps:.2f}")
                 self.display_response(response, elapsed)
             return elapsed
-            
+
         except Exception as e:
             print(f"[ERROR] Inference failed for model '{model}': {e}")
             return None
@@ -128,14 +129,14 @@ class BaseProvider(ProviderInterface):
         except Exception as e:
             print(f"[ERROR] Streaming inference failed for model '{model}': {e}")
             return None, None
-        
+
     def perform_trace_mode(self, proxy_server, load_generator, num_requests, verbosity):
         # Set handler for proxy
         async def data_handler(data, streaming):
             if streaming:
                 print("\nRequest not sent. Streaming not allowed in trace mode.")
                 return [{"error": "Streaming not allowed in trace mode."}]
-            
+
             def inference_sync():
                 try:
                     model_id = data.get('model')
@@ -168,14 +169,14 @@ class BaseProvider(ProviderInterface):
                         print(f"Response: {response.choices[0].message.content}")
 
                     return json.loads(response.json())
-                
+
                 except Exception as e:
                     print(f"\nInference failed: {e}")
                     return [{"error": f"Inference failed: {e}"}] if streaming else {"error": f"Inference failed: {e}"}
-            
-            response = await asyncio.to_thread(inference_sync)            
+
+            response = await asyncio.to_thread(inference_sync)
             return response
-        
+
         proxy_server.set_handler(data_handler)
 
         # Start load generator
