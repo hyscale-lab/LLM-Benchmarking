@@ -1,0 +1,27 @@
+[
+    {
+        "Content-Type": "application/json"
+    },
+    {
+        "timestamp": "00:00:00.000000",
+        "data": {
+            "model": "gpt-4o",
+            "messages": [
+                {"role": "user", "content": "Hello!"}
+            ],
+            "max_tokens": 100,
+            "stream": false
+        }
+    },
+    {
+        "timestamp": "00:00:00.000000",
+        "data": {
+            "model": "gpt-4o",
+            "messages": [
+                {"role": "user", "content": "Hello!"}
+            ],
+            "max_tokens": 100,
+            "stream": true
+        }
+    }
+]

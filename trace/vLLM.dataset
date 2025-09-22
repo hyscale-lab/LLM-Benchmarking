@@ -1,0 +1,15 @@
+[
+    {
+        "Content-Type": "application/json"
+    },
+    {
+        "timestamp": "00:00:00.000000",
+        "data": {
+            "model": "meta-llama/Llama-3.1-8B",
+            "prompt": "System: You are a tour guide \n User: Introduce yourself",
+            "max_tokens": 100,
+            "temperature": 0.7,
+            "stream": false
+        }
+    }
+]

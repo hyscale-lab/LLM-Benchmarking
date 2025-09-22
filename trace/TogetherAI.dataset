@@ -1,0 +1,16 @@
+[
+    {
+        "Content-Type": "application/json"
+    },
+    {
+        "timestamp": "00:00:00.000000",
+        "data": {
+            "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo",
+            "messages": [
+                {"role": "user", "content": "Hello!"}
+            ],
+            "max_tokens": 100,
+            "stream": false
+        }
+    }
+]
