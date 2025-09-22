@@ -1,6 +1,6 @@
 config.json
 trace/*.result
-proxy/received
+proxy/*.log
 
 # Ignore environment variables file
 .env
