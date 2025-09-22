@@ -207,9 +207,9 @@ class Azure(ProviderInterface):
                         print()
                         print(f"##### Generated in {elapsed_time:.2f} seconds")
                         print(f"##### Tokens: {total_tokens}, Avg TBT: {tbt:.4f}s, TPS: {tps:.2f}")
-                        print(f"Response: {response}")
+                        print(f"Response: {response['choices'][0]['message']['content']}")
 
-                    return response.to_dict()
+                    return response.as_dict()
 
                 except Exception as e:
                     print(f"\nInference failed: {e}")

@@ -204,7 +204,7 @@ class vLLM(ProviderInterface):
                         print()
                         print(f"##### Generated in {elapsed_time:.2f} seconds")
                         print(f"##### Tokens: {total_tokens}, Avg TBT: {tbt:.4f}s, TPS: {tps:.2f}")
-                        print(f"Response: {response.text}")
+                        print(f"Response: {response}")
 
                     return response
 
