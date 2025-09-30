@@ -4,7 +4,7 @@ export default function TimeBetweenToken() {
   return (
     <div>
       <div style={{ paddingBottom: "30px" }}>
-        <AppMetricsPage metricType="timebetweentokens" title="Time Between Tokens Metrics" metricName="Time Between Tokens" />
+        <AppMetricsPage metricType="timebetweentokens" title="Time Between Tokens Metrics" metricName="Time Between Tokens" cdf />
       </div>
       <div style={{ paddingBottom: "30px" }}>
         <AppMetricsPage metricType="timebetweentokens_median" title="Time Between Tokens Median Metrics" metricName="Time Between Tokens Median" />

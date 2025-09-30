@@ -156,7 +156,6 @@ class Benchmark:
 
         Args:
             metric (str): The name of the metric to plot (e.g., "response_times").
-            filename_suffix (str): Suffix to append to the filename for saving the plot.
         """
         plt.figure(figsize=(8, 8))
 
@@ -190,6 +189,13 @@ class Benchmark:
                         markersize=5,
                         label=f"{provider_name} - {model_name}",
                     )
+
+                provider.log_metrics(
+                    model, f"{metric}_median", np.percentile(latencies, 50)
+                )
+                provider.log_metrics(
+                    model, f"{metric}_p95", np.percentile(latencies, 95)
+                )
                 
         plt.xlabel("Latency (ms)", fontsize=12)
         plt.ylabel("Portion of requests", fontsize=12)
@@ -260,9 +266,9 @@ class Benchmark:
                             )
 
         metrics_to_plot = (
-            ["timetofirsttoken", "response_times", "timebetweentokens", "tps", "timebetweentokens_p95", "timebetweentokens_median"]
-            if self.streaming
-            else ["response_times"]
+            ["timetofirsttoken", "response_times", "timebetweentokens", "tps"]
+            # if self.streaming
+            # else ["response_times"]
         )
         
         for metric in metrics_to_plot:

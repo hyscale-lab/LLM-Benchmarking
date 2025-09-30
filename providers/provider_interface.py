@@ -17,9 +17,15 @@ class ProviderInterface(ABC):
         # metrics
         self.metrics = {
             "response_times": {},
+            "response_times_median": {},
+            "response_times_p95": {},
             "timetofirsttoken": {},
+            "timetofirsttoken_median": {},
+            "timetofirsttoken_p95": {},
             "totaltokens": {},
             "tps": {},
+            "tps_median": {},
+            "tps_p95": {},
             "timebetweentokens": {},
             "timebetweentokens_median": {},
             "timebetweentokens_p95": {},
