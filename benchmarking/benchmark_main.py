@@ -111,6 +111,13 @@ class Benchmark:
                         label=f"{provider_name} - {model_name}",
                     )
                 
+                provider.log_metrics(
+                    model, f"{filename_suffix}_median", np.percentile(latencies, 50)
+                )
+                provider.log_metrics(
+                    model, f"{filename_suffix}_p95", np.percentile(latencies, 95)
+                )
+                
         plt.xlabel("Latency (ms)", fontsize=12)
         plt.ylabel("Portion of requests", fontsize=12)
         plt.grid(True)
@@ -193,8 +200,6 @@ class Benchmark:
             self.plot_metrics("timetofirsttoken", "timetofirsttoken")
             self.plot_metrics("response_times", "totaltime")
             self.plot_metrics("timebetweentokens", "timebetweentokens")
-            self.plot_metrics("timebetweentokens_median", "timebetweentokens_median")
-            self.plot_metrics("timebetweentokens_p95", "timebetweentokens_p95")
     
     def run_trace_mode(self):
         """

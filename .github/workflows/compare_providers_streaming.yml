@@ -3,8 +3,8 @@ name: Compare Providers Streaming
 on:
   workflow_dispatch:
   # push:
-  schedule:
-    - cron: "0 0 * * 1"
+  # schedule:
+  #   - cron: "0 0 * * 1"
 
 
 jobs:
