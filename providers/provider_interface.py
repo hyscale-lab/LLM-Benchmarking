@@ -25,6 +25,10 @@ class ProviderInterface(ABC):
             "timebetweentokens_p95": {},
         }
 
+        # for trace mode
+        self.trace_dataset_path = f'./trace/{self.__class__.__name__}.dataset'
+        self.trace_result_path = f'./trace/{self.__class__.__name__}.result'
+
     def log_metrics(self, model_name, metric, value):
         """
         Logs metrics
@@ -46,6 +50,12 @@ class ProviderInterface(ABC):
     def perform_inference_streaming(self, model, prompt):
         """
         perform_inference_streaming
+        """
+
+    @abstractmethod
+    def perform_trace_mode(self, proxy_server, load_generator, num_requests, verbosity):
+        """
+        perform_trace_mode
         """
 
     @abstractmethod
