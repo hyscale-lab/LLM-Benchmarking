@@ -15,6 +15,9 @@ class MockProvider:
             "timebetweentokens_median": {"mock_model": [0.02]},
             "timebetweentokens_p95": {"mock_model": [0.04]},
         }
+
+    def log_metrics(self, model_name, metric, value):
+        pass
         
     def get_model_name(self, model):
         return model
