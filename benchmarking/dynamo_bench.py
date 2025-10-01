@@ -158,10 +158,13 @@ class Benchmark:
             metric (str): The name of the metric to plot (e.g., "response_times").
         """
         plt.figure(figsize=(8, 8))
+        any_series = False
 
         for provider in self.providers:
             provider_name = provider.__class__.__name__
             for model, latencies in provider.metrics[metric].items():
+                if len(latencies) == 0:
+                    continue
                 model_name = provider.get_model_name(model)
                 self.add_metric_data(provider_name, model_name, metric, latencies)
                 # Convert to milliseconds and sort for CDF
@@ -191,18 +194,20 @@ class Benchmark:
                     )
 
                 provider.log_metrics(
-                    model, f"{metric}_median", np.percentile(latencies, 50)
+                    model, f"{metric}_median", float(np.percentile(latencies, 50))
                 )
                 provider.log_metrics(
-                    model, f"{metric}_p95", np.percentile(latencies, 95)
+                    model, f"{metric}_p95", float(np.percentile(latencies, 95))
                 )
+                any_series = True
                 
         plt.xlabel("Latency (ms)", fontsize=12)
         plt.ylabel("Portion of requests", fontsize=12)
         plt.grid(True)
 
         # Add legend
-        plt.legend(loc="best")
+        if any_series:
+            plt.legend(loc="best")
         plt.xscale("log")
         # **Ensure all ticks are labeled**
         ax = plt.gca()
