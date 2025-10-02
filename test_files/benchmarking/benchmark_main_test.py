@@ -22,6 +22,9 @@ class MockProvider:
         }
         self.model_map = model_map
 
+    def log_metrics(self, model_name, metric, value):
+        pass
+
     def get_model_name(self, model):
         return self.model_map.get(model, None)
 

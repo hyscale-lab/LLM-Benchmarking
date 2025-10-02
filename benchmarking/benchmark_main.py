@@ -81,10 +81,13 @@ class Benchmark:
             filename_suffix (str): Suffix to append to the filename for saving the plot.
         """
         plt.figure(figsize=(8, 8))
+        any_series = False
 
         for provider in self.providers:
             provider_name = provider.__class__.__name__
             for model, latencies in provider.metrics[metric].items():
+                if len(latencies) == 0:
+                    continue
                 # Convert to milliseconds and sort for CDF
                 latencies_sorted = np.sort(latencies) * 1000
                 cdf = np.arange(1, len(latencies_sorted) + 1) / len(latencies_sorted)
@@ -111,12 +114,21 @@ class Benchmark:
                         label=f"{provider_name} - {model_name}",
                     )
                 
+                provider.log_metrics(
+                    model, f"{filename_suffix}_median", float(np.percentile(latencies, 50))
+                )
+                provider.log_metrics(
+                    model, f"{filename_suffix}_p95", float(np.percentile(latencies, 95))
+                )
+                any_series = True
+                
         plt.xlabel("Latency (ms)", fontsize=12)
         plt.ylabel("Portion of requests", fontsize=12)
         plt.grid(True)
 
         # Add legend
-        plt.legend(loc="best")
+        if any_series:
+            plt.legend(loc="best")
         plt.xscale("log")
         # **Ensure all ticks are labeled**
         ax = plt.gca()
@@ -193,8 +205,6 @@ class Benchmark:
             self.plot_metrics("timetofirsttoken", "timetofirsttoken")
             self.plot_metrics("response_times", "totaltime")
             self.plot_metrics("timebetweentokens", "timebetweentokens")
-            self.plot_metrics("timebetweentokens_median", "timebetweentokens_median")
-            self.plot_metrics("timebetweentokens_p95", "timebetweentokens_p95")
     
     def run_trace_mode(self):
         """

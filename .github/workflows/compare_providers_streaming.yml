@@ -3,8 +3,8 @@ name: Compare Providers Streaming
 on:
   workflow_dispatch:
   # push:
-  schedule:
-    - cron: "0 0 * * 1"
+  # schedule:
+  #   - cron: "0 0 * * 1"
 
 
 jobs:
@@ -30,6 +30,9 @@ jobs:
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         AWS_REGION: ${{ secrets.AWS_REGION }}
         MISTRAL_LARGE_API: ${{ secrets.MISTRAL_LARGE_API }}
+        AZURE_AI_ENDPOINT: ${{ secrets.AZURE_AI_ENDPOINT }}
+        AZURE_AI_API_KEY: ${{ secrets.AZURE_AI_API_KEY }}
+        AZURE_OPENAI_ENDPOINT: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
         
     steps:
     - name: Check out repository
