@@ -27,7 +27,9 @@ class Benchmark:
         prompt,
         streaming=False,
         verbosity=False,
-        vllm_ip=None
+        vllm_ip=None,
+        proxy_server=None,
+        load_generator=None
     ):
         """
         Initialize the Benchmark object.
