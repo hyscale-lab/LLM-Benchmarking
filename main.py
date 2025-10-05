@@ -166,7 +166,7 @@ def run_benchmark(config, vllm_ip=None, proxy_server=None, load_generator=None):
     verbose = config.get("verbose", False)
     backend = config.get("backend", False)
     # Select Benchmark class based on backend flag
-    if backend:
+    if backend and not proxy_server:
         from benchmarking.dynamo_bench import Benchmark
     else:
         from benchmarking.benchmark_main import Benchmark
