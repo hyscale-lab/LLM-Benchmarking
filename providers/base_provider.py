@@ -18,6 +18,7 @@ class BaseProvider(ProviderInterface):
             self.client = client_class(api_key=api_key)
 
         self.model_map = {}
+        self.timeout = (1, 2)
 
     def get_model_name(self, model):
         return self.model_map.get(model, None)
@@ -36,7 +37,7 @@ class BaseProvider(ProviderInterface):
                     {"role": "user", "content": prompt},
                 ],
                 max_tokens=max_output,
-                timeout=(1, 2)
+                timeout=self.timeout
             )
             elapsed = timer() - start
 

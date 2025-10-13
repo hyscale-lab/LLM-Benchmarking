@@ -17,3 +17,4 @@ class Open_AI(BaseProvider):
             "meta-llama-3.1-70b-instruct": "gpt-4",  # 1000-1800b
             "common-model": "gpt-4o",
         }
+        self.timeout = (10, 180)

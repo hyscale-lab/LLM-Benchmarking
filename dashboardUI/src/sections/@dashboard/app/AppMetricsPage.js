@@ -11,7 +11,7 @@ import AppMetricsDate from "./AppMetricsDate";
 
 // ----------------------------------------------------------------------
 
-const AppMetricsPage = ({ metricType, streaming = true, title = "Metrics Dashboard", metricName, min }) => {
+const AppMetricsPage = ({ metricType, streaming = true, title = "Metrics Dashboard", metricName, min, cdf = false }) => {
     const [metrics, setMetrics] = useState(null);
     const [periodMetrics, setPeriodMetrics] = useState(null);
     const [dateList, setDateList] = useState(null);
@@ -65,10 +65,10 @@ const AppMetricsPage = ({ metricType, streaming = true, title = "Metrics Dashboa
     }, [fetchPeriodMetrics]);
 
     useEffect(() => {
-        if (selectedDate) {
+        if (selectedDate && cdf) {
             fetchMetrics();
         }
-    }, [selectedDate, fetchMetrics]);
+    }, [selectedDate, fetchMetrics, cdf]);
 
     const handleDateRangeChange = (event) => {
         setDateRange(event.target.value);
@@ -79,7 +79,7 @@ const AppMetricsPage = ({ metricType, streaming = true, title = "Metrics Dashboa
     };
 
     // Combine loading states
-    const loading = loadingMetrics || loadingPeriodMetrics;
+    const loading = (loadingMetrics && cdf) || loadingPeriodMetrics;
     if (loading) return <CircularProgress />;
     if (error)
         return (
@@ -88,7 +88,7 @@ const AppMetricsPage = ({ metricType, streaming = true, title = "Metrics Dashboa
             </Alert>
         );
 
-    if (!metrics || !periodMetrics) return <Typography>No data available</Typography>;
+    if ((!metrics && cdf) || !periodMetrics) return <Typography>No data available</Typography>;
     return (
         <Page title="Metrics Dashboard">
             <Container maxWidth="xl">
@@ -119,38 +119,42 @@ const AppMetricsPage = ({ metricType, streaming = true, title = "Metrics Dashboa
                             dateArray={dateList}
                         />
                     </Grid>
-                    <Stack direction="row" alignItems="center" sx={{ mb: 2, pt: 5, pl: 3 }}>
-                        <InputLabel sx={{ mr: 3 }}>Date:</InputLabel>
-                        <Select
-                            value={selectedDate}
-                            onChange={handleDateChange}
-                            label="Select Date"
-                            MenuProps={{
-                                PaperProps: {
-                                    style: {
-                                        maxHeight: 200, // Set max height of dropdown menu (in px)
-                                        overflowY: "auto", // Enable vertical scrolling
+                    {cdf &&
+                        <Stack direction="row" alignItems="center" sx={{ mb: 2, pt: 5, pl: 3 }}>
+                            <InputLabel sx={{ mr: 3 }}>Date:</InputLabel>
+                            <Select
+                                value={selectedDate}
+                                onChange={handleDateChange}
+                                label="Select Date"
+                                MenuProps={{
+                                    PaperProps: {
+                                        style: {
+                                            maxHeight: 200, // Set max height of dropdown menu (in px)
+                                            overflowY: "auto", // Enable vertical scrolling
+                                        },
                                     },
-                                },
-                            }}
-                        >
-                            {dateList.map((date, index) => (
-                                <MenuItem key={index} value={date}>
-                                    {`${date}`}
-                                </MenuItem>
-                            ))}
-                        </Select>
-                    </Stack>
+                                }}
+                            >
+                                {dateList.map((date, index) => (
+                                    <MenuItem key={index} value={date}>
+                                        {`${date}`}
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </Stack>
+                    }
 
-                    <Grid item xs={12}>
-                        <AppMetrics
-                            title={metricName}
-                            metricType={metricType}
-                            subheader={`Latency vs CDF across all providers`}
-                            metrics={metrics}
-                            min={min}
-                        />
-                    </Grid>
+                    {cdf &&
+                        <Grid item xs={12}>
+                            <AppMetrics
+                                title={metricName}
+                                metricType={metricType}
+                                subheader={`Latency vs CDF across all providers`}
+                                metrics={metrics}
+                                min={min}
+                            />
+                        </Grid>
+                    }
                 </Grid>
             </Container>
         </Page>
@@ -162,5 +166,6 @@ AppMetricsPage.propTypes = {
     title: PropTypes.string,
     metricName: PropTypes.string.isRequired,
     min: PropTypes.number,
+    cdf: PropTypes.bool
 };
 export default AppMetricsPage;

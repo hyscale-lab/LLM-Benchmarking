@@ -18,11 +18,11 @@ def test_google_gemini_initialization(setup_google_gemini):
 
     # Ensure model_map is set correctly
     assert provider.model_map == {
-        "gemini-1.5-flash": "gemini-1.5-flash",
-        "common-model": "gemini-1.5-flash-8b",
-        "gemini-1.5-flash-8b": "gemini-1.5-flash-8b",
-        "gemini-1.5-pro": "gemini-1.5-pro",
-        "common-model": "gemini-1.5-flash",
+        "gemini-2.5-flash": "gemini-2.5-flash",
+        "gemini-2.5-pro": "gemini-2.5-pro",
+        "gemini-2.5-flash-lite": "gemini-2.5-flash-lite",
+        "gemini-2.0-flash": "gemini-2.0-flash-001",
+        "common-model": "gemini-2.0-flash-001",
     }
 
 
@@ -50,7 +50,7 @@ def test_perform_inference(mock_gen_model_class, setup_google_gemini):
 
     # Call the method with max_output and verbosity enabled
     elapsed_time = provider.perform_inference(
-        "gemini-1.5-flash", "Test prompt", max_output=100, verbosity=True,
+        "gemini-2.5-flash", "Test prompt", max_output=100, verbosity=True,
     )
 
     # Verify generate_content is called with correct parameters
@@ -81,7 +81,7 @@ def test_perform_inference_streaming(mock_gen_model_class, setup_google_gemini, 
 
     # Call the method and capture the output with verbosity enabled
     provider.perform_inference_streaming(
-        "gemini-1.5-flash", "Test prompt", max_output=100, verbosity=True,
+        "gemini-2.5-flash", "Test prompt", max_output=100, verbosity=True,
     )
     captured = capfd.readouterr()
 
