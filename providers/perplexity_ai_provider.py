@@ -32,6 +32,7 @@ class PerplexityAI(BaseProvider):
             "sonar-reasoning-pro": "sonar-reasoning-pro",
             "common-model": "sonar-pro",
         }
+        self.timeout = (10, 180)
 
     def perform_inference_streaming(
         self, model, prompt, max_output=100, verbosity=True
