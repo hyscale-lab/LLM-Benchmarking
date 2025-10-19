@@ -2,7 +2,6 @@
 from timeit import default_timer as timer
 import asyncio
 import json
-import numpy as np
 from providers.provider_interface import ProviderInterface
 
 
@@ -70,6 +69,8 @@ class BaseProvider(ProviderInterface):
             model_id = self.get_model_name(model)
             if model_id is None:
                 raise ValueError(f"Model {model} not available for provider.")
+
+            ttft = None
             first_token_time = None
             inter_token_latencies = []
 
@@ -111,21 +112,21 @@ class BaseProvider(ProviderInterface):
                     elif len(inter_token_latencies) == 20:
                         print("...")
 
-            avg_tbt = sum(inter_token_latencies) / len(inter_token_latencies)
+            token_count = (len(inter_token_latencies) + 1) if ttft is not None else 0
+            non_first_latency = max(elapsed - (ttft or 0.0), 0.0)
+            avg_tbt = (non_first_latency / (token_count)) if token_count > 0 else 0.0
+            
             if verbosity:
 
                 print(
                     f"\nNumber of output tokens/chunks: {len(inter_token_latencies) + 1}, Avg TBT: {avg_tbt:.4f}, Time to First Token (TTFT): {ttft:.4f} seconds, Total Response Time: {elapsed:.4f} seconds"
                 )
-            self.log_metrics(model, "timetofirsttoken", ttft)
+            if ttft is not None:
+                self.log_metrics(model, "timetofirsttoken", ttft)
             self.log_metrics(model, "response_times", elapsed)
             self.log_metrics(model, "timebetweentokens", avg_tbt)
-            median = np.percentile(inter_token_latencies, 50)
-            p95 = np.percentile(inter_token_latencies, 95)
-            self.log_metrics(model, "timebetweentokens_median", median)
-            self.log_metrics(model, "timebetweentokens_p95", p95)
-            self.log_metrics(model, "totaltokens", len(inter_token_latencies) + 1)
-            self.log_metrics(model, "tps", (len(inter_token_latencies) + 1) / elapsed)
+            self.log_metrics(model, "totaltokens", token_count)
+            self.log_metrics(model, "tps", (token_count / elapsed) if elapsed > 0 else 0.0)
 
         except Exception as e:
             print(f"[ERROR] Streaming inference failed for model '{model}': {e}")

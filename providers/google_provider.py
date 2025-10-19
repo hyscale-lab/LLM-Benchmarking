@@ -1,7 +1,6 @@
 import os
 import asyncio
 from timeit import default_timer as timer
-import numpy as np
 import google.generativeai as genai
 from providers.provider_interface import ProviderInterface
 
@@ -95,7 +94,6 @@ class GoogleGemini(ProviderInterface):
 
         self._initialize_model(model_id)
 
-        inter_token_latencies = []
         start_time = timer()
         response = self.model.generate_content(
             prompt,
@@ -105,56 +103,56 @@ class GoogleGemini(ProviderInterface):
             stream=True,
         )
 
+        ttft = None
         first_token_time = None
-        prev_token_time = start_time
         streamed_output = []
         total_tokens = 0
+        first_chunk_tokens = 0
 
         for chunk in response:
             current_time = timer()
-
-            if first_token_time is None:
-                first_token_time = current_time
-                TTFT = first_token_time - start_time
-                prev_token_time = first_token_time
-                if verbosity:
-                    print(f"Time to First Token (TTFT): {TTFT:.4f} seconds")
+            text = getattr(chunk, "text", "") or ""
 
             # Estimate the number of tokens in the current chunk
-            num_tokens = int(self.model.count_tokens(chunk.text).total_tokens)
-            total_tokens += num_tokens
+            num_tokens = 0
+            if text:
+                try:
+                    num_tokens = int(self.model.count_tokens(text).total_tokens)
+                    if num_tokens <= 0:
+                        num_tokens = 1
+                except Exception:
+                    num_tokens = 1
+
+            if first_token_time is None and text:
+                first_token_time = current_time
+                ttft = first_token_time - start_time
+                first_chunk_tokens = max(num_tokens, 0)
+                if verbosity:
+                    print(f"Time to First Token (TTFT): {ttft:.4f} seconds")
 
             # Calculate inter-token latency per token in the chunk
             if num_tokens > 0:
-                inter_token_latency = (current_time - prev_token_time) / num_tokens
-                for _ in range(num_tokens):
-                    inter_token_latencies.append(inter_token_latency)
+                total_tokens += num_tokens
 
-            prev_token_time = current_time
-            if verbosity and chunk.text:
-                print(chunk.text, end="", flush=True)
-            streamed_output.append(chunk.text)
+            if verbosity and text:
+                print(text, end="", flush=True)
+            streamed_output.append(text)
 
         total_time = timer() - start_time
+        if ttft is None:
+            ttft = total_time
+        non_first_latency = max(total_time - ttft, 0.0)
+        subsequent_tokens = max(total_tokens - first_chunk_tokens, 0)
+        avg_tbt = (non_first_latency / subsequent_tokens) if subsequent_tokens > 0 else 0.0
+        
         if verbosity:
             print(f"\nTotal Response Time: {total_time:.4f} seconds")
-            print(f"total tokens {len(inter_token_latencies)}")
+            print(f"total tokens {total_tokens}")
+            print(f"Avg TBT: {avg_tbt:.4f} seconds")
 
-        avg_tbt = sum(inter_token_latencies) / len(inter_token_latencies)
-        self.log_metrics(model, "timetofirsttoken", TTFT)
+        self.log_metrics(model, "timetofirsttoken", ttft)
         self.log_metrics(model, "response_times", total_time)
         self.log_metrics(model, "timebetweentokens", avg_tbt)
-
-        # Calculate additional latency metrics
-        median_latency = (
-            np.median(inter_token_latencies) if inter_token_latencies else 0
-        )
-        p95_latency = (
-            np.percentile(inter_token_latencies, 95) if inter_token_latencies else 0
-        )
-
-        self.log_metrics(model, "timebetweentokens_median", median_latency)
-        self.log_metrics(model, "timebetweentokens_p95", p95_latency)
         self.log_metrics(model, "totaltokens", total_tokens)
         self.log_metrics(
             model, "tps", total_tokens / total_time if total_time > 0 else 0

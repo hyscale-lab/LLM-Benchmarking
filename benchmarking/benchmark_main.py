@@ -93,6 +93,16 @@ class Benchmark:
                 cdf = np.arange(1, len(latencies_sorted) + 1) / len(latencies_sorted)
                 model_name = provider.get_model_name(model)
 
+                median = float(np.percentile(latencies, 50))
+                p95 = float(np.percentile(latencies, 95))
+                mean = float(np.mean(latencies))
+
+                if self.verbosity:
+                    print(f"Results for {provider_name}({model}) - {metric}:")
+                    print(f"Median {metric}: {median}")
+                    print(f"P95 {metric}: {p95}")
+                    print(f"Mean {metric}: {mean}")
+
                 if provider_name.lower() == "vllm":
                     plt.plot(
                         latencies_sorted,
@@ -113,13 +123,6 @@ class Benchmark:
                         markersize=5,
                         label=f"{provider_name} - {model_name}",
                     )
-                
-                provider.log_metrics(
-                    model, f"{filename_suffix}_median", float(np.percentile(latencies, 50))
-                )
-                provider.log_metrics(
-                    model, f"{filename_suffix}_p95", float(np.percentile(latencies, 95))
-                )
                 any_series = True
                 
         plt.xlabel("Latency (ms)", fontsize=12)

@@ -1,7 +1,6 @@
 import os
 import asyncio
 from time import perf_counter as timer
-import numpy as np
 from azure.ai.inference import ChatCompletionsClient
 from azure.ai.inference.models import SystemMessage, UserMessage, AssistantMessage
 from azure.core.credentials import AzureKeyCredential
@@ -107,8 +106,9 @@ class Azure(ProviderInterface):
 
         inter_token_latencies = []
         start_time = timer()
+        first_token_time = None
+        ttft = None
         try:
-            first_token_time = None
             with client.complete(
                 stream=True,
                 messages=[
@@ -139,24 +139,21 @@ class Azure(ProviderInterface):
 
             total_time = timer() - start_time
             # Calculate total metrics
+            token_count = (len(inter_token_latencies) + 1) if ttft is not None else 0
+            non_first_latency = max(total_time - (ttft or 0.0), 0.0)
+            avg_tbt = (non_first_latency / (token_count)) if token_count > 0 else 0.0
 
             if verbosity:
                 print(f"\nTotal Response Time: {total_time:.4f} seconds")
-                print(len(inter_token_latencies))
+                print(f"Total tokens: {token_count}")
+                print(f"Avg TBT: {avg_tbt:.4f} seconds")
 
             # Log metrics
-            avg_tbt = sum(inter_token_latencies) / len(inter_token_latencies)
-            print(f"{avg_tbt:.4f}, {len(inter_token_latencies)}")
-            self.log_metrics(model, "timetofirsttoken", ttft)
+            if ttft is not None:
+                self.log_metrics(model, "timetofirsttoken", ttft)
             self.log_metrics(model, "response_times", total_time)
             self.log_metrics(model, "timebetweentokens", avg_tbt)
-            self.log_metrics(
-                model, "timebetweentokens_median", np.median(inter_token_latencies)
-            )
-            self.log_metrics(
-                model, "timebetweentokens_p95", np.percentile(inter_token_latencies, 95)
-            )
-            self.log_metrics(model, "totaltokens", len(inter_token_latencies) + 1)
+            self.log_metrics(model, "totaltokens", token_count)
 
         except Exception as e:
             print(f"[ERROR] Streaming inference failed for model '{model}': {e}")

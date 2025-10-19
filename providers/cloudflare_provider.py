@@ -3,7 +3,6 @@ import time
 import asyncio
 from timeit import default_timer as timer
 import requests
-import numpy as np
 from providers.provider_interface import ProviderInterface
 
 # from IPython.display import display, Image, Markdown, Audio
@@ -117,7 +116,10 @@ class Cloudflare(ProviderInterface):
                 timeout=500,
             )
 
+            ttft = None
             first_token_time = None
+            prev_token_time = None
+
             for line in response.iter_lines():
                 if line:
                     if first_token_time is None:
@@ -143,22 +145,23 @@ class Cloudflare(ProviderInterface):
                     inter_token_latencies.append(inter_token_latency)
                     print(line_str[19:].split('"')[0], end='')
 
+            total_time = time.perf_counter() - start_time
+            token_count = (len(inter_token_latencies) + 1) if ttft is not None else 0
+            non_first_latency = max(total_time - (ttft or 0.0), 0.0)
+            avg_tbt = (non_first_latency / (token_count)) if token_count > 0 else 0.0
+
             if verbosity:
                 print(
                     f"\nNumber of output tokens/chunks: {len(inter_token_latencies) + 1}, Time to First Token (TTFT): {ttft:.4f} seconds, Total Response Time: {total_time:.4f} seconds"
                 )
 
-            avg_tbt = sum(inter_token_latencies) / len(inter_token_latencies)
             print(f"\nAvg TBT: {avg_tbt:.4f}, {len(inter_token_latencies)}")
-            self.log_metrics(model, "timetofirsttoken", ttft)
+            if ttft is not None:
+                self.log_metrics(model, "timetofirsttoken", ttft)
             self.log_metrics(model, "response_times", total_time)
             self.log_metrics(model, "timebetweentokens", avg_tbt)
-            median = np.percentile(inter_token_latencies, 50)
-            p95 = np.percentile(inter_token_latencies, 95)
-            self.log_metrics(model, "timebetweentokens_median", median)
-            self.log_metrics(model, "timebetweentokens_p95", p95)
-            self.log_metrics(model, "totaltokens", len(inter_token_latencies) + 1)
-            self.log_metrics(model, "tps", (len(inter_token_latencies) + 1) / total_time)
+            self.log_metrics(model, "totaltokens", token_count)
+            self.log_metrics(model, "tps", (token_count / total_time) if total_time > 0 else 0.0)
 
         except Exception as e:
             print(f"[ERROR] Streaming inference failed for model '{model}': {e}")
