@@ -73,6 +73,7 @@ class BaseProvider(ProviderInterface):
             ttft = None
             first_token_time = None
             inter_token_latencies = []
+            elapsed = 0.0
 
             start = timer()
             response = self.client.chat.completions.create(
@@ -87,6 +88,11 @@ class BaseProvider(ProviderInterface):
             )
 
             for chunk in response:
+                if timer() - start > 90:
+                    elapsed = timer() - start
+                    print("[WARN] Streaming exceeded 90s, stopping early.")
+                    break
+
                 if first_token_time is None:
                     first_token_time = timer()
                     ttft = first_token_time - start

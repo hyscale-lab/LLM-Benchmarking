@@ -115,6 +115,10 @@ class GoogleGemini(ProviderInterface):
 
             # Estimate the number of tokens in the current chunk
             num_tokens = 0
+
+            if timer() - start_time > 90:
+                print("[WARN] Streaming exceeded 90s, stopping early.")
+                break
             if text:
                 try:
                     num_tokens = int(self.model.count_tokens(text).total_tokens)

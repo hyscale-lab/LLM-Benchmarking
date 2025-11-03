@@ -118,6 +118,10 @@ class Anthropic(ProviderInterface):
                 timeout=500,
             ) as stream:
                 for chunk in stream.text_stream:
+                    if timer() - start > 90:
+                        elapsed = timer() - start
+                        print("[WARN] Streaming exceeded 90s, stopping early.")
+                        break
                     if first_token_time is None:
                         first_token_time = timer()
                         TTFT = first_token_time - start

@@ -119,6 +119,10 @@ class Azure(ProviderInterface):
                 model=model_id
             ) as response:
                 for event in response:
+                    if timer() - start_time > 90:
+                        print("[WARN] Streaming exceeded 90s, stopping early.")
+                        break
+
                     if not event.choices or not event.choices[0].delta:
                         continue
 

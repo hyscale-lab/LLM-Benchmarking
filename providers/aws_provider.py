@@ -133,6 +133,10 @@ class AWSBedrock(ProviderInterface):
                         # print(f"[DEBUG] Failed to decode chunk: {e}")
                         continue
 
+                    if timer() - start_time > 90:
+                        print("[WARN] Streaming exceeded 90s, stopping early.")
+                        break
+
                     if chunk["stop_reason"] == 'length':
                         total_time = time.perf_counter() - start_time
                         print(chunk)

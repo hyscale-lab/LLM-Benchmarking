@@ -60,6 +60,9 @@ class PerplexityAI(BaseProvider):
             first_chunk_tokens = 0
 
             for chunk in response:
+                if timer() - start > 90:
+                    print("[WARN] Streaming exceeded 90s, stopping early.")
+                    break
                 usage = getattr(chunk, "usage", None)
                 current_completion_tokens = (
                     getattr(usage, "completion_tokens", None)
