@@ -131,8 +131,8 @@ def test_plot_metrics(benchmark_instance):
         provider_name: {
             model_name: {
                 "response_times": {
-                    "latencies": ["100", "200", "300"],
-                    "cdf": ["0.33", "0.66", "1.0"]
+                    "latencies": [100, 200, 300],
+                    "cdf": [0.33, 0.66, 1.0]
                 }
             }
         }

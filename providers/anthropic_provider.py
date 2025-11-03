@@ -2,7 +2,6 @@
 import os
 import asyncio
 from timeit import default_timer as timer
-import numpy as np
 import anthropic
 from providers.provider_interface import ProviderInterface
 
@@ -107,6 +106,7 @@ class Anthropic(ProviderInterface):
 
             first_token_time = None
             inter_token_latencies = []
+            TTFT = None
 
             start = timer()
             with self.client.messages.stream(
@@ -118,6 +118,10 @@ class Anthropic(ProviderInterface):
                 timeout=500,
             ) as stream:
                 for chunk in stream.text_stream:
+                    if timer() - start > 90:
+                        elapsed = timer() - start
+                        print("[WARN] Streaming exceeded 90s, stopping early.")
+                        break
                     if first_token_time is None:
                         first_token_time = timer()
                         TTFT = first_token_time - start
@@ -142,24 +146,22 @@ class Anthropic(ProviderInterface):
                 if verbosity:
                     print(f"\nTotal Response Time: {elapsed:.4f} seconds")
                     print(f"Total tokens: {len(inter_token_latencies)}")
-                    # print(
-                    #     f"\nNumber of output tokens/chunks: {len(inter_token_latencies) + 1}, Avg TBT: {avg_tbt:.4f}, Time to First Token (TTFT): {ttft:.4f} seconds, Total Response Time: {elapsed:.4f} seconds"
-                    # )
 
             # Log remaining metrics
-            # avg_tbt = sum(inter_token_latencies) / len(inter_token_latencies)
-            avg_tbt = sum(inter_token_latencies) / max_output
+            token_count = len(inter_token_latencies) + (1 if TTFT is not None else 0)
+            if TTFT is None:
+                avg_tbt = 0.0
+            else:
+                non_first_latency = max(elapsed - TTFT, 0.0)
+                avg_tbt = non_first_latency / max(token_count - 1, 1)
+
+            if verbosity:
+                print(f"Avg TBT: {avg_tbt:.4f} seconds")
 
             self.log_metrics(model, "response_times", elapsed)
             self.log_metrics(model, "timebetweentokens", avg_tbt)
-            self.log_metrics(model, "totaltokens", len(inter_token_latencies) + 1)
-            self.log_metrics(model, "tps", (len(inter_token_latencies) + 1) / elapsed)
-            self.log_metrics(
-                model, "timebetweentokens_median", np.percentile(inter_token_latencies, 50)
-            )
-            self.log_metrics(
-                model, "timebetweentokens_p95", np.percentile(inter_token_latencies, 95)
-            )
+            self.log_metrics(model, "totaltokens", token_count)
+            self.log_metrics(model, "tps", (token_count / elapsed) if elapsed > 0 else 0.0)
 
         except Exception as e:
             print(f"[ERROR] Streaming inference failed for model '{model}': {e}")

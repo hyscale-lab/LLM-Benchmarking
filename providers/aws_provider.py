@@ -3,7 +3,6 @@ import time
 from timeit import default_timer as timer
 import asyncio
 import json
-import numpy as np
 from dotenv import load_dotenv
 import boto3
 from providers.provider_interface import ProviderInterface
@@ -76,7 +75,7 @@ class AWSBedrock(ProviderInterface):
 
             total_tokens = model_response.get("generation_token_count") or 0
 
-            tbt = total_time / max(total_tokens, 1)
+            tbt = total_time / max(total_tokens - 1, 1)
             tps = (total_tokens / total_time)
 
             self.log_metrics(model, "totaltokens", total_tokens)
@@ -134,6 +133,10 @@ class AWSBedrock(ProviderInterface):
                         # print(f"[DEBUG] Failed to decode chunk: {e}")
                         continue
 
+                    if timer() - start_time > 90:
+                        print("[WARN] Streaming exceeded 90s, stopping early.")
+                        break
+
                     if chunk["stop_reason"] == 'length':
                         total_time = time.perf_counter() - start_time
                         print(chunk)
@@ -166,23 +169,21 @@ class AWSBedrock(ProviderInterface):
 
             # Measure total response time
             total_time = time.perf_counter() - start_time
+
+            token_count = len(inter_token_latencies) + (1 if ttft is not None else 0)
+            non_first_latency = max(total_time - (ttft or 0.0), 0.0)
+            avg_tbt = (non_first_latency / token_count) if token_count > 0 else 0.0
+
             if verbosity:
                 print(f"\n##### Total Response Time: {total_time:.4f} seconds")
-                print(f"##### Tokens: {len(inter_token_latencies)}")
-                avg_tbt = sum(inter_token_latencies) / len(inter_token_latencies)
-                median = np.percentile(inter_token_latencies, 50)
-                p95 = np.percentile(inter_token_latencies, 95)
-                print("[INFO] avg_tbt - ", avg_tbt, median, p95)
+                print(f"##### Tokens: {token_count}")
+                print(f"[INFO] Avg TBT ((total - TTFT)/tokens): {avg_tbt:.4f}s")
+
             self.log_metrics(model, "timetofirsttoken", ttft)
             self.log_metrics(model, "response_times", total_time)
             self.log_metrics(model, "timebetweentokens", avg_tbt)
-            # print(median, p95)
-            self.log_metrics(model, "timebetweentokens_median", median)
-            self.log_metrics(model, "timebetweentokens_p95", p95)
-            self.log_metrics(model, "totaltokens", len(inter_token_latencies) + 1)
-            self.log_metrics(
-                model, "tps", (len(inter_token_latencies) + 1) / total_time
-            )
+            self.log_metrics(model, "totaltokens", token_count)
+            self.log_metrics(model, "tps", (token_count / total_time) if total_time > 0 else 0.0)
 
             return total_time, inter_token_latencies
 

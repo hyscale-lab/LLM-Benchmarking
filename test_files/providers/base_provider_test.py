@@ -46,7 +46,7 @@ def test_perform_inference(
     assert elapsed_time == 1.0
 
 
-@patch("providers.base_provider.timer", side_effect=[0, 0.5, 1.0, 1.5, 2.0])
+@patch("providers.base_provider.timer", side_effect=[0, 0.5, 0.5, 1.0, 1.5, 1.5, 2.0, 2.0])
 @patch.object(BaseProvider, "log_metrics")
 @patch.object(BaseProvider, "display_response")
 def test_perform_inference_streaming(
