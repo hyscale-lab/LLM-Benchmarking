@@ -28,10 +28,9 @@ def test_anthropic_provider_initialization(setup_anthropic_provider):
 
     # Ensure model_map is set correctly
     assert provider.model_map == {
-            "claude-3.5-sonnet": "claude-3-5-sonnet-20241022",  # approx 70b
-            "claude-3-opus": "claude-3-opus-20240229",  # approx 2T
-            "claude-3-haiku": "claude-3-5-haiku-20241022",  # approx 20b
-            "common-model": "claude-3-5-sonnet-20241022",
+        "claude-3-opus": "claude-3-opus-20240229",  # approx 2T
+        "claude-3-haiku": "claude-3-5-haiku-20241022",  # approx 20b
+        "common-model": "claude-3-5-haiku-20241022",
     }
 
 
@@ -57,12 +56,12 @@ def test_perform_inference(mock_anthropic_client_class, setup_anthropic_provider
 
     # Call the method with verbosity enabled
     elapsed_time = provider.perform_inference(
-        "claude-3.5-sonnet", "Test prompt", max_output=100, verbosity=True
+        "claude-3-haiku", "Test prompt", max_output=100, verbosity=True
     )
 
     # Verify messages.create is called with correct parameters
     provider.client.messages.create.assert_called_once_with(
-        model="claude-3-5-sonnet-20241022",
+        model="claude-3-5-haiku-20241022",
         max_tokens=100,
         messages=[{"role": "user", "content": "Test prompt"}],
         # temperature=0.7,
@@ -92,13 +91,13 @@ def test_perform_inference_streaming(
 
     # Call the method and capture the output with verbosity enabled
     provider.perform_inference_streaming(
-        "claude-3.5-sonnet", "Test prompt", max_output=100, verbosity=True
+        "claude-3-haiku", "Test prompt", max_output=100, verbosity=True
     )
     captured = capfd.readouterr()
 
     # Verify messages.stream is called with correct parameters
     provider.client.messages.stream.assert_called_once_with(
-        model="claude-3-5-sonnet-20241022",
+        model="claude-3-5-haiku-20241022",
         max_tokens=100,
         messages=[{"role": "user", "content": "Test prompt"}],
         # temperature=0.7,
