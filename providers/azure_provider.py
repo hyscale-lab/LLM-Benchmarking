@@ -17,11 +17,7 @@ class Azure(ProviderInterface):
 
         # Map model names to Azure model IDs
         self.model_map = {
-            # "mistral-7b-instruct-v0.1": "mistral-7b-instruct-v0.1",
-            "meta-llama-3.1-8b-instruct": "Meta-Llama-3.1-8B-Instruct-fyp",
-            "meta-llama-3.1-70b-instruct": "Meta-Llama-3-1-70B-Instruct-fyp",
-            "mistral-large": "Mistral-Large-2411-yatcd",
-            "common-model": "Mistral-Large-2411-yatcd",
+            "common-model": "Meta-Llama-3.1-8B-Instruct"
         }
 
         self._client = None
