@@ -17,6 +17,7 @@ class Azure(ProviderInterface):
 
         # Map model names to Azure model IDs
         self.model_map = {
+            "llama-3.3-70b-instruct": "Llama-3.3-70B-Instruct",
             "meta-llama-3.1-8b-instruct": "Meta-Llama-3.1-8B-Instruct",
             "common-model": "Meta-Llama-3.1-8B-Instruct"
         }
