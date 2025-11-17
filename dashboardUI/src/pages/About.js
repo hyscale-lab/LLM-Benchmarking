@@ -112,7 +112,7 @@ export default function LLMetrics() {
                       </TableRow>
                       <TableRow>
                         <TableCell>Azure</TableCell>
-                        <TableCell>Mistral-Large-2411-yatcd</TableCell>
+                        <TableCell>Meta-Llama-3.1-8B-Instruct</TableCell>
                       </TableRow>
                       <TableRow>
                         <TableCell>Cloudflare</TableCell>
