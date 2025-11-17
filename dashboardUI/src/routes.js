@@ -9,6 +9,7 @@ import TimeBetweenToken from './pages/TimeBetweenToken';
 import TimeToFirstToken from './pages/TimeToFirstToken';
 import About from './pages/About';
 import ResponseTimes from './pages/ResponseTimes';
+import Accuracy from './pages/Accuracy';
 
 // ----------------------------------------------------------------------
 
@@ -28,6 +29,7 @@ export default function Router() {
             { path: 'time-to-first-token', element: <TimeToFirstToken /> },
             { path: 'time-between-token', element: <TimeBetweenToken /> },
             { path: 'response-times', element: <ResponseTimes /> },
+            { path: 'accuracy', element: <Accuracy /> },
 
             // { path: 'deployment-language', element: <ComingSoon /> }
           ]

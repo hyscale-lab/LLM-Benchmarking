@@ -6,9 +6,10 @@ import json
 from dotenv import load_dotenv
 import boto3
 from providers.provider_interface import ProviderInterface
+from utils.accuracy_mixin import AccuracyMixin
 
 
-class AWSBedrock(ProviderInterface):
+class AWSBedrock(AccuracyMixin, ProviderInterface):
     def __init__(self):
         """
         Initializes the AWS Bedrock client with credentials from environment variables.
@@ -27,6 +28,7 @@ class AWSBedrock(ProviderInterface):
         self.model_map = {
             "meta-llama-3-70b-instruct": "meta.llama3-70b-instruct-v1:0",
             "common-model": "meta.llama3-70b-instruct-v1:0",
+            "reasoning-model": ["arn:aws:bedrock:us-east-1:356764711652:inference-profile/us.anthropic.claude-3-7-sonnet-20250219-v1:0"]
         }
 
     def get_model_name(self, model):
@@ -249,6 +251,53 @@ class AWSBedrock(ProviderInterface):
             max_drift=100,
             upscale='ars'
         )
+
+    def _chat_for_eval(self, model_id, messages):
+        system_prompt = None
+        bedrock_messages = []
+
+        for m in messages:
+            role = m["role"]
+            content = m.get("content", "")
+            if role == "system":
+                system_prompt = content
+            elif role in ("user", "assistant"):
+                bedrock_messages.append({"role": role, "content": content})
+
+        # Claude Messages API format
+        body = json.dumps({
+            "anthropic_version": "bedrock-2023-05-31",
+            "system": system_prompt,
+            "max_tokens": 10000,
+            "temperature": 0.0,
+            "messages": bedrock_messages,
+        })
+
+        start = time.perf_counter()
+        try:
+            resp = self.bedrock_client.invoke_model(
+                modelId=model_id,
+                body=body,
+            )
+            # print(resp)
+            elapsed = time.perf_counter() - start
+
+            payload = json.loads(resp["body"].read())
+
+            # Extract the full text from the assistant response
+            text = ""
+            if "content" in payload and isinstance(payload["content"], list):
+                text = "".join([c.get("text", "") for c in payload["content"]])
+
+            # Fallback token count if usage is provided
+            tokens = int(payload.get("usage", {}).get("output_tokens", 0))
+
+            return text, tokens, elapsed
+
+        except Exception as e:
+            elapsed = time.perf_counter() - start
+            print(f"[ERROR] _chat_for_eval failed (Bedrock): {e}")
+            return "", 0, float(elapsed)
 
 
 # Example Usage

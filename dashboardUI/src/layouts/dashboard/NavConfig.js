@@ -26,6 +26,11 @@ const navConfig = [
     path: '/dashboard/metric/time-between-token',
     icon: getIcon('bx:bar-chart'),
   },
+  {
+    title: 'Accuracy',
+    path: '/dashboard/metric/accuracy',
+    icon: getIcon('bx:bar-chart'),
+  },
   // {
   //   title: 'Data Transfer Delays',
   //   path: '/dashboard/data-transfer/',

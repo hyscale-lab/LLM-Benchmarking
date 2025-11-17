@@ -18,5 +18,6 @@ class TogetherAI(BaseProvider):
             "mistral-7b-instruct-v0.1": "mistralai/Mistral-7B-Instruct-v0.1",
             "meta-llama-3.1-70b-instruct": "meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo",
             "meta-llama-3.1-405b-instruct": "meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo",
-            "common-model": "meta-llama/Llama-3.3-70B-Instruct-Turbo"
+            "common-model": "meta-llama/Llama-3.3-70B-Instruct-Turbo",
+            "reasoning-model": ["openai/gpt-oss-120b"]
         }

@@ -67,6 +67,9 @@ export default function LLMetrics() {
                 <ListItem sx={{ display: 'list-item' }}>
                   <b>Total Response Time:</b> Captures the overall time taken to generate the complete response.
                 </ListItem>
+                <ListItem sx={{ display: 'list-item' }}>
+                  <b>Accuracy:</b> Captures the accuracy of reasoning models using the AIME-2024 dataset.
+                </ListItem>
               </Box>
 
               <Typography variant="h5" marginTop={4} marginBottom={2}>
