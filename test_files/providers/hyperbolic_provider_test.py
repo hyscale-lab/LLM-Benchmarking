@@ -18,9 +18,9 @@ def test_hyperbolic_provider_initialization(setup_hyperbolic_provider):
     # Check model_map is set correctly
     assert provider.model_map == {
         "meta-llama-3.2-3b-instruct": "meta-llama/Llama-3.2-3B-Instruct",
-        "qwen2-vl-7b-instruct": "Qwen/Qwen2-VL-7B-Instruct",
+        "qwen2.5-vl-7b-instruct": "Qwen/Qwen2.5-VL-7B-Instruct",
         "meta-llama-3.1-70b-instruct": "meta-llama/Meta-Llama-3.1-70B-Instruct",
-        "common-model": "meta-llama/Meta-Llama-3.1-70B-Instruct",
+        "common-model": "Qwen/Qwen2.5-VL-7B-Instruct",
     }
 
 
@@ -59,7 +59,7 @@ def test_hyperbolic_provider_get_model_name(
         == "meta-llama/Llama-3.2-3B-Instruct"
     )
     assert (
-        provider.get_model_name("qwen2-vl-7b-instruct") == "Qwen/Qwen2-VL-7B-Instruct"
+        provider.get_model_name("qwen2.5-vl-7b-instruct") == "Qwen/Qwen2.5-VL-7B-Instruct"
     )
     assert (
         provider.get_model_name("meta-llama-3.1-70b-instruct")
