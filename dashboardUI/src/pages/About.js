@@ -128,7 +128,7 @@ export default function LLMetrics() {
                       </TableRow>
                       <TableRow>
                         <TableCell>Hyperbolic</TableCell>
-                        <TableCell>meta-llama/Meta-Llama-3.1-70B-Instruct</TableCell>
+                        <TableCell>Qwen/Qwen2.5-VL-7B-Instruct</TableCell>
                       </TableRow>
                       <TableRow>
                         <TableCell>OpenAI</TableCell>
