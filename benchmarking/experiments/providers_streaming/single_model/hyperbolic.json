@@ -3,7 +3,7 @@
         "Hyperbolic"
     ],
     "models": [
-        "qwen2-vl-7b-instruct"
+        "qwen2.5-vl-7b-instruct"
     ],
     "num_requests": 100,
     "input_tokens": 10,
