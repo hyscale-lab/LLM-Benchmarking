@@ -115,7 +115,7 @@ export default function LLMetrics() {
                       </TableRow>
                       <TableRow>
                         <TableCell>Azure</TableCell>
-                        <TableCell>Mistral-Large-2411-yatcd</TableCell>
+                        <TableCell>Meta-Llama-3.1-8B-Instruct</TableCell>
                       </TableRow>
                       <TableRow>
                         <TableCell>Cloudflare</TableCell>
@@ -131,7 +131,7 @@ export default function LLMetrics() {
                       </TableRow>
                       <TableRow>
                         <TableCell>Hyperbolic</TableCell>
-                        <TableCell>meta-llama/Meta-Llama-3.1-70B-Instruct</TableCell>
+                        <TableCell>Qwen/Qwen2.5-VL-7B-Instruct</TableCell>
                       </TableRow>
                       <TableRow>
                         <TableCell>OpenAI</TableCell>

@@ -20,11 +20,9 @@ class Azure(AccuracyMixin, ProviderInterface):
 
         # Map model names to Azure model IDs
         self.model_map = {
-            # "mistral-7b-instruct-v0.1": "mistral-7b-instruct-v0.1",
-            "meta-llama-3.1-8b-instruct": "Meta-Llama-3.1-8B-Instruct-fyp",
-            "meta-llama-3.1-70b-instruct": "Meta-Llama-3-1-70B-Instruct-fyp",
-            "mistral-large": "Mistral-Large-2411-yatcd",
-            "common-model": "Mistral-Large-2411-yatcd",
+            "llama-3.3-70b-instruct": "Llama-3.3-70B-Instruct",
+            "meta-llama-3.1-8b-instruct": "Meta-Llama-3.1-8B-Instruct",
+            "common-model": "Meta-Llama-3.1-8B-Instruct"
             "reasoning-model": ["o4-mini", "gpt-4o"],
         }
 
