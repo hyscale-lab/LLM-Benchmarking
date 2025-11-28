@@ -28,7 +28,7 @@ class AWSBedrock(AccuracyMixin, ProviderInterface):
         self.model_map = {
             "meta-llama-3-70b-instruct": "meta.llama3-70b-instruct-v1:0",
             "common-model": "meta.llama3-70b-instruct-v1:0",
-            "reasoning-model": ["arn:aws:bedrock:us-east-1:356764711652:inference-profile/us.anthropic.claude-3-7-sonnet-20250219-v1:0"]
+            "reasoning-model": ["us.anthropic.claude-3-7-sonnet-20250219-v1:0"]
         }
 
     def get_model_name(self, model):
@@ -276,7 +276,7 @@ class AWSBedrock(AccuracyMixin, ProviderInterface):
         start = time.perf_counter()
         try:
             resp = self.bedrock_client.invoke_model(
-                modelId=model_id,
+                modelId=f"arn:aws:bedrock:us-east-1:356764711652:inference-profile/{model_id}",
                 body=body,
             )
             # print(resp)

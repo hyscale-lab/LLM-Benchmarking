@@ -21,7 +21,17 @@ export const providerColors = {
     "VLLM": "#4B0082"            // Indigo
 };
 
-const AppMetricsDate = ({ title, subheader, metrics, dateArray }) => {
+const getProviderColor = (fullName) => {
+  const lower = fullName.toLowerCase();
+
+  const match = Object.entries(providerColors).find(([baseName]) =>
+    lower.includes(baseName.toLowerCase())
+  );
+
+  return match ? match[1] : "#999999";
+};
+
+const AppMetricsDate = ({ title, subheader, metrics, dateArray, yaxis }) => {
     // Prepare chart data with normalized dates and log-transform values
     const logTransformedMetrics = {};
 
@@ -50,7 +60,7 @@ const AppMetricsDate = ({ title, subheader, metrics, dateArray }) => {
         markers: {
             size: 5,
         },
-        colors: sortedProviders.map((provider) => providerColors[provider] || "#999999"), // Default gray if no match
+        colors: sortedProviders.map((provider) => getProviderColor(provider)),
         xaxis: {
             categories: dateArray,
             title: {
@@ -62,7 +72,7 @@ const AppMetricsDate = ({ title, subheader, metrics, dateArray }) => {
         },
         yaxis: {
             title: {
-                text: "Latency ms",
+                text: yaxis === "Accuracy" ? "Accuracy" : "Latency ms",
             },
             labels: {
                 formatter: (value) => (value !== null ? `${(10 ** value).toFixed(3)}` : "N/A"),
@@ -110,6 +120,7 @@ AppMetricsDate.propTypes = {
     subheader: PropTypes.string,
     metrics: PropTypes.object.isRequired,
     dateArray: PropTypes.arrayOf(PropTypes.string).isRequired,
+    yaxis: PropTypes.string.isRequired,
 };
 
 export default AppMetricsDate;
