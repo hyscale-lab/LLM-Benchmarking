@@ -90,6 +90,8 @@ const AppMetricsPage = ({ metricType, streaming = true, title = "Metrics Dashboa
         );
 
     if ((!metrics && cdf) || !periodMetrics) return <Typography>No data available</Typography>;
+
+    const yaxis = metricType === "aime_2024_accuracy" ? "Accuracy" : "Latency";
     return (
         <Page title="Metrics Dashboard">
             <Container maxWidth="xl">
@@ -115,9 +117,10 @@ const AppMetricsPage = ({ metricType, streaming = true, title = "Metrics Dashboa
                     <Grid item xs={12}>
                         <AppMetricsDate
                             title={`Aggregated Metrics for ${metricName}`}
-                            subheader={`Aggregated Latency Metrics (${dateRange})`}
+                            subheader={`Aggregated ${yaxis} Metrics (${dateRange})`}
                             metrics={periodMetrics}
                             dateArray={dateList}
+                            yaxis={yaxis}
                         />
                     </Grid>
                     {cdf &&

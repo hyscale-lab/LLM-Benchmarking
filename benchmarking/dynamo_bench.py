@@ -131,7 +131,7 @@ class Benchmark:
         except ClientError as e:
             print(f"Error saving to DynamoDB: {e.response['Error']['Message']}")
 
-    def add_metric_data(self, provider_name, model_name, metric, latencies):
+    def add_metric_data(self, provider_name, model_name, metric, latencies, track=None):
         """
         Add latency and CDF data to the benchmark data structure.
 
@@ -141,7 +141,8 @@ class Benchmark:
             metric (str): The metric type (e.g., response_times, timetofirsttoken).
             latencies (list): List of latency values in milliseconds.
         """
-        latencies_sorted = np.sort(latencies) * 1000  # Convert to milliseconds
+        latencies_sorted = np.sort(latencies)
+        latencies_sorted = latencies_sorted * 1000 if track != 'accuracy' else latencies_sorted  # Convert to milliseconds
         cdf = np.arange(1, len(latencies_sorted) + 1) / len(latencies_sorted)
 
         # Convert floats to string for DynamoDB compatibility
