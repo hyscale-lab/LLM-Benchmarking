@@ -4,9 +4,10 @@ import asyncio
 from timeit import default_timer as timer
 import anthropic
 from providers.provider_interface import ProviderInterface
+from utils.accuracy_mixin import AccuracyMixin
 
 
-class Anthropic(ProviderInterface):
+class Anthropic(AccuracyMixin, ProviderInterface):
     def __init__(self):
         """
         Initializes the AnthropicProvider with the necessary API key and client.
@@ -26,6 +27,7 @@ class Anthropic(ProviderInterface):
             "claude-3-opus": "claude-3-opus-20240229",  # approx 2T
             "claude-3-haiku": "claude-3-5-haiku-20241022",  # approx 20b
             "common-model": "claude-3-5-haiku-20241022",
+            "reasoning-model": ["claude-3-7-sonnet-20250219"]
         }
 
     def get_model_name(self, model):
@@ -164,6 +166,53 @@ class Anthropic(ProviderInterface):
         except Exception as e:
             print(f"[ERROR] Streaming inference failed for model '{model}': {e}")
             return None, None
+
+    @staticmethod
+    def _split_system_and_messages(messages):
+        system_text = None
+        out = []
+        for m in messages:
+            role = (m.get("role") or "").lower()
+            content = m.get("content", "")
+            if role == "system":
+                system_text = f"{system_text}\n{content}".strip() if system_text else content
+            else:
+                r = role if role in ("user", "assistant") else "user"
+                out.append({"role": r, "content": content})
+        return system_text, out
+
+    def _chat_for_eval(self, model_id, messages):
+        system_text, msg_list = self._split_system_and_messages(messages)
+
+        start = timer()
+        try:
+            resp = self.client.messages.create(
+                model=model_id,
+                system=system_text,
+                messages=msg_list,
+                max_tokens=4096,
+                temperature=0,
+            )
+            elapsed = timer() - start
+
+            raw = ""
+            for b in (resp.content or []):
+                if getattr(b, "type", None) == "text":
+                    raw += b.text
+
+            tokens = 0
+            try:
+                usage = getattr(resp, "usage", None)
+                tokens = getattr(usage, "output_tokens", 0) if usage else 0
+            except Exception:
+                tokens = 0
+
+            return raw, int(tokens or 0), float(elapsed)
+
+        except Exception as e:
+            elapsed = timer() - start
+            print(f"[ERROR] _chat_for_eval failed: {e}")
+            return "", 0, float(elapsed)
 
     def perform_trace_mode(self, proxy_server, load_generator, num_requests, verbosity):
         # Set handler for proxy

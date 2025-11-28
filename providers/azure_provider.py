@@ -1,28 +1,33 @@
 import os
 import asyncio
+from utils.accuracy_mixin import AccuracyMixin
 from time import perf_counter as timer
 from azure.ai.inference import ChatCompletionsClient
 from azure.ai.inference.models import SystemMessage, UserMessage, AssistantMessage
 from azure.core.credentials import AzureKeyCredential
 from providers.base_provider import ProviderInterface
+from openai import AzureOpenAI
 
 
-class Azure(ProviderInterface):
+class Azure(AccuracyMixin, ProviderInterface):
     def __init__(self):
         """Initialize AzureProvider with required API information."""
         super().__init__()
 
         self.endpoint = os.getenv("AZURE_AI_ENDPOINT")
         self.api_key = os.getenv("AZURE_AI_API_KEY")
+        self.openai_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
 
         # Map model names to Azure model IDs
         self.model_map = {
             "llama-3.3-70b-instruct": "Llama-3.3-70B-Instruct",
             "meta-llama-3.1-8b-instruct": "Meta-Llama-3.1-8B-Instruct",
-            "common-model": "Meta-Llama-3.1-8B-Instruct"
+            "common-model": "Meta-Llama-3.1-8B-Instruct",
+            "reasoning-model": ["o4-mini", "gpt-4o"],
         }
 
         self._client = None
+        self._openai_client = None
 
     def _ensure_client(self):
         """
@@ -46,6 +51,11 @@ class Azure(ProviderInterface):
             endpoint=self.endpoint,
             credential=credential,
             api_version="2024-05-01-preview",
+        )
+        self._openai_client = AzureOpenAI(
+            api_version="2024-12-01-preview",
+            azure_endpoint=self.openai_endpoint,
+            api_key=self.api_key,
         )
 
     def get_model_name(self, model):
@@ -229,3 +239,48 @@ class Azure(ProviderInterface):
             max_drift=100,
             upscale='ars'
         )
+
+    def _to_azure_messages(self, messages):
+        out = []
+        for m in messages:
+            role = (m.get("role") or "").lower()
+            content = m.get("content", "")
+            if role == "system":
+                out.append(SystemMessage(content=content))
+            else:
+                out.append(UserMessage(content=content))
+        return out
+
+    def _chat_for_eval(self, model_id, messages):
+        self._ensure_client()
+        client = self._openai_client
+        azure_msgs = self._to_azure_messages(messages)
+        max_tokens = 40000 if model_id == "o4-mini" else 16384
+        start = timer()
+        try:
+            resp = client.chat.completions.create(
+                messages=azure_msgs,
+                max_completion_tokens=max_tokens,
+                model=model_id
+            )
+            text = resp.choices[0].message.content
+            elapsed = timer() - start
+
+            tokens = 0
+            try:
+                usage = getattr(resp, "usage", None) or {}
+                tokens = (
+                    getattr(usage, "completion_tokens", None)
+                    or getattr(usage, "output_tokens", None)
+                    or (isinstance(usage, dict) and (usage.get("completion_tokens") or usage.get("output_tokens")))
+                    or 0
+                )
+            except Exception:
+                tokens = 0
+
+            return text, int(tokens or 0), float(elapsed)
+
+        except Exception as e:
+            elapsed = timer() - start
+            print(f"ERROR IS {e!r}")
+            return "", 0, float(elapsed)

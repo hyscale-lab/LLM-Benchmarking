@@ -31,7 +31,8 @@ class Benchmark:
         verbosity=False,
         vllm_ip=None,
         proxy_server=None,
-        load_generator=None
+        load_generator=None,
+        dataset=None
     ):
         """
         Initializes the Benchmark instance with provided parameters.
@@ -55,6 +56,7 @@ class Benchmark:
         self.vllm_ip = vllm_ip
         self.proxy_server = proxy_server
         self.load_generator = load_generator
+        self.dataset = dataset
 
         base_dir = "streaming" if streaming else "end_to_end"
 
@@ -168,7 +170,6 @@ class Benchmark:
         """
         for provider in self.providers:
             provider_name = provider.__class__.__name__
-            # logging.debug(f"{provider_name}")
             print(f"{provider_name}")
             for model in self.models:
                 model_name = provider.get_model_name(model)
@@ -179,7 +180,6 @@ class Benchmark:
                         print(f"Request {i + 1}/{self.num_requests}")
 
                     if i % 20 == 0:
-                        # print("[DEBUG] Sleeping for 2 mins to bypass rate limit...")
                         time.sleep(120)
 
                     if self.streaming:
@@ -208,7 +208,31 @@ class Benchmark:
             self.plot_metrics("timetofirsttoken", "timetofirsttoken")
             self.plot_metrics("response_times", "totaltime")
             self.plot_metrics("timebetweentokens", "timebetweentokens")
-    
+
+        if self.dataset:
+            print("\nRunning accuracy evaluation...")
+            for provider in self.providers:
+                model_names = provider.get_model_name("reasoning-model")
+                if not model_names:
+                    continue
+                for model_name in model_names:
+                    if not hasattr(provider, "measure_accuracy"):
+                        print(f"[SKIP] {provider.__class__.__name__} has no measure_accuracy().")
+                        continue
+                    try:
+                        acc_summary = provider.measure_accuracy(
+                            dataset=self.dataset,
+                            verbosity=self.verbosity,
+                            metric_default="numeric",
+                            model_id=model_name,
+                        )
+                        provider.log_metrics(
+                            model_name, "aime_2024_accuracy", acc_summary.get("accuracy")
+                        )
+                        print(f"[ACCURACY] {provider.__class__.__name__} – "f"{model_name}: {acc_summary}")
+                    except Exception as e:
+                        print(f"[WARN] measure_accuracy failed for "f"{provider.__class__.__name__}/{model_name}: {e!r}")
+
     def run_trace_mode(self):
         """
         Runs the benchmark for the selected providers and models, and plots the results.

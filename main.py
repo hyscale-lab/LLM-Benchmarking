@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import os
 from dotenv import load_dotenv
 from providers import (
     TogetherAI,
@@ -165,6 +166,7 @@ def run_benchmark(config, vllm_ip=None, proxy_server=None, load_generator=None):
     # max_output = config.get("max_output", [100])
     verbose = config.get("verbose", False)
     backend = config.get("backend", False)
+    dataset = config.get("dataset")
     # Select Benchmark class based on backend flag
     if backend and not proxy_server:
         from benchmarking.dynamo_bench import Benchmark
@@ -210,8 +212,15 @@ def run_benchmark(config, vllm_ip=None, proxy_server=None, load_generator=None):
             )
             return
     
+    if not dataset:
+        print("No dataset config found.")
+        return
+
+    if not os.path.isfile(dataset):
+        print(f"Dataset file not found: {dataset}")
+        return
+
     prompt = get_prompt(input_tokens)
-    # print(f"Prompt: {prompt}")
     
     benchmark = Benchmark(
         selected_providers,
@@ -223,7 +232,8 @@ def run_benchmark(config, vllm_ip=None, proxy_server=None, load_generator=None):
         verbosity=verbose,
         vllm_ip=vllm_ip,
         proxy_server=proxy_server,
-        load_generator=load_generator
+        load_generator=load_generator,
+        dataset=dataset,
     )
     if proxy_server:
         print("\nRunning trace mode...")

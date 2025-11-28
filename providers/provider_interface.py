@@ -29,6 +29,7 @@ class ProviderInterface(ABC):
             "timebetweentokens": {},
             "timebetweentokens_median": {},
             "timebetweentokens_p95": {},
+            "aime_2024_accuracy": {}
         }
 
         # for trace mode

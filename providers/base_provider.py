@@ -3,9 +3,10 @@ from timeit import default_timer as timer
 import asyncio
 import json
 from providers.provider_interface import ProviderInterface
+from utils.accuracy_mixin import AccuracyMixin
 
 
-class BaseProvider(ProviderInterface):
+class BaseProvider(AccuracyMixin, ProviderInterface):
     def __init__(self, api_key, client_class, base_url=None):
         super().__init__()
 
@@ -202,3 +203,40 @@ class BaseProvider(ProviderInterface):
         """Display response."""
         print(response.choices[0].message.content)  # [:100] + "...")
         print(f"\nGenerated in {elapsed:.2f} seconds")
+
+    def _chat_for_eval(self, model_id, messages):
+        start = timer()
+        try:
+            resp = self.client.chat.completions.create(
+                model=model_id,
+                messages=messages,
+                max_tokens=40960,
+                temperature=0,
+            )
+            elapsed = timer() - start
+
+            text = ""
+            try:
+                choice = resp.choices[0]
+                msg = getattr(choice, "message", None)
+                text = (getattr(msg, "content", "") or getattr(choice, "text", "") or "")
+            except Exception:
+                text = ""
+
+            tokens = 0
+            try:
+                usage = getattr(resp, "usage", None)
+                tokens = (
+                    getattr(usage, "completion_tokens", None)
+                    or getattr(usage, "output_tokens", None)
+                    or 0
+                )
+            except Exception:
+                tokens = 0
+
+            return text, int(tokens or 0), float(elapsed)
+
+        except Exception as e:
+            elapsed = timer() - start
+            print(f"[ERROR] _chat_for_eval failed (BaseProvider): {e}")
+            return "", 0, float(elapsed)

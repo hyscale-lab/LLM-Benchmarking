@@ -16,6 +16,12 @@ export const members = [
     affiliation: 'Nanyang Technological University, Singapore',
     link: 'https://www.linkedin.com/in/%E9%B8%BF%E7%9D%BF-%E5%88%98-728136294/',
     photo: '/LLM-Benchmarking/static/avatars/hongrui.jpg',
+  },
+  {
+    name: 'Maison Sapol',
+    affiliation: 'Nanyang Technological University, Singapore',
+    link: 'https://www.linkedin.com/in/sapol-maison-657a31230/',
+    photo: '/LLM-Benchmarking/static/avatars/maison.jpg',
   }
 ]
 

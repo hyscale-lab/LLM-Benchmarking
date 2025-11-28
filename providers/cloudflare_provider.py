@@ -4,12 +4,13 @@ import asyncio
 from timeit import default_timer as timer
 import requests
 from providers.provider_interface import ProviderInterface
+from utils.accuracy_mixin import AccuracyMixin
 
 # from IPython.display import display, Image, Markdown, Audio
 # import logging
 
 
-class Cloudflare(ProviderInterface):
+class Cloudflare(AccuracyMixin, ProviderInterface):
     def __init__(self):
         """
         Initializes the Cloudflare with the necessary API key and client.
@@ -35,6 +36,7 @@ class Cloudflare(ProviderInterface):
             "mistral-7b-instruct-v0.1": "@cf/mistral/mistral-7b-instruct-v0.1",
             "meta-llama-3.1-70b-instruct": "@cf/meta/llama-3.1-70b-instruct",
             "common-model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+            "reasoning-model": ["@cf/openai/gpt-oss-120b"]
         }
 
     def get_model_name(self, model):
@@ -230,3 +232,60 @@ class Cloudflare(ProviderInterface):
             max_drift=100,
             upscale='ars'
         )
+
+    def _chat_for_eval(self, model_id, messages):
+        if model_id is None:
+            return "", 0, 0.0
+
+        start = timer()
+        try:
+            r = requests.post(
+                f"https://api.cloudflare.com/client/v4/accounts/{self.cloudflare_account_id}/ai/v1/responses",
+                headers={
+                    "Authorization": f"Bearer {self.cloudflare_api_token}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": model_id,
+                    "input": messages,
+                    "max_tokens": 10000,
+                    "temperature": 0.0,
+                },
+                timeout=500,
+            )
+            elapsed = timer() - start
+
+            if r.status_code != 200:
+                return "", 0, float(elapsed)
+
+            data = r.json() or {}
+            # print(data)
+            result = data or {}
+
+            outputs = result.get("output", [])
+            text_parts = []
+
+            for item in outputs:
+                # Each item may have "content" list with multiple text entries
+                for content in item.get("content", []):
+                    if "text" in content:
+                        text_parts.append(content["text"])
+
+            # Join all text segments into one output string
+            text = "\n".join(text_parts)
+
+            usage = result.get("usage", {}) or {}
+            tokens = (
+                usage.get("completion_tokens")
+                or usage.get("output_tokens")
+                or 0
+            )
+
+            # print(text)
+
+            return text, int(tokens or 0), float(elapsed)
+
+        except Exception as e:
+            elapsed = timer() - start
+            print(f"[ERROR] _chat_for_eval failed (Cloudflare): {e}")
+            return "", 0, float(elapsed)

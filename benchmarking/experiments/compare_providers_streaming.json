@@ -19,5 +19,6 @@
     "streaming": true,
     "max_output": 100,
     "verbose": true,
-    "backend": true
+    "backend": true,
+    "dataset": "aime.jsonl"
 }

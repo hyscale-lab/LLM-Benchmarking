@@ -29,7 +29,8 @@ class Benchmark:
         verbosity=False,
         vllm_ip=None,
         proxy_server=None,
-        load_generator=None
+        load_generator=None,
+        dataset=None,
     ):
         """
         Initialize the Benchmark object.
@@ -51,6 +52,7 @@ class Benchmark:
         self.max_output = max_output
         self.verbosity = verbosity
         self.run_id = str(uuid.uuid4())  # Generate a unique ID for each benchmark run
+        self.dataset = dataset
 
         base_dir = "streaming" if streaming else "end_to_end"
 
@@ -275,6 +277,36 @@ class Benchmark:
                             provider.perform_inference(
                                 model, self.prompt, self.max_output, self.verbosity
                             )
+
+        if self.dataset:
+            print("\nRunning accuracy evaluation...")
+            for provider in self.providers:
+                model_names = provider.get_model_name("reasoning-model")
+                if not model_names:
+                    continue
+                for model_name in model_names:
+                    if not hasattr(provider, "measure_accuracy"):
+                        print(f"[SKIP] {provider.__class__.__name__} has no measure_accuracy().")
+                        continue
+                    try:
+                        acc_summary = provider.measure_accuracy(
+                            dataset=self.dataset,
+                            verbosity=self.verbosity,
+                            metric_default="numeric",
+                            model_id=model_name,
+                        )
+                        provider.log_metrics(
+                            model_name, "aime_2024_accuracy", acc_summary.get("accuracy")
+                        )
+                        self.add_metric_data(
+                            f"{provider.__class__.__name__} - {model_name}",
+                            model_name,
+                            "aime_2024_accuracy",
+                            [acc_summary.get("accuracy")]
+                        )
+                        print(f"[ACCURACY] {provider.__class__.__name__} – "f"{model_name}: {acc_summary}")
+                    except Exception as e:
+                        print(f"[WARN] measure_accuracy failed for "f"{provider.__class__.__name__}/{model_name}: {e!r}")
 
         metrics_to_plot = (
             ["timetofirsttoken", "response_times", "timebetweentokens", "tps"]
