@@ -66,7 +66,6 @@ class AccuracyMixin:
 
     @staticmethod
     def _extract_final_answer(text):
-        print(text)
         s = str(text or "")
         # 1) Try tagged final answer
         m = re.search(rf"{re.escape("ANSWER:")}\s*([-+]?\d+)\s*$", s, flags=re.I | re.M)

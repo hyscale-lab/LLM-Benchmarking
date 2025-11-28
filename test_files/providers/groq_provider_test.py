@@ -21,6 +21,9 @@ def test_groq_provider_initialization(setup_groq_provider):
         "meta-llama-3.2-3b-instruct": "llama-3.2-3b-preview",
         "meta-llama-3.1-70b-instruct": "llama-3.3-70b-versatile",
         "common-model": "llama-3.3-70b-versatile",
+        'reasoning-model': [
+            'openai/gpt-oss-120b',
+        ],
     }
 
 

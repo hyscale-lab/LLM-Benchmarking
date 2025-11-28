@@ -22,7 +22,7 @@ class Azure(AccuracyMixin, ProviderInterface):
         self.model_map = {
             "llama-3.3-70b-instruct": "Llama-3.3-70B-Instruct",
             "meta-llama-3.1-8b-instruct": "Meta-Llama-3.1-8B-Instruct",
-            "common-model": "Meta-Llama-3.1-8B-Instruct"
+            "common-model": "Meta-Llama-3.1-8B-Instruct",
             "reasoning-model": ["o4-mini", "gpt-4o"],
         }
 

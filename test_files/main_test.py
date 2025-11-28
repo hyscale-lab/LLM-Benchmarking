@@ -51,6 +51,7 @@ class TestMain(unittest.TestCase):
             "streaming": False,
             "max_output": 1000,
             "verbose": True,
+            "dataset": "aime.jsonl"
         }
 
         # Create a temporary config file

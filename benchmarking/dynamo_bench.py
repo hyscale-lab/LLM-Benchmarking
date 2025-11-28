@@ -282,6 +282,8 @@ class Benchmark:
             print("\nRunning accuracy evaluation...")
             for provider in self.providers:
                 model_names = provider.get_model_name("reasoning-model")
+                if not model_names:
+                    continue
                 for model_name in model_names:
                     if not hasattr(provider, "measure_accuracy"):
                         print(f"[SKIP] {provider.__class__.__name__} has no measure_accuracy().")
@@ -297,7 +299,7 @@ class Benchmark:
                             model_name, "aime_2024_accuracy", acc_summary.get("accuracy")
                         )
                         self.add_metric_data(
-                            provider.__class__.__name__,
+                            f"{provider.__class__.__name__} - {model_name}",
                             model_name,
                             "aime_2024_accuracy",
                             [acc_summary.get("accuracy")]

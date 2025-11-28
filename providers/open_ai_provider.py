@@ -29,7 +29,7 @@ class Open_AI(BaseProvider):
                 model=model_id,
                 messages=messages,
                 max_completion_tokens=10000,
-                temperature=0,
+                temperature=1,
             )
             elapsed = timer() - start
 
