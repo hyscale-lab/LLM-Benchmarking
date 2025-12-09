@@ -103,19 +103,19 @@ def get_metrics_period(metricType, timeRange, streaming=True):
     end_date_str = end_date.strftime("%Y-%m-%d %H:%M:%S")
 
     scan_kwargs = {
-            "FilterExpression": "#ts BETWEEN :start_date AND :end_date AND #streaming = :streaming AND #model_key = :common",
-            "ExpressionAttributeNames": {
-                "#ts": "timestamp",
-                "#streaming": "streaming",
-                "#model_key": "model_key"
-            },
-            "ExpressionAttributeValues": {
-                ":start_date": start_date_str,
-                ":end_date": end_date_str,
-                ":streaming": streaming,
-                ":common": "common"
-            },
-        }
+        "FilterExpression": "#ts BETWEEN :start_date AND :end_date AND #streaming = :streaming AND #model_key = :common",
+        "ExpressionAttributeNames": {
+            "#ts": "timestamp",
+            "#streaming": "streaming",
+            "#model_key": "model_key"
+        },
+        "ExpressionAttributeValues": {
+            ":start_date": start_date_str,
+            ":end_date": end_date_str,
+            ":streaming": streaming,
+            ":common": "common"
+        },
+    }
 
     items = scan_all_items(scan_kwargs)
     aggregated_metrics = {}
@@ -183,7 +183,7 @@ def get_metrics_by_date(metricType, date, streaming=True):
                 ":streaming": streaming,
                 ":common": "common"
             },
-}
+        }
         items = scan_all_items(scan_kwargs)
         metrics_by_provider = {}
         for item in items:
