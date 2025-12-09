@@ -1,5 +1,6 @@
 import boto3
 import json
+import time
 import statistics  # Import for median calculation
 from datetime import datetime, timedelta
 from botocore.exceptions import ClientError
