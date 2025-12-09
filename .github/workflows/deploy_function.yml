@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - main
+    paths:
+      - 'function/function.py'  # Changes in function
+      - '.github/workflows/**'  # Changes in pipeline
 
 jobs:
   deploy:
