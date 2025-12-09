@@ -14,7 +14,7 @@ export default function ResponseTimes() {
         <AppMetricsPage metricType="response_times_p95" title="Response Times Metrics P95 Metrics" metricName="Response Times Metrics P95" />
       </div>
       <div>
-        {region}
+        region: {region}
       </div>
     </div>
   );
