@@ -249,7 +249,7 @@ def lambda_handler(event, context):
         streaming = params.get("streaming", "true").lower() == "true"
 
         if not metricType or not date:
-            return {"statusCode": 400, "body": json.dumps({"error": "Missing metricType or date parameter lollllll"})}
+            return {"statusCode": 400, "body": json.dumps({"error": "Missing metricType or date parameter"})}
 
         response = get_metrics_by_date(metricType, date, streaming)
         return {"statusCode": 200, "body": json.dumps(response)}
