@@ -18,7 +18,7 @@ export const members = [
     photo: '/LLM-Benchmarking/static/avatars/hongrui.jpg',
   },
   {
-    name: 'Maison Sapol',
+    name: 'Sapol Maison',
     affiliation: 'Nanyang Technological University, Singapore',
     link: 'https://www.linkedin.com/in/sapol-maison-657a31230/',
     photo: '/LLM-Benchmarking/static/avatars/maison.jpg',
