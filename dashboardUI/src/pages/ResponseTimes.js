@@ -1,7 +1,7 @@
 import AppMetricsPage from "../sections/@dashboard/app/AppMetricsPage";
 
 export default function ResponseTimes() {
-  const region = process.env.AWS_REGION;
+  const region = process.env.REACT_APP_AWS_REGION;
   return (
     <div>
       <div style={{ paddingBottom: "30px" }}>
