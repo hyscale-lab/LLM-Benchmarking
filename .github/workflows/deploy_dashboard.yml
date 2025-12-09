@@ -3,7 +3,8 @@ name: Deploy Dashboard UI to GitHub Pages
 on:
   push:
     branches:
-      - main  
+      - main
+      - test-maison
 
 jobs:
   deploy:
