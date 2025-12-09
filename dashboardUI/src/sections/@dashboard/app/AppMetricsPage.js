@@ -30,8 +30,7 @@ const AppMetricsPage = ({ metricType, streaming = true, title = "Metrics Dashboa
                 params: { timeRange: dateRange, metricType, streaming },
             });
             setPeriodMetrics(response.data.aggregated_metrics);
-            const sortedDates = [...response.data.date_array].sort();  
-            setDateList(sortedDates);
+            setDateList(response.data.date_array);
 
             // If dateList has values, set selectedDate to the first element
             if (response.data.date_array.length > 0) {
