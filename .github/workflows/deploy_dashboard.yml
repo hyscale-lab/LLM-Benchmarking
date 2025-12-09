@@ -29,7 +29,6 @@ jobs:
     # Step 4: Build the React app with environment variables
     - name: Build React app
       run: |
-        REACT_APP_AWS_REGION=${{ secrets.AWS_REGION }} \
         REACT_APP_BASE_URL=${{ secrets.REACT_APP_API_URL }} \
         npm run build
       working-directory: ./dashboardUI
