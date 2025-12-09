@@ -52,9 +52,9 @@ def get_latest_vllm():
     Retrieves the latest item with provider_name 'vLLM'.
     """
     scan_kwargs = {
-        "FilterExpression":"#provider_name = :vllm",
-        "ExpressionAttributeNames":{"#provider_name": "provider_name"},
-        "ExpressionAttributeValues":{":vllm": "vLLM"},
+        "FilterExpression": "#provider_name = :vllm",
+        "ExpressionAttributeNames": {"#provider_name": "provider_name"},
+        "ExpressionAttributeValues": {":vllm": "vLLM"},
     }
     items = scan_all_items(scan_kwargs)
     if not items:
