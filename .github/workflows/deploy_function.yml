@@ -1,0 +1,19 @@
+name: Deploy function code to AWS Lambda
+
+on:
+  push:
+    branches:
+      - main
+      - fix/dashboard
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Check region
+      run: |
+        echo ${AWS_REGION}
