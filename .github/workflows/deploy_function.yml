@@ -32,5 +32,5 @@ jobs:
       run: |
         aws lambda update-function-code \
           --function-name llmetricsLambda \
-          --zip-file fileb://deploy.zip
+          --zip-file fileb://function.zip
       working-directory: ./function
