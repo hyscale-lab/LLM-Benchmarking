@@ -15,3 +15,36 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v3
+
+    - name: Zip the code
+      run: |
+        zip deploy.zip function.py
+      working-directory: ./function
+      
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ secrets.AWS_REGION }}
+
+    - name: Get Function Details
+      run: |
+        echo "Fetching configuration for llmetricsLambda..."
+        
+        # This command retrieves the metadata (Memory, Timeout, Handler, etc.)
+        aws lambda get-function --function-name llmetricsLambda
+        
+    # - name: Deploy to Lambda
+    #   uses: aws-actions/configure-aws-credentials@v4
+    #   with:
+    #     aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+    #     aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+    #     aws-region: ${{ secrets.AWS_REGION }}
+
+    # - name: Update Function Code
+    #   run: |
+    #     # REPLACE 'my-function-name' with the exact name of your Lambda in AWS
+    #     aws lambda update-function-code \
+    #       --function-name my-function-name \
+    #       --zip-file fileb://deploy.zip
