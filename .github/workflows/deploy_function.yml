@@ -5,7 +5,7 @@ on:
     branches:
       - main
     paths:
-      - 'function/*.py'  # Changes in function
+      - 'function/*'  # Changes in function
       - '.github/workflows/**'  # Changes in pipeline
 
 jobs:
