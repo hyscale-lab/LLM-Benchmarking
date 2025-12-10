@@ -6,13 +6,11 @@ on:
       - main
     paths:
       - 'function/*'  # Changes in function
-      - '.github/workflows/**'  # Changes in pipeline
+      - '.github/workflows/**'  # Changes in pipelines
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    env:
-        AWS_REGION: ${{ secrets.AWS_REGION }}
 
     steps:
     - name: Checkout repository
@@ -20,7 +18,7 @@ jobs:
 
     - name: Zip the code
       run: |
-        zip function.zip function.py
+        zip -r function.zip .
       working-directory: ./function
       
     - name: Configure AWS Credentials
