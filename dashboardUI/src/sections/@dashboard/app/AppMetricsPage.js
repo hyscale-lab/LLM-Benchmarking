@@ -110,6 +110,7 @@ const AppMetricsPage = ({ metricType, streaming = true, title = "Metrics Dashboa
                             <MenuItem value="week">Last week</MenuItem>
                             <MenuItem value="month">Last month</MenuItem>
                             <MenuItem value="three-month">Last 3 months</MenuItem>
+                            <MenuItem value="max">Max</MenuItem>
                         </Select>
                     </Stack>
 
