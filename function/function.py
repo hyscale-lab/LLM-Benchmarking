@@ -99,7 +99,7 @@ def get_metrics_period(metricType, timeRange, streaming=True):
         return {"error": f"Invalid timeRange. Valid options: {list(time_ranges.keys())}"}
 
     end_date = datetime.now()
-    start_date = end_date - time_ranges[timeRange] if timeRange != "max" else datetime(2025, 1, 1)
+    start_date = end_date - time_ranges[timeRange] if timeRange != "max" else datetime(2025, 3, 10)
     start_date_str = start_date.strftime("%Y-%m-%d %H:%M:%S")
     end_date_str = end_date.strftime("%Y-%m-%d %H:%M:%S")
 
