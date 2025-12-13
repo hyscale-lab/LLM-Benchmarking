@@ -1,6 +1,4 @@
 config.json
-trace/*.result
-proxy/*.log
 
 # Ignore environment variables file
 .env
@@ -24,3 +22,7 @@ notebooks/.ipynb_checkpoints/
 
 
 azure-test.py
+
+# Trace mode
+trace/*.result
+trace/proxy/*.log
