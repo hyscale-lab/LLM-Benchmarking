@@ -1,4 +1,5 @@
 import os
+import json
 from timeit import default_timer as timer
 from openai import OpenAI
 from providers.base_provider import BaseProvider
@@ -59,7 +60,9 @@ class PerplexityAI(BaseProvider):
             elapsed = None
             first_chunk_tokens = 0
 
+            response_list = []
             for chunk in response:
+                response_list.append(json.loads(chunk.json()))
                 if timer() - start > 90:
                     print("[WARN] Streaming exceeded 90s, stopping early.")
                     break
@@ -116,7 +119,8 @@ class PerplexityAI(BaseProvider):
             self.log_metrics(model, "timebetweentokens", avg_tbt)
             self.log_metrics(model, "totaltokens", total_tokens)
             self.log_metrics(model, "tps", total_tokens / elapsed if elapsed > 0 else 0)
+            return response_list
 
         except Exception as e:
             print(f"[ERROR] Streaming inference failed for model '{model}': {e}")
-            return None, None
+            return e

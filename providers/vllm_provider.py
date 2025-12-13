@@ -69,11 +69,11 @@ class vLLM(ProviderInterface):
             print(response)
             inference = response.json()
             print(inference)
-            return elapsed
+            return inference
 
         except Exception as e:
             print(f"Error during inference: {e}")
-            return None
+            return e
 
     def perform_inference_streaming(
         self, model, prompt, vllm_ip, max_output=100, verbosity=True
@@ -105,6 +105,7 @@ class vLLM(ProviderInterface):
             )
 
             first_token_time = None
+            response_list = []
             for line in response.iter_lines():
                 if line:
                     if first_token_time is None:
@@ -119,11 +120,14 @@ class vLLM(ProviderInterface):
 
                     # Handle end of stream
                     if line_str == "data: [DONE]":
+                        response_list.append(line_str[6:])
                         end_time = time.perf_counter()
                         total_time = end_time - start_time
                         if verbosity:
                             print(f"##### Total Response Time: {total_time:.4f} seconds")
                         break
+                    else:
+                        response_list.append(json.loads(line_str[6:]))
 
                     # Extract text from chunk
                     if line_str.startswith("data:"):
@@ -159,63 +163,41 @@ class vLLM(ProviderInterface):
             self.log_metrics(model, "totaltokens", len(inter_token_latencies) + 1)
             self.log_metrics(model, "tps", (len(inter_token_latencies) + 1) / total_time)
 
-            return generated_text, total_time
+            return response_list
 
         except Exception as e:
             print(f"Error during streaming inference: {e}")
-            return None, None
+            return e
 
-    def perform_trace_mode(self, proxy_server, load_generator, num_requests, verbosity, vllm_ip):
+    def perform_trace_mode(self, proxy_server, load_generator, num_requests, streaming, verbosity, vllm_ip, model='common-model'):
         # Set handler for proxy
         async def data_handler(data, streaming):
-            if streaming:
-                print("\nRequest not sent. Streaming not allowed in trace mode.")
-                return [{"error": "Streaming not allowed in trace mode."}]
+            prompt = data.pop('prompt')
+            gen_tokens = data.pop('generated_tokens')
 
             def inference_sync():
                 try:
-                    model_id = data.get('model')
-                    if not model_id or model_id not in self.model_map.values():
-                        raise Exception(f"Model {model_id} not found in model map.")
-                    model = next((k for k, v in self.model_map.items() if v == model_id))
-
-                    # Non-streaming inference
-                    start_time = timer()
-                    response = requests.post(
-                        f"http:/{vllm_ip}:{self.vllm_port}/v1/completions",
-                        headers={"Content-Type": "application/json"},
-                        timeout=data.pop('timeout', 1800),
-                        json=data,
-                        stream=False
-                    )
-                    elapsed_time = timer() - start_time
-                    response = response.json()
-
-                    usage = response.get("usage") or {}
-                    total_tokens = usage.get("completion_tokens")
-                    tbt = elapsed_time / max(total_tokens, 1)
-                    tps = (total_tokens / elapsed_time)
-                    self.log_metrics(model, "totaltokens", total_tokens)
-                    self.log_metrics(model, "timebetweentokens", tbt)
-                    self.log_metrics(model, "tps", tps)
-                    self.log_metrics(model, "response_times", elapsed_time)
-
-                    if verbosity:
-                        print()
-                        print(f"##### Generated in {elapsed_time:.2f} seconds")
-                        print(f"##### Tokens: {total_tokens}, Avg TBT: {tbt:.4f}s, TPS: {tps:.2f}")
-                        print(f"Response: {response}")
-
-                    return response
+                    if streaming:
+                        response_list = self.perform_inference_streaming(model, prompt, gen_tokens, verbosity)
+                        if isinstance(response_list, Exception):
+                            return [{"error": f"Inference failed: {response_list}"}]
+                        return response_list
+                    else:
+                        response = self.perform_inference(model, prompt, gen_tokens, verbosity)
+                        if isinstance(response, Exception):
+                            return {"error": f"Inference failed: {response}"}
+                        return response
 
                 except Exception as e:
-                    print(f"\nInference failed: {e}")
-                    return [{"error": f"Inference failed: {e}"}] if streaming else {"error": f"Inference failed: {e}"}
+                    print(f"\nData handling failed: {e}")
+                    return [{"error": f"Data handling failed: {e}"}] if streaming else {"error": f"Data handling failed: {e}"}
 
             response = await asyncio.to_thread(inference_sync)
             return response
 
         proxy_server.set_handler(data_handler)
+        proxy_server.set_streaming(streaming)
+
 
         # Start load generator
         load_generator.send_loads(

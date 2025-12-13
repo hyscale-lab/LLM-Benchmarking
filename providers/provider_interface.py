@@ -1,3 +1,4 @@
+import os
 from abc import ABC, abstractmethod
 
 
@@ -33,7 +34,7 @@ class ProviderInterface(ABC):
         }
 
         # for trace mode
-        self.trace_dataset_path = f'./trace/{self.__class__.__name__}.dataset'
+        self.trace_dataset_path = os.getenv('TRACE_DATASET_PATH', './trace/sample.json')
         self.trace_result_path = f'./trace/{self.__class__.__name__}.result'
 
     def log_metrics(self, model_name, metric, value):
@@ -60,7 +61,7 @@ class ProviderInterface(ABC):
         """
 
     @abstractmethod
-    def perform_trace_mode(self, proxy_server, load_generator, num_requests, verbosity):
+    def perform_trace_mode(self, proxy_server, load_generator, num_requests, streaming, verbosity, model):
         """
         perform_trace_mode
         """

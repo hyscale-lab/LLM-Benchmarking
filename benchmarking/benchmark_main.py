@@ -66,7 +66,7 @@ class Benchmark:
         provider_dir_name = "_".join(provider_names)
 
         if self.proxy_server:  # trace mode
-            self.graph_dir = os.path.join("benchmark_graph", "trace", provider_dir_name)
+            self.graph_dir = os.path.join("benchmark_graph", f"trace/{base_dir}", provider_dir_name)
         else:
             self.graph_dir = os.path.join("benchmark_graph", base_dir, provider_dir_name)
 
@@ -245,11 +245,15 @@ class Benchmark:
             print(f"\n[{provider_name}]")
 
             if provider_name == "vLLM":
-                provider.perform_trace_mode(self.proxy_server, self.load_generator, self.num_requests, self.verbosity, self.vllm_ip)
+                provider.perform_trace_mode(self.proxy_server, self.load_generator, self.num_requests, self.streaming, self.verbosity, self.vllm_ip)
             else:
-                provider.perform_trace_mode(self.proxy_server, self.load_generator, self.num_requests, self.verbosity)
+                provider.perform_trace_mode(self.proxy_server, self.load_generator, self.num_requests, self.streaming, self.verbosity)
         print()
 
-        self.plot_metrics("response_times", "response_times")
-        self.plot_metrics("timebetweentokens", "timebetweentokens")
-        self.plot_metrics("tps", "tps")
+        if not self.streaming:
+            self.plot_metrics("response_times", "response_times")
+        else:
+            # Save all the relevant metrics plots when streaming is true
+            self.plot_metrics("timetofirsttoken", "timetofirsttoken")
+            self.plot_metrics("response_times", "totaltime")
+            self.plot_metrics("timebetweentokens", "timebetweentokens")

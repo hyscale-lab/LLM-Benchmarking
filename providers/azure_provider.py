@@ -95,11 +95,11 @@ class Azure(AccuracyMixin, ProviderInterface):
             if verbosity:
                 print(f"Tokens: {total_tokens}, Avg TBT: {tbt:.4f}s, TPS: {tps:.2f}")
                 print(f"Response: {response['choices'][0]['message']['content']}")
-            return response
+            return response.as_dict()
 
         except Exception as e:
             print(f"[ERROR] Inference failed for model '{model}': {e}")
-            return None, None
+            return e
 
     def perform_inference_streaming(
         self, model, prompt, max_output=100, verbosity=True
@@ -126,11 +126,13 @@ class Azure(AccuracyMixin, ProviderInterface):
                 max_tokens=max_output,
                 model=model_id
             ) as response:
+                response_list = []
                 for event in response:
                     if timer() - start_time > 90:
                         print("[WARN] Streaming exceeded 90s, stopping early.")
                         break
 
+                    response_list.append(event.as_dict())
                     if not event.choices or not event.choices[0].delta:
                         continue
 
@@ -167,67 +169,41 @@ class Azure(AccuracyMixin, ProviderInterface):
             self.log_metrics(model, "timebetweentokens", avg_tbt)
             self.log_metrics(model, "totaltokens", token_count)
 
+            return response_list
+
         except Exception as e:
             print(f"[ERROR] Streaming inference failed for model '{model}': {e}")
-            return None, None
+            return e
 
-    def perform_trace_mode(self, proxy_server, load_generator, num_requests, verbosity):
+    def perform_trace_mode(self, proxy_server, load_generator, num_requests, streaming, verbosity, model='common-model'):
         # Set handler for proxy
-        async def data_handler(data, streaming):
-            if streaming:
-                print("\nRequest not sent. Streaming not allowed in trace mode.")
-                return [{"error": "Streaming not allowed in trace mode."}]
+        async def data_handler(data):
+            gen_tokens = data.pop('generated_tokens')
+            prompt = data.pop('prompt')
 
             def inference_sync():
                 try:
-                    model_id = data.get('model')
-                    if not model_id or model_id not in self.model_map.values():
-                        raise Exception(f"Model {model_id} not found in model map.")
-                    model = next((k for k, v in self.model_map.items() if v == model_id))
+                    if streaming:
+                        response_list = self.perform_inference_streaming(model, prompt, gen_tokens, verbosity)
+                        if isinstance(response_list, Exception):
+                            return [{"error": f"Inference failed: {response_list}"}]
+                        return response_list
 
-                    # Format prompt messages
-                    for i, m in enumerate(data['messages']):
-                        match m['role']:
-                            case 'system':
-                                data['messages'][i] = SystemMessage(m['content'])
-                            case 'assistant':
-                                data['messages'][i] = AssistantMessage(m['content'])
-                            case 'user':
-                                data['messages'][i] = UserMessage(m['content'])
-                            case _:
-                                raise Exception(f"Role {m['role']} not supported.")
-
-                    # Non-streaming inference
-                    self._ensure_client()
-                    start_time = timer()
-                    response = self._client.complete(**data)
-                    elapsed_time = timer() - start_time
-
-                    usage = response.get("usage")
-                    total_tokens = usage.get("completion_tokens") or 0
-                    tbt = elapsed_time / max(total_tokens, 1)
-                    tps = (total_tokens / elapsed_time)
-                    self.log_metrics(model, "response_times", elapsed_time)
-                    self.log_metrics(model, "totaltokens", total_tokens)
-                    self.log_metrics(model, "timebetweentokens", tbt)
-                    self.log_metrics(model, "tps", tps)
-
-                    if verbosity:
-                        print()
-                        print(f"##### Generated in {elapsed_time:.2f} seconds")
-                        print(f"##### Tokens: {total_tokens}, Avg TBT: {tbt:.4f}s, TPS: {tps:.2f}")
-                        print(f"Response: {response['choices'][0]['message']['content']}")
-
-                    return response.as_dict()
+                    else:
+                        response = self.perform_inference(model, prompt, gen_tokens, verbosity)
+                        if isinstance(response, Exception):
+                            return {"error": f"Inference failed: {response}"}
+                        return response
 
                 except Exception as e:
-                    print(f"\nInference failed: {e}")
-                    return [{"error": f"Inference failed: {e}"}] if streaming else {"error": f"Inference failed: {e}"}
+                    print(f"\nData handling failed: {e}")
+                    return [{"error": f"Data handling failed: {e}"}] if streaming else {"error": f"Data handling failed: {e}"}
 
             response = await asyncio.to_thread(inference_sync)
             return response
 
         proxy_server.set_handler(data_handler)
+        proxy_server.set_streaming(streaming)
 
         # Start load generator
         load_generator.send_loads(

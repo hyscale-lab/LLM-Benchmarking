@@ -11,40 +11,44 @@ class ProxyServer(threading.Thread):
         self._host = host
         self._port = port
         self._app = FastAPI()
-        self._on_receive = []  # Must be a list to allow updating handler without restarting proxy
+        self._on_receive = None
+        self._streaming = None
         self.server = None
+        self._log_path = './trace/proxy/traffic.log'
 
         @self._app.post("/")
         async def endpoint(request: Request):
             if not self._on_receive:
-                return {"status": "error", "message": "handler not set"}
+                return {"status": "error", "message": "Handler not set"}
             
             data = await request.json()  # dict
             # Log data
-            with open('./proxy/traffic.log', 'a') as f:
+            with open(self._log_path, 'a') as f:
                 f.write(f'[Client] {json.dumps(data)}\n')
 
-            streaming = data.get("stream", False)
-            response = await self._on_receive[0](data, streaming)  # List[dict] if streaming, else dict
+            response = await self._on_receive(data)
             
             # Log response
-            with open('./proxy/traffic.log', 'a') as f:
-                if streaming:
+            with open(self._log_path, 'a') as f:
+                if self._streaming:
                     for line in response:
                         f.write(f'[Server] {json.dumps(line)}\n')
                 else:
                     f.write(f'[Server] {json.dumps(response)}\n')
 
-            return {"full_response": response} if streaming else response
+            return {"streaming_response": response} if self._streaming else response
 
     def set_handler(self, handler):
         """
         Set method to handle received data
         """
-        if not self._on_receive:
-            self._on_receive.append(handler)
-        else:
-            self._on_receive[0] = handler
+        self._on_receive = handler
+
+    def set_streaming(self, streaming):
+        """
+        Set streaming mode
+        """
+        self._streaming = streaming
 
     def get_url(self):
         return f'http://{self._host}:{self._port}'

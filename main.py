@@ -17,8 +17,8 @@ from providers import (
     AWSBedrock,
     vLLM
 )
-from proxy import ProxyServer
-from loadgenerator import LoadGenerator
+from trace.proxy import ProxyServer
+from trace.loadgenerator import LoadGenerator
 from utils.prompt_generator import get_prompt
 
 # Load environment variables
@@ -166,9 +166,9 @@ def run_benchmark(config, vllm_ip=None, proxy_server=None, load_generator=None):
     # max_output = config.get("max_output", [100])
     verbose = config.get("verbose", False)
     backend = config.get("backend", False)
-    dataset = config.get("dataset")
+    dataset = config.get("dataset", False)
     # Select Benchmark class based on backend flag
-    if backend and not proxy_server:
+    if backend:
         from benchmarking.dynamo_bench import Benchmark
     else:
         from benchmarking.benchmark_main import Benchmark
@@ -182,7 +182,7 @@ def run_benchmark(config, vllm_ip=None, proxy_server=None, load_generator=None):
     common_models = (
         get_common_models(selected_providers) if len(selected_providers) > 1 else []
     )
-    if not proxy_server and not common_models and len(selected_providers) > 1:
+    if not common_models and len(selected_providers) > 1:
         # logging.error("No common models found among selected providers.")
         print("No common models found among selected providers.")
         return
@@ -213,11 +213,10 @@ def run_benchmark(config, vllm_ip=None, proxy_server=None, load_generator=None):
             return
     
     if not dataset:
-        print("No dataset config found.")
-        return
+        print("Accuracy dataset config not set.")
 
-    if not os.path.isfile(dataset):
-        print(f"Dataset file not found: {dataset}")
+    if dataset and not os.path.isfile(dataset):
+        print(f"Accuracy dataset file not found: {dataset}")
         return
 
     prompt = get_prompt(input_tokens)
