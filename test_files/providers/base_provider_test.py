@@ -27,7 +27,7 @@ def test_perform_inference(
     base_provider.client.chat.completions.create.return_value = mock_response
 
     # Call perform_inference
-    elapsed_time = base_provider.perform_inference(
+    response = base_provider.perform_inference(
         "test-model", "What is the test prompt?"
     )
 
@@ -43,7 +43,8 @@ def test_perform_inference(
 
     mock_log_metrics.assert_called_with("test-model", "response_times", 1.0)
     mock_display_response.assert_called_with(mock_response, 1.0)
-    assert elapsed_time == 1.0
+    # Ensure the response is a dict
+    assert isinstance(response, dict)
 
 
 @patch("providers.base_provider.timer", side_effect=[0, 0.5, 0.5, 1.0, 1.5, 1.5, 2.0, 2.0])
@@ -75,7 +76,7 @@ def test_perform_inference_streaming(
     ]
 
     # Call perform_inference_streaming
-    base_provider.perform_inference_streaming(
+    response_list = base_provider.perform_inference_streaming(
         "test-model", "What is the test streaming prompt?"
     )
 
@@ -96,3 +97,6 @@ def test_perform_inference_streaming(
     mock_log_metrics.assert_any_call("test-model", "timebetweentokens", avg_tbt)
 
     mock_display_response.assert_not_called()
+
+    # Ensure the response is a list
+    assert isinstance(response_list, list)
