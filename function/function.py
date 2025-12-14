@@ -67,7 +67,7 @@ def get_latest_vllm(streaming, input_type):
         return items[0] if items else {}
     except Exception as e:
         print(f"Error: {e}")
-        return {"error": e}
+        return {"error": str(e)}
 
 def get_metrics_period(metricType, timeRange, streaming, input_type):
     time_ranges = {
@@ -98,7 +98,7 @@ def get_metrics_period(metricType, timeRange, streaming, input_type):
         items = response.get('Items', [])
     except Exception as e:
         print(f"Error: {e}")
-        return {"error": e}
+        return {"error": str(e)}
 
     aggregated_metrics = {}
     date_array = set()
@@ -158,7 +158,7 @@ def get_metrics_by_date(metricType, date, streaming, input_type):
         items = response.get('Items', [])
     except Exception as e:
         print(f"Error: {e}")
-        return {"error": e}
+        return {"error": str(e)}
 
     metrics_by_provider = {}
     for item in items:
