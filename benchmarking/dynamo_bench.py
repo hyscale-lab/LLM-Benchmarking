@@ -63,7 +63,7 @@ class Benchmark:
         provider_dir_name = "_".join(provider_names)
 
         if self.proxy_server:  # trace mode
-            self.graph_dir = os.path.join("benchmark_graph", "trace", provider_dir_name)
+            self.graph_dir = os.path.join("benchmark_graph", "trace", base_dir, provider_dir_name)
         else:
             self.graph_dir = os.path.join("benchmark_graph", base_dir, provider_dir_name)
 
