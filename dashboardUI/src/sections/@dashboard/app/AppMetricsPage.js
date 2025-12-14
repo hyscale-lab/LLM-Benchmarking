@@ -112,7 +112,7 @@ const AppMetricsPage = ({ metricType, streaming = true, title = "Metrics Dashboa
                         sx={{ mb: 2, pt: 3, pl: 3 }}
                     >
                         {/* First Dropdown: Time Span */}
-                        <Stack direction="row" alignItems="center" sx={{ mb: 2, pt: 3, pl: 3 }}>
+                        <Stack direction="row" alignItems="center">
                             <InputLabel sx={{ mr: 3 }}>Time Span:</InputLabel>
                             <Select
                                 value={dateRange}
@@ -126,7 +126,7 @@ const AppMetricsPage = ({ metricType, streaming = true, title = "Metrics Dashboa
                         </Stack>
 
                         {/* Second Dropdown: Input Type */}
-                        <Stack direction="row" alignItems="center" sx={{ mb: 2, pt: 3, pl: 3 }}>
+                        <Stack direction="row" alignItems="center">
                             <InputLabel sx={{ mr: 3 }}>Input Type:</InputLabel>
                             <Select
                                 value={inputType}
