@@ -3,7 +3,7 @@ name: Deploy function code to AWS Lambda
 on:
   push:
     branches:
-      - main
+      - fix/cleanup-trace-mode
     paths:
       - 'function/**'  # Changes in function
       - '.github/workflows/**'  # Changes in pipelines
