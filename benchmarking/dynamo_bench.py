@@ -51,6 +51,7 @@ class Benchmark:
         self.streaming = streaming
         self.max_output = max_output
         self.verbosity = verbosity
+        self.proxy_server = proxy_server
         self.run_id = str(uuid.uuid4())  # Generate a unique ID for each benchmark run
         self.dataset = dataset
         self.input_type = "trace" if proxy_server else "static"
