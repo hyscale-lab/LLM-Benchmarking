@@ -43,7 +43,7 @@ const AppMetricsPage = ({ metricType, streaming = true, title = "Metrics Dashboa
         } finally {
             setLoadingPeriodMetrics(false);
         }
-    }, [baseURL, dateRange, metricType, streaming]);
+    }, [baseURL, dateRange, metricType, streaming, inputType]);
 
     const fetchMetrics = useCallback(async () => {
         if (!selectedDate) return; // Ensure selectedDate is set before fetching metrics
@@ -59,7 +59,7 @@ const AppMetricsPage = ({ metricType, streaming = true, title = "Metrics Dashboa
         } finally {
             setLoadingMetrics(false);
         }
-    }, [baseURL, selectedDate, metricType, streaming]);
+    }, [baseURL, selectedDate, metricType, streaming, inputType]);
 
     useEffect(() => {
         fetchPeriodMetrics();
