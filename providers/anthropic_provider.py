@@ -49,9 +49,6 @@ class Anthropic(AccuracyMixin, ProviderInterface):
         Args:
             model (str): The model name to use for inference.
             prompt (str): The user prompt for the chat completion.
-
-        Returns:
-            float: The elapsed time in seconds for the inference request.
         """
         try:
             model_id = self.get_model_name(model)
