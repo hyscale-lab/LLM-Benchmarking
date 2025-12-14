@@ -13,6 +13,8 @@ class TextBlock:
 class Message:
     def __init__(self, content):
         self.content = content
+    def model_dump(self):
+        return {"content": "Test response"}
 
 
 @pytest.fixture

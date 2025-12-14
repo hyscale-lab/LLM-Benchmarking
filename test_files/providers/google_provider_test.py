@@ -45,6 +45,7 @@ def test_perform_inference(mock_gen_model_class, setup_google_gemini):
     mock_response = MagicMock()
     mock_response.text = "Test response"
     mock_response.usage_metadata.candidates_token_count = 100
+    mock_response.to_dict.return_value = {"content": "Test response"}
     mock_gen_model_instance.generate_content.return_value = mock_response
     mock_gen_model_class.return_value = mock_gen_model_instance
 
