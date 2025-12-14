@@ -1,9 +1,10 @@
-import boto3
 import json
 import time
 import statistics  # Import for median calculation
-from datetime import datetime, timedelta
+import boto3
+from boto3.dynamodb.conditions import Key, Attr
 from botocore.exceptions import ClientError
+from datetime import datetime, timedelta
 
 # Initialize DynamoDB
 dynamodb = boto3.resource("dynamodb", region_name="us-west-2")
@@ -11,22 +12,17 @@ table = dynamodb.Table("BenchmarkMetrics")
 
 
 # Helper functions
-def add_input_type_filter(filter_exp, exp_names, exp_values, input_type):
+def apply_input_type_filter(filter_exp, input_type):
     """
-    Helper to append the input_type logic to scan kwargs.
-    If inputType is 'static', it includes items where the column is MISSING.
+    Helper to append the input type logic.
+    If input_type is 'static', it includes items where the column is MISSING.
     """
     if input_type == "static":
-        # LOGIC: (input_type == 'static') OR (input_type does not exist)
-        filter_exp += " AND ( #input_type = :input_type OR attribute_not_exists(#input_type) )"
+        # Logic: input_type is 'static' OR the column is missing entirely
+        return filter_exp & (Attr("input_type").eq("static") | Attr("input_type").not_exists())
     else:
-        # LOGIC: input_type == 'trace' (strict match)
-        filter_exp += " AND #input_type = :input_type"
-    
-    exp_names["#input_type"] = "input_type"
-    exp_values[":input_type"] = input_type
-    
-    return filter_exp, exp_names, exp_values
+        # Logic: Strict match
+        return filter_exp & Attr("input_type").eq(input_type)
 
 def scan_all_items(scan_kwargs):
     items = []
@@ -56,24 +52,22 @@ def get_latest_vllm(streaming, input_type):
     """
     Retrieves the latest item with provider_name 'vLLM'.
     """
-    filter_expression = "#provider_name = :vllm AND #streaming = :streaming"
-    expression_names = {"#provider_name": "provider_name", "#streaming": "streaming"}
-    expression_values = {":vllm": "vLLM", ":streaming": streaming}
-
-    filter_expression, expression_names, expression_values = add_input_type_filter(
-        filter_expression, expression_names, expression_values, input_type
-    )
-
-    scan_kwargs = {
-        "FilterExpression": filter_expression,
-        "ExpressionAttributeNames": expression_names,
-        "ExpressionAttributeValues": expression_values,
-    }
-    items = scan_all_items(scan_kwargs)
-    if not items:
-        return {}
-    latest_item = max(items, key=lambda x: x["timestamp"])
-    return latest_item
+    # Query
+    try:
+        filter_exp = Attr("streaming").eq(streaming)
+        filter_exp = apply_input_type_filter(filter_exp, input_type)
+        response = table.query(
+            IndexName='Provider-Timestamp-Index',
+            KeyConditionExpression=Key('provider_name').eq('vLLM'),
+            FilterExpression=filter_exp,
+            ScanIndexForward=False,  # Descending order
+            Limit=1  # Get only latest
+        )
+        items = response.get('Items', [])
+        return items[0] if items else {}
+    except Exception as e:
+        print(f"Error: {e}")
+        return {"error": e}
 
 def get_metrics_period(metricType, timeRange, streaming, input_type):
     time_ranges = {
@@ -91,28 +85,21 @@ def get_metrics_period(metricType, timeRange, streaming, input_type):
     start_date_str = start_date.strftime("%Y-%m-%d %H:%M:%S")
     end_date_str = end_date.strftime("%Y-%m-%d %H:%M:%S")
 
-    filter_expression = "#ts BETWEEN :start_date AND :end_date AND #streaming = :streaming AND #model_key = :common"
-    expression_names = {
-        "#ts": "timestamp",
-        "#streaming": "streaming",
-        "#model_key": "model_key"
-    }
-    expression_values = {
-        ":start_date": start_date_str,
-        ":end_date": end_date_str,
-        ":streaming": streaming,
-        ":common": "common"
-    }
-    filter_expression, expression_names, expression_values = add_input_type_filter(
-        filter_expression, expression_names, expression_values, input_type
-    )
-    scan_kwargs = {
-        "FilterExpression": filter_expression,
-        "ExpressionAttributeNames": expression_names,
-        "ExpressionAttributeValues": expression_values,
-    }
+    # Query
+    try:
+        key_condition = Key('model_key').eq('common') & Key('timestamp').between(start_date_str, end_date_str)
+        filter_exp = Attr("streaming").eq(streaming)
+        filter_exp = apply_input_type_filter(filter_exp, input_type)
+        response = table.query(
+            IndexName='ModelKey-Timestamp-Index',
+            KeyConditionExpression=key_condition,
+            FilterExpression=filter_exp
+        )
+        items = response.get('Items', [])
+    except Exception as e:
+        print(f"Error: {e}")
+        return {"error": e}
 
-    items = scan_all_items(scan_kwargs)
     aggregated_metrics = {}
     date_array = set()
 
@@ -158,28 +145,21 @@ def get_metrics_by_date(metricType, date, streaming, input_type):
     start_date_str = start_date.strftime("%Y-%m-%d %H:%M:%S")
     end_date_str = end_date.strftime("%Y-%m-%d %H:%M:%S")
 
-    filter_expression = "#ts BETWEEN :start_date AND :end_date AND #streaming = :streaming AND #model_key = :common"
-    expression_names = {
-        "#ts": "timestamp",
-        "#streaming": "streaming",
-        "#model_key": "model_key"
-    }
-    expression_values = {
-        ":start_date": start_date_str,
-        ":end_date": end_date_str,
-        ":streaming": streaming,
-        ":common": "common"
-    }
-    filter_expression, expression_names, expression_values = add_input_type_filter(
-        filter_expression, expression_names, expression_values, input_type
-    )
-    scan_kwargs = {
-        "FilterExpression": filter_expression,
-        "ExpressionAttributeNames": expression_names,
-        "ExpressionAttributeValues": expression_values,
-    }
+    # Query
+    try:
+        key_condition = Key('model_key').eq('common') & Key('timestamp').between(start_date_str, end_date_str)
+        filter_exp = Attr("streaming").eq(streaming)
+        filter_exp = apply_input_type_filter(filter_exp, input_type)
+        response = table.query(
+            IndexName='ModelKey-Timestamp-Index',
+            KeyConditionExpression=key_condition,
+            FilterExpression=filter_exp
+        )
+        items = response.get('Items', [])
+    except Exception as e:
+        print(f"Error: {e}")
+        return {"error": e}
 
-    items = scan_all_items(scan_kwargs)
     metrics_by_provider = {}
     for item in items:
         provider_name = item["provider_name"]
