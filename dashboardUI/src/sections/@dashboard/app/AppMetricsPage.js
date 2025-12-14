@@ -11,7 +11,7 @@ import AppMetricsDate from "./AppMetricsDate";
 
 // ----------------------------------------------------------------------
 
-const AppMetricsPage = ({ metricType, streaming = true, title = "Metrics Dashboard", metricName, min, cdf = false }) => {
+const AppMetricsPage = ({ metricType, streaming = true, title = "Metrics Dashboard", metricName, min, cdf = false, showInputType = true }) => {
     const [metrics, setMetrics] = useState(null);
     const [periodMetrics, setPeriodMetrics] = useState(null);
     const [dateList, setDateList] = useState(null);
@@ -126,16 +126,18 @@ const AppMetricsPage = ({ metricType, streaming = true, title = "Metrics Dashboa
                         </Stack>
 
                         {/* Second Dropdown: Input Type */}
-                        <Stack direction="row" alignItems="center">
-                            <InputLabel sx={{ mr: 3 }}>Input Type:</InputLabel>
-                            <Select
-                                value={inputType}
-                                onChange={handleInputTypeChange}
-                            >
-                                <MenuItem value="static">Static</MenuItem>
-                                <MenuItem value="trace">Trace</MenuItem>
-                            </Select>
-                        </Stack>
+                        {showInputType && (
+                            <Stack direction="row" alignItems="center">
+                                <InputLabel sx={{ mr: 3 }}>Input Type:</InputLabel>
+                                <Select
+                                    value={inputType}
+                                    onChange={handleInputTypeChange}
+                                >
+                                    <MenuItem value="static">Static</MenuItem>
+                                    <MenuItem value="trace">Trace</MenuItem>
+                                </Select>
+                            </Stack>
+                        )}
                     </Stack>
 
                     <Grid item xs={12}>
