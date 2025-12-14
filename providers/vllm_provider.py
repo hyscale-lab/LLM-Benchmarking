@@ -198,7 +198,6 @@ class vLLM(ProviderInterface):
         proxy_server.set_handler(data_handler)
         proxy_server.set_streaming(streaming)
 
-
         # Start load generator
         load_generator.send_loads(
             self.trace_dataset_path,

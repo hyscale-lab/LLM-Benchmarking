@@ -232,7 +232,7 @@ def lambda_handler(event, context):
         metricType = params.get("metricType")
         timeRange = params.get("timeRange")
         streaming = params.get("streaming", "true").lower() == "true"
-        input_type = params.get("inputType", "static").lower() == "static" 
+        input_type = params.get("inputType", "static").lower() == "static"
 
         if not metricType or not timeRange:
             return {"statusCode": 400, "body": json.dumps({"error": "Missing metricType or timeRange parameter"})}

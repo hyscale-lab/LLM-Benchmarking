@@ -3,7 +3,7 @@ import asyncio
 from utils.accuracy_mixin import AccuracyMixin
 from time import perf_counter as timer
 from azure.ai.inference import ChatCompletionsClient
-from azure.ai.inference.models import SystemMessage, UserMessage, AssistantMessage
+from azure.ai.inference.models import SystemMessage, UserMessage
 from azure.core.credentials import AzureKeyCredential
 from providers.base_provider import ProviderInterface
 from openai import AzureOpenAI
