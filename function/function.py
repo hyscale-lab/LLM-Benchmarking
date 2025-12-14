@@ -11,17 +11,22 @@ table = dynamodb.Table("BenchmarkMetrics")
 
 
 # Helper functions
-def get_latest_run_id(streaming):
-    response = table.scan(
-        FilterExpression="#streaming = :streaming",
-        ExpressionAttributeNames={"#streaming": "streaming"},
-        ExpressionAttributeValues={":streaming": streaming},
-    )
-    items = response.get("Items", [])
-    if not items:
-        return {"error": "No data found"}
-    latest_item = max(items, key=lambda x: x["timestamp"])
-    return {"run_id": latest_item["run_id"]}
+def add_input_type_filter(filter_exp, exp_names, exp_values, input_type):
+    """
+    Helper to append the input_type logic to scan kwargs.
+    If inputType is 'static', it includes items where the column is MISSING.
+    """
+    if input_type == "static":
+        # LOGIC: (input_type == 'static') OR (input_type does not exist)
+        filter_exp += " AND ( #input_type = :input_type OR attribute_not_exists(#input_type) )"
+    else:
+        # LOGIC: input_type == 'trace' (strict match)
+        filter_exp += " AND #input_type = :input_type"
+    
+    exp_names["#input_type"] = "input_type"
+    exp_values[":input_type"] = input_type
+    
+    return filter_exp, exp_names, exp_values
 
 def scan_all_items(scan_kwargs):
     items = []
@@ -47,14 +52,22 @@ def scan_all_items(scan_kwargs):
             break
     return items
 
-def get_latest_vllm():
+def get_latest_vllm(streaming, input_type):
     """
     Retrieves the latest item with provider_name 'vLLM'.
     """
+    filter_expression = "#provider_name = :vllm AND #streaming = :streaming"
+    expression_names = {"#provider_name": "provider_name", "#streaming": "streaming"}
+    expression_values = {":vllm": "vLLM", ":streaming": streaming}
+
+    filter_expression, expression_names, expression_values = add_input_type_filter(
+        filter_expression, expression_names, expression_values, input_type
+    )
+
     scan_kwargs = {
-        "FilterExpression": "#provider_name = :vllm",
-        "ExpressionAttributeNames": {"#provider_name": "provider_name"},
-        "ExpressionAttributeValues": {":vllm": "vLLM"},
+        "FilterExpression": filter_expression,
+        "ExpressionAttributeNames": expression_names,
+        "ExpressionAttributeValues": expression_values,
     }
     items = scan_all_items(scan_kwargs)
     if not items:
@@ -62,32 +75,7 @@ def get_latest_vllm():
     latest_item = max(items, key=lambda x: x["timestamp"])
     return latest_item
 
-def get_metrics(run_id, metricType=None):
-    response = table.scan(
-        FilterExpression="run_id = :run_id",
-        ExpressionAttributeValues={":run_id": run_id},
-    )
-    items = response.get("Items", [])
-    metrics_by_provider = {}
-
-    for item in items:
-        provider_name = item["provider_name"]
-        model_name = item["model_name"]
-        metrics = json.loads(item["metrics"])
-
-        if provider_name not in metrics_by_provider:
-            metrics_by_provider[provider_name] = {}
-
-        if metricType:
-            filtered_metrics = {metricType: metrics.get(metricType)} if metricType in metrics else {}
-            metrics_by_provider[provider_name][model_name] = filtered_metrics
-        else:
-            metrics_by_provider[provider_name][model_name] = metrics
-
-    return {"run_id": run_id, "metrics": metrics_by_provider}
-
-
-def get_metrics_period(metricType, timeRange, streaming=True):
+def get_metrics_period(metricType, timeRange, streaming, input_type):
     time_ranges = {
         "week": timedelta(weeks=1),
         "month": timedelta(days=30),
@@ -103,19 +91,25 @@ def get_metrics_period(metricType, timeRange, streaming=True):
     start_date_str = start_date.strftime("%Y-%m-%d %H:%M:%S")
     end_date_str = end_date.strftime("%Y-%m-%d %H:%M:%S")
 
+    filter_expression = "#ts BETWEEN :start_date AND :end_date AND #streaming = :streaming AND #model_key = :common"
+    expression_names = {
+        "#ts": "timestamp",
+        "#streaming": "streaming",
+        "#model_key": "model_key"
+    }
+    expression_values = {
+        ":start_date": start_date_str,
+        ":end_date": end_date_str,
+        ":streaming": streaming,
+        ":common": "common"
+    }
+    filter_expression, expression_names, expression_values = add_input_type_filter(
+        filter_expression, expression_names, expression_values, input_type
+    )
     scan_kwargs = {
-        "FilterExpression": "#ts BETWEEN :start_date AND :end_date AND #streaming = :streaming AND #model_key = :common",
-        "ExpressionAttributeNames": {
-            "#ts": "timestamp",
-            "#streaming": "streaming",
-            "#model_key": "model_key"
-        },
-        "ExpressionAttributeValues": {
-            ":start_date": start_date_str,
-            ":end_date": end_date_str,
-            ":streaming": streaming,
-            ":common": "common"
-        },
+        "FilterExpression": filter_expression,
+        "ExpressionAttributeNames": expression_names,
+        "ExpressionAttributeValues": expression_values,
     }
 
     items = scan_all_items(scan_kwargs)
@@ -154,61 +148,61 @@ def get_metrics_period(metricType, timeRange, streaming=True):
     return {"metricType": metricType, "timeRange": timeRange, "aggregated_metrics": sorted_result, "date_array": sorted_date_array}
 
 
-def get_metrics_by_date(metricType, date, streaming=True):
-    if date == "latest":
-        latest_id_response = get_latest_run_id(streaming)
-        if "error" in latest_id_response:
-            return {"error": "No latest run_id found."}
-        run_id = latest_id_response["run_id"]
-        result = get_metrics(run_id, metricType)
-    else:
-        try:
-            start_date = datetime.strptime(date, "%d-%m-%Y")
-            end_date = start_date + timedelta(days=1)
-        except ValueError:
-            return {"error": "Invalid date format. Use '12-12-2024'."}
+def get_metrics_by_date(metricType, date, streaming, input_type):
+    try:
+        start_date = datetime.strptime(date, "%d-%m-%Y")
+        end_date = start_date + timedelta(days=1)
+    except ValueError:
+        return {"error": "Invalid date format. Use '12-12-2024'."}
 
-        start_date_str = start_date.strftime("%Y-%m-%d %H:%M:%S")
-        end_date_str = end_date.strftime("%Y-%m-%d %H:%M:%S")
+    start_date_str = start_date.strftime("%Y-%m-%d %H:%M:%S")
+    end_date_str = end_date.strftime("%Y-%m-%d %H:%M:%S")
 
-        scan_kwargs = {
-            "FilterExpression": "#ts BETWEEN :start_date AND :end_date AND #streaming = :streaming AND #model_key = :common",
-            "ExpressionAttributeNames": {
-                "#ts": "timestamp",
-                "#streaming": "streaming",
-                "#model_key": "model_key"
-            },
-            "ExpressionAttributeValues": {
-                ":start_date": start_date_str,
-                ":end_date": end_date_str,
-                ":streaming": streaming,
-                ":common": "common"
-            },
-        }
-        items = scan_all_items(scan_kwargs)
-        metrics_by_provider = {}
-        for item in items:
-            provider_name = item["provider_name"]
-            model_name = item["model_name"]
-            metrics = json.loads(item["metrics"])
+    filter_expression = "#ts BETWEEN :start_date AND :end_date AND #streaming = :streaming AND #model_key = :common"
+    expression_names = {
+        "#ts": "timestamp",
+        "#streaming": "streaming",
+        "#model_key": "model_key"
+    }
+    expression_values = {
+        ":start_date": start_date_str,
+        ":end_date": end_date_str,
+        ":streaming": streaming,
+        ":common": "common"
+    }
+    filter_expression, expression_names, expression_values = add_input_type_filter(
+        filter_expression, expression_names, expression_values, input_type
+    )
+    scan_kwargs = {
+        "FilterExpression": filter_expression,
+        "ExpressionAttributeNames": expression_names,
+        "ExpressionAttributeValues": expression_values,
+    }
 
-            if provider_name not in metrics_by_provider:
-                metrics_by_provider[provider_name] = {}
+    items = scan_all_items(scan_kwargs)
+    metrics_by_provider = {}
+    for item in items:
+        provider_name = item["provider_name"]
+        model_name = item["model_name"]
+        metrics = json.loads(item["metrics"])
 
-            if metricType:
-                filtered_metrics = {metricType: metrics.get(metricType)} if metricType in metrics else {}
-                metrics_by_provider[provider_name][model_name] = filtered_metrics
-            else:
-                metrics_by_provider[provider_name][model_name] = metrics
+        if provider_name not in metrics_by_provider:
+            metrics_by_provider[provider_name] = {}
 
-        sorted_metrics_by_provider = {
-            provider: metrics_by_provider[provider]
-            for provider in sorted(metrics_by_provider)
-        }
-        result = {"date": date, "metricType": metricType, "metrics": sorted_metrics_by_provider}
+        if metricType:
+            filtered_metrics = {metricType: metrics.get(metricType)} if metricType in metrics else {}
+            metrics_by_provider[provider_name][model_name] = filtered_metrics
+        else:
+            metrics_by_provider[provider_name][model_name] = metrics
+
+    sorted_metrics_by_provider = {
+        provider: metrics_by_provider[provider]
+        for provider in sorted(metrics_by_provider)
+    }
+    result = {"date": date, "metricType": metricType, "metrics": sorted_metrics_by_provider}
 
     # Append vLLM metrics to the result
-    vllm_item = get_latest_vllm()
+    vllm_item = get_latest_vllm(streaming, input_type)
     if vllm_item and "vLLM" not in result["metrics"]:
         try:
             vllm_metrics = json.loads(vllm_item["metrics"])
@@ -238,25 +232,29 @@ def lambda_handler(event, context):
         metricType = params.get("metricType")
         timeRange = params.get("timeRange")
         streaming = params.get("streaming", "true").lower() == "true"
+        input_type = params.get("inputType", "static").lower() == "static" 
 
         if not metricType or not timeRange:
             return {"statusCode": 400, "body": json.dumps({"error": "Missing metricType or timeRange parameter"})}
 
-        response = get_metrics_period(metricType, timeRange, streaming)
+        response = get_metrics_period(metricType, timeRange, streaming, input_type)
         return {"statusCode": 200, "body": json.dumps(response)}
 
     elif path == "/default/metrics/date":
         metricType = params.get("metricType")
         date = params.get("date")
         streaming = params.get("streaming", "true").lower() == "true"
+        input_type = params.get("inputType", "static").lower() == "static"
 
         if not metricType or not date:
             return {"statusCode": 400, "body": json.dumps({"error": "Missing metricType or date parameter"})}
 
-        response = get_metrics_by_date(metricType, date, streaming)
+        response = get_metrics_by_date(metricType, date, streaming, input_type)
         return {"statusCode": 200, "body": json.dumps(response)}
     elif path == "/default/metrics/vllm":
-        vllm_item = get_latest_vllm()
+        streaming = params.get("streaming", "true").lower() == "true"
+        input_type = params.get("inputType", "static").lower() == "static"
+        vllm_item = get_latest_vllm(streaming, input_type)
         print(vllm_item)
         if not vllm_item:
             return {"statusCode": 404, "body": json.dumps({"error": "No vLLM metrics found"})}
