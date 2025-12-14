@@ -232,7 +232,7 @@ def lambda_handler(event, context):
         metricType = params.get("metricType")
         timeRange = params.get("timeRange")
         streaming = params.get("streaming", "true").lower() == "true"
-        input_type = params.get("inputType", "static").lower() == "static"
+        input_type = params.get("inputType", "static").lower()
 
         if not metricType or not timeRange:
             return {"statusCode": 400, "body": json.dumps({"error": "Missing metricType or timeRange parameter"})}
@@ -244,7 +244,7 @@ def lambda_handler(event, context):
         metricType = params.get("metricType")
         date = params.get("date")
         streaming = params.get("streaming", "true").lower() == "true"
-        input_type = params.get("inputType", "static").lower() == "static"
+        input_type = params.get("inputType", "static").lower()
 
         if not metricType or not date:
             return {"statusCode": 400, "body": json.dumps({"error": "Missing metricType or date parameter"})}
@@ -253,7 +253,7 @@ def lambda_handler(event, context):
         return {"statusCode": 200, "body": json.dumps(response)}
     elif path == "/default/metrics/vllm":
         streaming = params.get("streaming", "true").lower() == "true"
-        input_type = params.get("inputType", "static").lower() == "static"
+        input_type = params.get("inputType", "static").lower()
         vllm_item = get_latest_vllm(streaming, input_type)
         print(vllm_item)
         if not vllm_item:
