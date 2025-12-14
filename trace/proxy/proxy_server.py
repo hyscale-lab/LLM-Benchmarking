@@ -26,7 +26,7 @@ class ProxyServer(threading.Thread):
             with open(self._log_path, 'a') as f:
                 f.write(f'[Client] {json.dumps(data)}\n')
 
-            response = await self._on_receive(data)
+            response = await self._on_receive(data)  # List[dict] if streaming, else dict
             
             # Log response
             with open(self._log_path, 'a') as f:
