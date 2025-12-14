@@ -18,6 +18,7 @@ const AppMetricsPage = ({ metricType, streaming = true, title = "Metrics Dashboa
     const [loadingMetrics, setLoadingMetrics] = useState(true);
     const [loadingPeriodMetrics, setLoadingPeriodMetrics] = useState(true);
     const [error, setError] = useState(false);
+    const [inputType, setInputType] = useState("static");
     const [dateRange, setDateRange] = useState("three-month");
     const [selectedDate, setSelectedDate] = useState(null); // Initially null to ensure correct fetch order
 
@@ -27,7 +28,7 @@ const AppMetricsPage = ({ metricType, streaming = true, title = "Metrics Dashboa
         setLoadingPeriodMetrics(true);
         try {
             const response = await axios.get(`${baseURL}/metrics/period`, {
-                params: { timeRange: dateRange, metricType, streaming },
+                params: { timeRange: dateRange, metricType, streaming, inputType },
             });
             setPeriodMetrics(response.data.aggregated_metrics);
             setDateList(response.data.date_array);
@@ -49,7 +50,7 @@ const AppMetricsPage = ({ metricType, streaming = true, title = "Metrics Dashboa
         setLoadingMetrics(true);
         try {
             const response = await axios.get(`${baseURL}/metrics/date`, {
-                params: { date: selectedDate, metricType, streaming },
+                params: { date: selectedDate, metricType, streaming, inputType },
             });
             setMetrics(response.data.metrics);
         } catch (error) {
@@ -69,6 +70,10 @@ const AppMetricsPage = ({ metricType, streaming = true, title = "Metrics Dashboa
             fetchMetrics();
         }
     }, [selectedDate, fetchMetrics, cdf]);
+
+    const handleInputTypeChange = (event) => {
+        setInputType(event.target.value)
+    }
 
     const handleDateRangeChange = (event) => {
         setDateRange(event.target.value);
@@ -99,19 +104,38 @@ const AppMetricsPage = ({ metricType, streaming = true, title = "Metrics Dashboa
                 </Typography>
 
                 <Grid container spacing={3}>
+                    {/* Stack to hold dropdowns */}
+                    <Stack 
+                        direction="row" 
+                        alignItems="center" 
+                        spacing={3}
+                        sx={{ mb: 2, pt: 3, pl: 3 }}
+                    >
+                        {/* First Dropdown: Time Span */}
+                        <Stack direction="row" alignItems="center" sx={{ mb: 2, pt: 3, pl: 3 }}>
+                            <InputLabel sx={{ mr: 3 }}>Time Span:</InputLabel>
+                            <Select
+                                value={dateRange}
+                                onChange={handleDateRangeChange}
+                            >
+                                <MenuItem value="week">Last week</MenuItem>
+                                <MenuItem value="month">Last month</MenuItem>
+                                <MenuItem value="three-month">Last 3 months</MenuItem>
+                                <MenuItem value="max">Max</MenuItem>
+                            </Select>
+                        </Stack>
 
-                    <Stack direction="row" alignItems="center" sx={{ mb: 2, pt: 3, pl: 3 }}>
-                        <InputLabel sx={{ mr: 3 }}>Time span:</InputLabel>
-                        <Select
-                            value={dateRange}
-                            onChange={handleDateRangeChange}
-                            label="Date Range"
-                        >
-                            <MenuItem value="week">Last week</MenuItem>
-                            <MenuItem value="month">Last month</MenuItem>
-                            <MenuItem value="three-month">Last 3 months</MenuItem>
-                            <MenuItem value="max">Max</MenuItem>
-                        </Select>
+                        {/* Second Dropdown: Input Type */}
+                        <Stack direction="row" alignItems="center" sx={{ mb: 2, pt: 3, pl: 3 }}>
+                            <InputLabel sx={{ mr: 3 }}>Input Type:</InputLabel>
+                            <Select
+                                value={inputType}
+                                onChange={handleInputTypeChange}
+                            >
+                                <MenuItem value="static">Static</MenuItem>
+                                <MenuItem value="trace">Trace</MenuItem>
+                            </Select>
+                        </Stack>
                     </Stack>
 
                     <Grid item xs={12}>
