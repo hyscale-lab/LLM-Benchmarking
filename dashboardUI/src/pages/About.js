@@ -36,7 +36,7 @@ export default function LLMetrics() {
                   <b>Core Framework:</b> Built primarily in Python, LLMetrics includes dedicated classes for each provider with methods like <code>get_model_name</code>, <code>perform_inference_streaming</code>, <code>perform_inference</code>, and <code>log_metrics</code>.
                 </ListItem>
                 <ListItem sx={{ display: 'list-item' }}>
-                  <b>Configuration Management:</b> The <code>main.py</code> script uses a JSON configuration to specify the provider, model, number of requests, input token count, max output size, and whether the request is streaming or non-streaming.
+                  <b>Configuration Management:</b> The <code>main.py</code> script uses a JSON configuration to specify the provider, model, number of requests, input token count, max output size, input type, and whether the request is streaming or non-streaming.
                 </ListItem>
                 <ListItem sx={{ display: 'list-item' }}>
                   <b>Data Persistence:</b> All benchmarking results are securely stored in a DynamoDB database for consistency, scalability, and easy retrieval.
