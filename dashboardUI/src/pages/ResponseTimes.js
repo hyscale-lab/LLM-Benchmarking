@@ -4,7 +4,7 @@ export default function ResponseTimes() {
   return (
     <div>
       <div style={{ paddingBottom: "30px" }}>
-        <AppMetricsPage metricType="response_times" title="Response Times Metrics" metricName="Response Times" min={500} cdf />
+        <AppMetricsPage metricType="response_times" title="Response Times Metrics" metricName="Response Times" min={100} cdf />
       </div>
       <div style={{ paddingBottom: "30px" }}>
         <AppMetricsPage metricType="response_times_median" title="Response Times Metrics Median Metrics" metricName="Response Times Metrics Median" />
