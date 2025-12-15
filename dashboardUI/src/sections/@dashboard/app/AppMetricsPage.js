@@ -83,15 +83,17 @@ const AppMetricsPage = ({ metricType, streaming = true, title = "Metrics Dashboa
         setSelectedDate(event.target.value);
     };
 
-    // Combine loading states
-    const loading = (loadingMetrics && cdf) || loadingPeriodMetrics;
-    if (loading) return <CircularProgress />;
+    // Check for error first to prevent getting stuck in loading state
     if (error)
         return (
             <Alert variant="outlined" severity="error">
                 Something went wrong while fetching metrics!
             </Alert>
         );
+    // Then check for loading
+    // Combine loading states
+    const loading = (loadingMetrics && cdf) || loadingPeriodMetrics;
+    if (loading) return <CircularProgress />;
 
     if ((!metrics && cdf) || !periodMetrics) return <Typography>No data available</Typography>;
 
