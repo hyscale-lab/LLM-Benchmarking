@@ -49,9 +49,19 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
+
+    # - name: Setup Trace Data
+    #   env:
+    #     GH_TOKEN: ${{ github.token }}
+    #   run: |
+    #     gh release download -p "trace_conv.json"
+    #     echo "TRACE_DATASET_PATH=${{ github.workspace }}/input_data.jsonl" >> $GITHUB_ENV
     
     - name: Run Experiment
       run: python main.py -c benchmarking/experiments/compare_providers_streaming.json
+
+    # - name: Run Trace Experiment
+    #   run: python main.py -c benchmarking/experiments/compare_providers_streaming_trace.json
 
     - name: Upload Experiment Outputs
       if: success()
