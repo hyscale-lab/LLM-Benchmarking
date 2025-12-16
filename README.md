@@ -55,7 +55,6 @@ AZURE_OPENAI_ENDPOINT="your-azure-openai-endpoint"
 AZURE_AI_ENDPOINT="your-azure-ai-endpoint"
 AZURE_AI_API_KEY="your-azure-ai-api-key"
 ```
-
 ## **Usage**
 
 ### **1. Create a Configuration File**
@@ -69,9 +68,10 @@ Create a config.json file to define your benchmarking experiment:
   "num_requests": 100, 
   "input_tokens": 10, 
   "streaming": true,
-  "input_type": "static", # or "trace"
+  "input_type": "static",  # or "trace"
   "max_output": 100, 
-  "verbose": true
+  "verbose": true,
+  "dataset": "aime.jsonl"
 }
 ```
 ### **2. Run the Benchmark**
@@ -85,6 +85,12 @@ python main.py -c config.json --vllm_ip <host ip>
 ### **3. View Results**
 
 LLMetrics saves plots (latency graphs - CDF Plots) in the designated output directory `benchmark_graph`
+
+## **Input Type**
+
+LLMetrics supports these input types, which can be set in the consiguration file using `input_type`. This does not apply to `Accuracy` metrics since it uses its own input.
+- `static`: Use the same prompt for every request.
+- `trace`: Use a preprocessed input derived from Azure trace dataset. See [releases](https://github.com/hyscale-lab/LLM-Benchmarking/releases).
 
 ## **Continuous Benchmarking Workflow**
 
