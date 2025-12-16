@@ -33,7 +33,7 @@ class ProviderInterface(ABC):
             "aime_2024_accuracy": {}
         }
 
-        # for trace mode
+        # for trace input type
         self.trace_dataset_path = os.getenv('TRACE_DATASET_PATH', './trace/sample.json')
         self.trace_result_path = f'./trace/{self.__class__.__name__}.result'
 
@@ -61,9 +61,9 @@ class ProviderInterface(ABC):
         """
 
     @abstractmethod
-    def perform_trace_mode(self, proxy_server, load_generator, num_requests, streaming, verbosity, model):
+    def perform_trace(self, proxy_server, load_generator, num_requests, streaming, verbosity, model):
         """
-        perform_trace_mode
+        perform_trace
         """
 
     @abstractmethod

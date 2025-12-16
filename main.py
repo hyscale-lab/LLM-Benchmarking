@@ -34,9 +34,6 @@ parser.add_argument(
     "-c", "--config", type=str, help="Path to the JSON configuration file"
 )
 parser.add_argument(
-    "-t", "--trace", action="store_true", help="Enable trace mode"
-)
-parser.add_argument(
     "--list", action="store_true", help="List available providers and models"
 )
 parser.add_argument(
@@ -179,8 +176,8 @@ def run_benchmark(config, vllm_ip=None):
     proxy_server, load_generator = None, None
     if input_type == "static":
         pass
-    elif input_type == "trace":  # trace mode
-        print("Using trace mode.")
+    elif input_type == "trace":
+        print("Using trace input type.")
         print("Starting proxy server...")
         proxy_server = ProxyServer()
         proxy_server.start()
@@ -255,8 +252,8 @@ def run_benchmark(config, vllm_ip=None):
         dataset=dataset,
     )
     if input_type == "trace":
-        print("\nRunning trace mode...")
-        benchmark.run_trace_mode()
+        print("\nRunning benchmark with trace input...")
+        benchmark.run_trace()
     else:
         print("\nRunning benchmark...")
         benchmark.run()

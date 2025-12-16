@@ -65,7 +65,7 @@ class Benchmark:
         )
         provider_dir_name = "_".join(provider_names)
 
-        if self.proxy_server:  # trace mode
+        if self.proxy_server:  # trace input type
             self.graph_dir = os.path.join("benchmark_graph", "trace", base_dir, provider_dir_name)
         else:
             self.graph_dir = os.path.join("benchmark_graph", base_dir, provider_dir_name)
@@ -233,7 +233,7 @@ class Benchmark:
                     except Exception as e:
                         print(f"[WARN] measure_accuracy failed for "f"{provider.__class__.__name__}/{model_name}: {e!r}")
 
-    def run_trace_mode(self):
+    def run_trace(self):
         """
         Runs the benchmark for the selected providers and models, and plots the results.
 
@@ -245,9 +245,9 @@ class Benchmark:
             print(f"\n[{provider_name}]")
 
             if provider_name == "vLLM":
-                provider.perform_trace_mode(self.proxy_server, self.load_generator, self.num_requests, self.streaming, self.verbosity, self.vllm_ip)
+                provider.perform_trace(self.proxy_server, self.load_generator, self.num_requests, self.streaming, self.verbosity, self.vllm_ip)
             else:
-                provider.perform_trace_mode(self.proxy_server, self.load_generator, self.num_requests, self.streaming, self.verbosity)
+                provider.perform_trace(self.proxy_server, self.load_generator, self.num_requests, self.streaming, self.verbosity)
         print()
 
         if not self.streaming:

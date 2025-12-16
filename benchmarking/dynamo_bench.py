@@ -63,7 +63,7 @@ class Benchmark:
         )
         provider_dir_name = "_".join(provider_names)
 
-        if self.proxy_server:  # trace mode
+        if self.proxy_server:  # trace input type
             self.graph_dir = os.path.join("benchmark_graph", "trace", base_dir, provider_dir_name)
         else:
             self.graph_dir = os.path.join("benchmark_graph", base_dir, provider_dir_name)
@@ -326,7 +326,7 @@ class Benchmark:
             
         self.store_data_points()
 
-    def run_trace_mode(self):
+    def run_trace(self):
         """
         Execute the benchmark using trace input and store metrics in DynamoDB.
         """
@@ -335,9 +335,9 @@ class Benchmark:
             print(f"\n[{provider_name}]")
 
             if provider_name == "vLLM":
-                provider.perform_trace_mode(self.proxy_server, self.load_generator, self.num_requests, self.streaming, self.verbosity, self.vllm_ip)
+                provider.perform_trace(self.proxy_server, self.load_generator, self.num_requests, self.streaming, self.verbosity, self.vllm_ip)
             else:
-                provider.perform_trace_mode(self.proxy_server, self.load_generator, self.num_requests, self.streaming, self.verbosity)
+                provider.perform_trace(self.proxy_server, self.load_generator, self.num_requests, self.streaming, self.verbosity)
         print()
 
         metrics_to_plot = (

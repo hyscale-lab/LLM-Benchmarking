@@ -214,7 +214,7 @@ class Anthropic(AccuracyMixin, ProviderInterface):
             print(f"[ERROR] _chat_for_eval failed: {e}")
             return "", 0, float(elapsed)
 
-    def perform_trace_mode(self, proxy_server, load_generator, num_requests, streaming, verbosity, model='common-model'):
+    def perform_trace(self, proxy_server, load_generator, num_requests, streaming, verbosity, model='common-model'):
         # Set handler for proxy
         async def data_handler(data):
             prompt = data.pop('prompt')

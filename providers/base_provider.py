@@ -142,7 +142,7 @@ class BaseProvider(AccuracyMixin, ProviderInterface):
             print(f"[ERROR] Streaming inference failed for model '{model}': {e}")
             return e
 
-    def perform_trace_mode(self, proxy_server, load_generator, num_requests, streaming, verbosity, model='common-model'):
+    def perform_trace(self, proxy_server, load_generator, num_requests, streaming, verbosity, model='common-model'):
         # Set handler for proxy
         async def data_handler(data):
             prompt = data.pop('prompt')

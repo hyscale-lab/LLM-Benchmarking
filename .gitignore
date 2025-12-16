@@ -23,6 +23,6 @@ notebooks/.ipynb_checkpoints/
 
 azure-test.py
 
-# Trace mode
+# Logs from trace runs
 trace/*.result
 trace/proxy/*.log

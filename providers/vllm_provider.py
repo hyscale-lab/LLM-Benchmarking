@@ -169,7 +169,7 @@ class vLLM(ProviderInterface):
             print(f"Error during streaming inference: {e}")
             return e
 
-    def perform_trace_mode(self, proxy_server, load_generator, num_requests, streaming, verbosity, vllm_ip, model='common-model'):
+    def perform_trace(self, proxy_server, load_generator, num_requests, streaming, verbosity, vllm_ip, model='common-model'):
         # Set handler for proxy
         async def data_handler(data):
             prompt = data.pop('prompt')
