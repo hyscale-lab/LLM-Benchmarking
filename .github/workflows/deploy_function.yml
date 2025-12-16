@@ -34,3 +34,35 @@ jobs:
           --function-name llmetricsLambda \
           --zip-file fileb://function.zip
       working-directory: ./function
+    
+    - name: Get AWS Account ID
+      run: |
+        AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+        echo "AWS_ACCOUNT_ID=$AWS_ACCOUNT_ID" >> $GITHUB_ENV
+
+    - name: Add Required Permissions for Function Role
+      run: |
+        aws iam put-role-policy \
+          --role-name llmetricsDynamoLambda \
+          --policy-name DynamoDB-Index-Access \
+          --policy-document '{
+              "Version": "2012-10-17",
+              "Statement": [
+                  {
+                      "Effect": "Allow",
+                      "Action": [
+                          "dynamodb:Query",
+                          "dynamodb:Scan"
+                      ],
+                      "Resource": [
+                          "arn:aws:dynamodb:${{ secrets.AWS_REGION }}:${{ env.ACCOUNT_ID }}:table/BenchmarkMetrics/index/*"
+                      ]
+                  }
+              ]
+          }'
+    
+    - name: Verify added policy
+      run: |
+        aws iam get-role-policy \
+          --role-name llmetricsDynamoLambda \
+          --policy-name DynamoDB-Index-Access
