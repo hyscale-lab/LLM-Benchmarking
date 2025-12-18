@@ -10,8 +10,6 @@ from datetime import datetime, timedelta
 dynamodb = boto3.resource("dynamodb", region_name="us-west-2")
 table = dynamodb.Table("BenchmarkMetrics")
 
-
-# Helper functions
 def apply_input_type_filter(filter_exp, input_type):
     """
     Helper to append the input type logic.
@@ -24,28 +22,34 @@ def apply_input_type_filter(filter_exp, input_type):
         # Logic: Strict match
         return filter_exp & Attr("input_type").eq(input_type)
 
-def scan_all_items(scan_kwargs):
+def query_all_items(**query_kwargs):
+
     items = []
-    backoff = 1  # starting backoff time in seconds
+    backoff = 1  # backoff time in seconds
+    
     while True:
         try:
-            response = table.scan(**scan_kwargs)
+            response = table.query(**query_kwargs)
         except ClientError as e:
             error_code = e.response.get("Error", {}).get("Code", "")
             if error_code == "ProvisionedThroughputExceededException":
-                print("Throughput exceeded, backing off for", backoff, "seconds")
+                print(f"Throughput exceeded, backing off for {backoff} seconds")
                 time.sleep(backoff)
-                backoff = min(backoff * 2, 30)  # Exponential backoff up to a maximum
+                backoff = min(backoff * 2, 30)  # Cap backoff at 30 seconds
                 continue
             else:
                 raise e
         else:
             backoff = 1  # Reset backoff if successful
+
         items.extend(response.get("Items", []))
+        
+        # Handle Pagination
         if "LastEvaluatedKey" in response:
-            scan_kwargs["ExclusiveStartKey"] = response["LastEvaluatedKey"]
+            query_kwargs["ExclusiveStartKey"] = response["LastEvaluatedKey"]
         else:
             break
+            
     return items
 
 def get_latest_vllm(streaming, input_type):
@@ -53,21 +57,16 @@ def get_latest_vllm(streaming, input_type):
     Retrieves the latest item with provider_name 'vLLM'.
     """
     # Query
-    try:
-        filter_exp = Attr("streaming").eq(streaming)
-        filter_exp = apply_input_type_filter(filter_exp, input_type)
-        response = table.query(
-            IndexName='Provider-Timestamp-Index',
-            KeyConditionExpression=Key('provider_name').eq('vLLM'),
-            FilterExpression=filter_exp,
-            ScanIndexForward=False,  # Descending order
-            Limit=1  # Get only latest
-        )
-        items = response.get('Items', [])
-        return items[0] if items else {}
-    except Exception as e:
-        print(f"Error: {e}")
-        return {"error": str(e)}
+    filter_exp = Attr("streaming").eq(streaming)
+    filter_exp = apply_input_type_filter(filter_exp, input_type)
+    items = query_all_items(
+        IndexName='Provider-Timestamp-Index',
+        KeyConditionExpression=Key('provider_name').eq('vLLM'),
+        FilterExpression=filter_exp,
+        ScanIndexForward=False,  # Descending order
+        Limit=1  # Get only latest
+    )
+    return items[0] if items else {}
 
 def get_metrics_period(metricType, timeRange, streaming, input_type):
     time_ranges = {
@@ -86,19 +85,14 @@ def get_metrics_period(metricType, timeRange, streaming, input_type):
     end_date_str = end_date.strftime("%Y-%m-%d %H:%M:%S")
 
     # Query
-    try:
-        key_condition = Key('model_key').eq('common') & Key('timestamp').between(start_date_str, end_date_str)
-        filter_exp = Attr("streaming").eq(streaming)
-        filter_exp = apply_input_type_filter(filter_exp, input_type)
-        response = table.query(
-            IndexName='ModelKey-Timestamp-Index',
-            KeyConditionExpression=key_condition,
-            FilterExpression=filter_exp
-        )
-        items = response.get('Items', [])
-    except Exception as e:
-        print(f"Error: {e}")
-        return {"error": str(e)}
+    key_condition = Key('model_key').eq('common') & Key('timestamp').between(start_date_str, end_date_str)
+    filter_exp = Attr("streaming").eq(streaming)
+    filter_exp = apply_input_type_filter(filter_exp, input_type)
+    items = query_all_items(
+        IndexName='ModelKey-Timestamp-Index',
+        KeyConditionExpression=key_condition,
+        FilterExpression=filter_exp
+    )
 
     aggregated_metrics = {}
     date_array = set()
@@ -146,19 +140,14 @@ def get_metrics_by_date(metricType, date, streaming, input_type):
     end_date_str = end_date.strftime("%Y-%m-%d %H:%M:%S")
 
     # Query
-    try:
-        key_condition = Key('model_key').eq('common') & Key('timestamp').between(start_date_str, end_date_str)
-        filter_exp = Attr("streaming").eq(streaming)
-        filter_exp = apply_input_type_filter(filter_exp, input_type)
-        response = table.query(
-            IndexName='ModelKey-Timestamp-Index',
-            KeyConditionExpression=key_condition,
-            FilterExpression=filter_exp
-        )
-        items = response.get('Items', [])
-    except Exception as e:
-        print(f"Error: {e}")
-        return {"error": str(e)}
+    key_condition = Key('model_key').eq('common') & Key('timestamp').between(start_date_str, end_date_str)
+    filter_exp = Attr("streaming").eq(streaming)
+    filter_exp = apply_input_type_filter(filter_exp, input_type)
+    items = query_all_items(
+        IndexName='ModelKey-Timestamp-Index',
+        KeyConditionExpression=key_condition,
+        FilterExpression=filter_exp
+    )
 
     metrics_by_provider = {}
     for item in items:
