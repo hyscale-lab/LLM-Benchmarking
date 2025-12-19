@@ -198,6 +198,7 @@ AppMetricsPage.propTypes = {
     title: PropTypes.string,
     metricName: PropTypes.string.isRequired,
     min: PropTypes.number,
-    cdf: PropTypes.bool
+    cdf: PropTypes.bool,
+    showInputType: PropTypes.bool
 };
 export default AppMetricsPage;
