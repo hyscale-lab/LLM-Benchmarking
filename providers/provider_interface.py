@@ -99,13 +99,16 @@ class ProviderInterface(ABC):
         proxy_server.set_handler(data_handler)
         proxy_server.set_streaming(streaming)
 
+        # For plots from load generator
+        if not os.path.exists('plots'):
+            os.makedirs('plots')
+
         # Start load generator
         load_generator.send_loads(
             self.trace_dataset_path,
             self.trace_result_path,
-            sampling_rate=50,
-            recur_step=10,
+            sampling_rate=1,
+            recur_step=3,
             limit=num_requests,
-            max_drift=10000,
-            upscale='ars'
+            max_drift=1000,
         )
