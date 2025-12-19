@@ -1,3 +1,5 @@
+import os
+import asyncio
 from abc import ABC, abstractmethod
 
 
@@ -32,8 +34,8 @@ class ProviderInterface(ABC):
             "aime_2024_accuracy": {}
         }
 
-        # for trace mode
-        self.trace_dataset_path = f'./trace/{self.__class__.__name__}.dataset'
+        # for trace input type
+        self.trace_dataset_path = os.getenv('TRACE_DATASET_PATH', './trace/sample.json')
         self.trace_result_path = f'./trace/{self.__class__.__name__}.result'
 
     def log_metrics(self, model_name, metric, value):
@@ -48,6 +50,12 @@ class ProviderInterface(ABC):
         self.metrics[metric][model_name].append(value)
 
     @abstractmethod
+    def get_model_name(self, model):
+        """
+        get model names
+        """
+
+    @abstractmethod
     def perform_inference(self, model, prompt):
         """
         perform_inference
@@ -59,14 +67,48 @@ class ProviderInterface(ABC):
         perform_inference_streaming
         """
 
-    @abstractmethod
-    def perform_trace_mode(self, proxy_server, load_generator, num_requests, verbosity):
+    def perform_trace(self, proxy_server, load_generator, num_requests, streaming, verbosity, model='common-model'):
         """
-        perform_trace_mode
+        Perform using trace input
         """
+        # Set handler for proxy
+        async def data_handler(data):
+            prompt = data.pop('prompt')
+            gen_tokens = data.pop('generated_tokens')
 
-    @abstractmethod
-    def get_model_name(self, model):
-        """
-        get model names
-        """
+            def inference_sync():
+                try:
+                    if streaming:
+                        response_list = self.perform_inference_streaming(model, prompt, gen_tokens, verbosity)
+                        if isinstance(response_list, Exception):
+                            return [{"error": f"Inference failed: {response_list}"}]
+                        return response_list
+                    else:
+                        response = self.perform_inference(model, prompt, gen_tokens, verbosity)
+                        if isinstance(response, Exception):
+                            return {"error": f"Inference failed: {response}"}
+                        return response
+
+                except Exception as e:
+                    print(f"\nData handling failed: {e}")
+                    return [{"error": f"Data handling failed: {e}"}] if streaming else {"error": f"Data handling failed: {e}"}
+
+            response = await asyncio.to_thread(inference_sync)
+            return response
+
+        proxy_server.set_handler(data_handler)
+        proxy_server.set_streaming(streaming)
+
+        # For plots from load generator
+        if not os.path.exists('plots'):
+            os.makedirs('plots')
+
+        # Start load generator
+        load_generator.send_loads(
+            self.trace_dataset_path,
+            self.trace_result_path,
+            sampling_rate=1,
+            recur_step=3,
+            limit=num_requests,
+            max_drift=1000,
+        )

@@ -1,0 +1,26 @@
+[
+    {
+        "Content-Type": "application/json"
+    },
+    {
+        "timestamp": "00:00:00.001163",
+        "data": {
+            "prompt": " data data data data data",
+            "generated_tokens": 3
+        }
+    },
+    {
+        "timestamp": "00:00:00.041683",
+        "data": {
+            "prompt": " data data data data data data data data data data",
+            "generated_tokens": 3
+        }
+    },
+    {
+        "timestamp": "00:00:00.157988",
+        "data": {
+            "prompt": " data data data",
+            "generated_tokens": 38
+        }
+    }
+]

@@ -17,8 +17,8 @@ from providers import (
     AWSBedrock,
     vLLM
 )
-from proxy import ProxyServer
-from loadgenerator import LoadGenerator
+from trace.proxy import ProxyServer
+from trace.loadgenerator import LoadGenerator
 from utils.prompt_generator import get_prompt
 
 # Load environment variables
@@ -32,9 +32,6 @@ parser = argparse.ArgumentParser(
 )
 parser.add_argument(
     "-c", "--config", type=str, help="Path to the JSON configuration file"
-)
-parser.add_argument(
-    "-t", "--trace", action="store_true", help="Enable trace mode"
 )
 parser.add_argument(
     "--list", action="store_true", help="List available providers and models"
@@ -154,7 +151,7 @@ def validate_selected_models(selected_models, common_models, selected_providers)
 
 
 # Main function to run the benchmark
-def run_benchmark(config, vllm_ip=None, proxy_server=None, load_generator=None):
+def run_benchmark(config, vllm_ip=None):
     """Runs the benchmark based on the given configuration."""
     providers = config.get("providers", [])
     num_requests = config.get("num_requests", 1)
@@ -162,16 +159,36 @@ def run_benchmark(config, vllm_ip=None, proxy_server=None, load_generator=None):
     input_tokens = config.get("input_tokens", 10)
     # input_tokens = config.get("input_tokens", [10])
     streaming = config.get("streaming", False)
+    input_type = config.get("input_type", "static")
     max_output = config.get("max_output", 100)
     # max_output = config.get("max_output", [100])
     verbose = config.get("verbose", False)
     backend = config.get("backend", False)
-    dataset = config.get("dataset")
+    dataset = config.get("dataset", False)
+    
     # Select Benchmark class based on backend flag
-    if backend and not proxy_server:
+    if backend:
         from benchmarking.dynamo_bench import Benchmark
     else:
         from benchmarking.benchmark_main import Benchmark
+    
+    # Input type
+    proxy_server, load_generator = None, None
+    if input_type == "static":
+        pass
+    elif input_type == "trace":
+        print("Using trace input type.")
+        print("Starting proxy server...")
+        proxy_server = ProxyServer()
+        proxy_server.start()
+        while not proxy_server.server.started:  # Wait for server startup
+            pass
+        print("Loading load generator...")
+        load_generator = LoadGenerator(proxy_server.get_url())
+    else:
+        print(f"Invalid input type: {input_type}")
+        return
+    
     # Validate and initialize providers
     selected_providers = validate_providers(providers)
     print(
@@ -182,14 +199,14 @@ def run_benchmark(config, vllm_ip=None, proxy_server=None, load_generator=None):
     common_models = (
         get_common_models(selected_providers) if len(selected_providers) > 1 else []
     )
-    if not proxy_server and not common_models and len(selected_providers) > 1:
+    if not common_models and len(selected_providers) > 1:
         # logging.error("No common models found among selected providers.")
         print("No common models found among selected providers.")
         return
 
     # Validate models
     valid_models = validate_selected_models(models, common_models, selected_providers)
-    if not proxy_server:
+    if input_type != "trace":
         if not valid_models:
             print(
                 "No valid/common models selected. Ensure models are available across providers."
@@ -213,11 +230,10 @@ def run_benchmark(config, vllm_ip=None, proxy_server=None, load_generator=None):
             return
     
     if not dataset:
-        print("No dataset config found.")
-        return
+        print("Accuracy dataset config not set.")
 
-    if not os.path.isfile(dataset):
-        print(f"Dataset file not found: {dataset}")
+    if dataset and not os.path.isfile(dataset):
+        print(f"Accuracy dataset file not found: {dataset}")
         return
 
     prompt = get_prompt(input_tokens)
@@ -235,9 +251,9 @@ def run_benchmark(config, vllm_ip=None, proxy_server=None, load_generator=None):
         load_generator=load_generator,
         dataset=dataset,
     )
-    if proxy_server:
-        print("\nRunning trace mode...")
-        benchmark.run_trace_mode()
+    if input_type == "trace":
+        print("\nRunning benchmark with trace input...")
+        benchmark.run_trace()
     else:
         print("\nRunning benchmark...")
         benchmark.run()
@@ -258,18 +274,7 @@ def main():
                 print("   ➜ Please add `vllm_ip' via CLI using `--vllm_ip <ip-addr>`.")
                 return  # Stop execution
             
-            if args.trace:  # trace mode
-                print("Using trace mode.")
-                print("Starting proxy server...")
-                proxy_server = ProxyServer()
-                proxy_server.start()
-                while not proxy_server.server.started:  # Wait for server startup
-                    pass
-                print("Loading load generator...")
-                load_generator = LoadGenerator(proxy_server.get_url())
-                run_benchmark(config, vllm_ip, proxy_server, load_generator)
-            else:
-                run_benchmark(config, vllm_ip)
+            run_benchmark(config, vllm_ip)
     else:
         parser.print_help()
 

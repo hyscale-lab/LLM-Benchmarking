@@ -1,93 +1,74 @@
-import boto3
 import json
 import time
 import statistics  # Import for median calculation
-from datetime import datetime, timedelta
+import boto3
+from boto3.dynamodb.conditions import Key, Attr
 from botocore.exceptions import ClientError
+from datetime import datetime, timedelta
 
 # Initialize DynamoDB
 dynamodb = boto3.resource("dynamodb", region_name="us-west-2")
 table = dynamodb.Table("BenchmarkMetrics")
 
+def apply_input_type_filter(filter_exp, input_type):
+    """
+    Helper to append the input type logic.
+    If input_type is 'static', it includes items where the column is MISSING.
+    """
+    if input_type == "static":
+        # Logic: input_type is 'static' OR the column is missing entirely
+        return filter_exp & (Attr("input_type").eq("static") | Attr("input_type").not_exists())
+    else:
+        # Logic: Strict match
+        return filter_exp & Attr("input_type").eq(input_type)
 
-# Helper functions
-def get_latest_run_id(streaming):
-    response = table.scan(
-        FilterExpression="#streaming = :streaming",
-        ExpressionAttributeNames={"#streaming": "streaming"},
-        ExpressionAttributeValues={":streaming": streaming},
-    )
-    items = response.get("Items", [])
-    if not items:
-        return {"error": "No data found"}
-    latest_item = max(items, key=lambda x: x["timestamp"])
-    return {"run_id": latest_item["run_id"]}
+def query_all_items(**query_kwargs):
 
-def scan_all_items(scan_kwargs):
     items = []
-    backoff = 1  # starting backoff time in seconds
+    backoff = 1  # backoff time in seconds
+    
     while True:
         try:
-            response = table.scan(**scan_kwargs)
+            response = table.query(**query_kwargs)
         except ClientError as e:
             error_code = e.response.get("Error", {}).get("Code", "")
             if error_code == "ProvisionedThroughputExceededException":
-                print("Throughput exceeded, backing off for", backoff, "seconds")
+                print(f"Throughput exceeded, backing off for {backoff} seconds")
                 time.sleep(backoff)
-                backoff = min(backoff * 2, 30)  # Exponential backoff up to a maximum
+                backoff = min(backoff * 2, 30)  # Cap backoff at 30 seconds
                 continue
             else:
                 raise e
         else:
             backoff = 1  # Reset backoff if successful
+
         items.extend(response.get("Items", []))
+        
+        # Handle Pagination
         if "LastEvaluatedKey" in response:
-            scan_kwargs["ExclusiveStartKey"] = response["LastEvaluatedKey"]
+            query_kwargs["ExclusiveStartKey"] = response["LastEvaluatedKey"]
         else:
             break
+            
     return items
 
-def get_latest_vllm():
+def get_latest_vllm(streaming, input_type):
     """
     Retrieves the latest item with provider_name 'vLLM'.
     """
-    scan_kwargs = {
-        "FilterExpression": "#provider_name = :vllm",
-        "ExpressionAttributeNames": {"#provider_name": "provider_name"},
-        "ExpressionAttributeValues": {":vllm": "vLLM"},
-    }
-    items = scan_all_items(scan_kwargs)
-    if not items:
-        return {}
-    latest_item = max(items, key=lambda x: x["timestamp"])
-    return latest_item
-
-def get_metrics(run_id, metricType=None):
-    response = table.scan(
-        FilterExpression="run_id = :run_id",
-        ExpressionAttributeValues={":run_id": run_id},
+    # Query
+    filter_exp = Attr("streaming").eq(streaming)
+    filter_exp = apply_input_type_filter(filter_exp, input_type)
+    items = query_all_items(
+        IndexName='Provider-Timestamp-Index',
+        KeyConditionExpression=Key('provider_name').eq('vLLM'),
+        FilterExpression=filter_exp,
+        ScanIndexForward=False,  # Descending order
+        Limit=1  # Get only latest
     )
-    items = response.get("Items", [])
-    metrics_by_provider = {}
+    return items[0] if items else {}
 
-    for item in items:
-        provider_name = item["provider_name"]
-        model_name = item["model_name"]
-        metrics = json.loads(item["metrics"])
-
-        if provider_name not in metrics_by_provider:
-            metrics_by_provider[provider_name] = {}
-
-        if metricType:
-            filtered_metrics = {metricType: metrics.get(metricType)} if metricType in metrics else {}
-            metrics_by_provider[provider_name][model_name] = filtered_metrics
-        else:
-            metrics_by_provider[provider_name][model_name] = metrics
-
-    return {"run_id": run_id, "metrics": metrics_by_provider}
-
-
-def get_metrics_period(metricType, timeRange, streaming=True):
+def get_metrics_period(metricType, timeRange, streaming, input_type):
     time_ranges = {
         "week": timedelta(weeks=1),
         "month": timedelta(days=30),
@@ -103,22 +84,16 @@ def get_metrics_period(metricType, timeRange, streaming=True):
     start_date_str = start_date.strftime("%Y-%m-%d %H:%M:%S")
     end_date_str = end_date.strftime("%Y-%m-%d %H:%M:%S")
 
-    scan_kwargs = {
-        "FilterExpression": "#ts BETWEEN :start_date AND :end_date AND #streaming = :streaming AND #model_key = :common",
-        "ExpressionAttributeNames": {
-            "#ts": "timestamp",
-            "#streaming": "streaming",
-            "#model_key": "model_key"
-        },
-        "ExpressionAttributeValues": {
-            ":start_date": start_date_str,
-            ":end_date": end_date_str,
-            ":streaming": streaming,
-            ":common": "common"
-        },
-    }
+    # Query
+    key_condition = Key('model_key').eq('common') & Key('timestamp').between(start_date_str, end_date_str)
+    filter_exp = Attr("streaming").eq(streaming)
+    filter_exp = apply_input_type_filter(filter_exp, input_type)
+    items = query_all_items(
+        IndexName='ModelKey-Timestamp-Index',
+        KeyConditionExpression=key_condition,
+        FilterExpression=filter_exp
+    )
 
-    items = scan_all_items(scan_kwargs)
     aggregated_metrics = {}
     date_array = set()
 
@@ -154,61 +129,49 @@ def get_metrics_period(metricType, timeRange, streaming=True):
     return {"metricType": metricType, "timeRange": timeRange, "aggregated_metrics": sorted_result, "date_array": sorted_date_array}
 
 
-def get_metrics_by_date(metricType, date, streaming=True):
-    if date == "latest":
-        latest_id_response = get_latest_run_id(streaming)
-        if "error" in latest_id_response:
-            return {"error": "No latest run_id found."}
-        run_id = latest_id_response["run_id"]
-        result = get_metrics(run_id, metricType)
-    else:
-        try:
-            start_date = datetime.strptime(date, "%d-%m-%Y")
-            end_date = start_date + timedelta(days=1)
-        except ValueError:
-            return {"error": "Invalid date format. Use '12-12-2024'."}
+def get_metrics_by_date(metricType, date, streaming, input_type):
+    try:
+        start_date = datetime.strptime(date, "%d-%m-%Y")
+        end_date = start_date + timedelta(days=1)
+    except ValueError:
+        return {"error": "Invalid date format. Use '12-12-2024'."}
 
-        start_date_str = start_date.strftime("%Y-%m-%d %H:%M:%S")
-        end_date_str = end_date.strftime("%Y-%m-%d %H:%M:%S")
+    start_date_str = start_date.strftime("%Y-%m-%d %H:%M:%S")
+    end_date_str = end_date.strftime("%Y-%m-%d %H:%M:%S")
 
-        scan_kwargs = {
-            "FilterExpression": "#ts BETWEEN :start_date AND :end_date AND #streaming = :streaming AND #model_key = :common",
-            "ExpressionAttributeNames": {
-                "#ts": "timestamp",
-                "#streaming": "streaming",
-                "#model_key": "model_key"
-            },
-            "ExpressionAttributeValues": {
-                ":start_date": start_date_str,
-                ":end_date": end_date_str,
-                ":streaming": streaming,
-                ":common": "common"
-            },
-        }
-        items = scan_all_items(scan_kwargs)
-        metrics_by_provider = {}
-        for item in items:
-            provider_name = item["provider_name"]
-            model_name = item["model_name"]
-            metrics = json.loads(item["metrics"])
+    # Query
+    key_condition = Key('model_key').eq('common') & Key('timestamp').between(start_date_str, end_date_str)
+    filter_exp = Attr("streaming").eq(streaming)
+    filter_exp = apply_input_type_filter(filter_exp, input_type)
+    items = query_all_items(
+        IndexName='ModelKey-Timestamp-Index',
+        KeyConditionExpression=key_condition,
+        FilterExpression=filter_exp
+    )
 
-            if provider_name not in metrics_by_provider:
-                metrics_by_provider[provider_name] = {}
+    metrics_by_provider = {}
+    for item in items:
+        provider_name = item["provider_name"]
+        model_name = item["model_name"]
+        metrics = json.loads(item["metrics"])
 
-            if metricType:
-                filtered_metrics = {metricType: metrics.get(metricType)} if metricType in metrics else {}
-                metrics_by_provider[provider_name][model_name] = filtered_metrics
-            else:
-                metrics_by_provider[provider_name][model_name] = metrics
+        if provider_name not in metrics_by_provider:
+            metrics_by_provider[provider_name] = {}
 
-        sorted_metrics_by_provider = {
-            provider: metrics_by_provider[provider]
-            for provider in sorted(metrics_by_provider)
-        }
-        result = {"date": date, "metricType": metricType, "metrics": sorted_metrics_by_provider}
+        if metricType:
+            filtered_metrics = {metricType: metrics.get(metricType)} if metricType in metrics else {}
+            metrics_by_provider[provider_name][model_name] = filtered_metrics
+        else:
+            metrics_by_provider[provider_name][model_name] = metrics
+
+    sorted_metrics_by_provider = {
+        provider: metrics_by_provider[provider]
+        for provider in sorted(metrics_by_provider)
+    }
+    result = {"date": date, "metricType": metricType, "metrics": sorted_metrics_by_provider}
 
     # Append vLLM metrics to the result
-    vllm_item = get_latest_vllm()
+    vllm_item = get_latest_vllm(streaming, input_type)
     if vllm_item and "vLLM" not in result["metrics"]:
         try:
             vllm_metrics = json.loads(vllm_item["metrics"])
@@ -238,25 +201,29 @@ def lambda_handler(event, context):
         metricType = params.get("metricType")
         timeRange = params.get("timeRange")
         streaming = params.get("streaming", "true").lower() == "true"
+        input_type = params.get("inputType", "static").lower()
 
         if not metricType or not timeRange:
             return {"statusCode": 400, "body": json.dumps({"error": "Missing metricType or timeRange parameter"})}
 
-        response = get_metrics_period(metricType, timeRange, streaming)
+        response = get_metrics_period(metricType, timeRange, streaming, input_type)
         return {"statusCode": 200, "body": json.dumps(response)}
 
     elif path == "/default/metrics/date":
         metricType = params.get("metricType")
         date = params.get("date")
         streaming = params.get("streaming", "true").lower() == "true"
+        input_type = params.get("inputType", "static").lower()
 
         if not metricType or not date:
             return {"statusCode": 400, "body": json.dumps({"error": "Missing metricType or date parameter"})}
 
-        response = get_metrics_by_date(metricType, date, streaming)
+        response = get_metrics_by_date(metricType, date, streaming, input_type)
         return {"statusCode": 200, "body": json.dumps(response)}
     elif path == "/default/metrics/vllm":
-        vllm_item = get_latest_vllm()
+        streaming = params.get("streaming", "true").lower() == "true"
+        input_type = params.get("inputType", "static").lower()
+        vllm_item = get_latest_vllm(streaming, input_type)
         print(vllm_item)
         if not vllm_item:
             return {"statusCode": 404, "body": json.dumps({"error": "No vLLM metrics found"})}

@@ -1,6 +1,5 @@
 # anthropic_provider.py
 import os
-import asyncio
 from timeit import default_timer as timer
 import anthropic
 from providers.provider_interface import ProviderInterface
@@ -49,9 +48,6 @@ class Anthropic(AccuracyMixin, ProviderInterface):
         Args:
             model (str): The model name to use for inference.
             prompt (str): The user prompt for the chat completion.
-
-        Returns:
-            float: The elapsed time in seconds for the inference request.
         """
         try:
             model_id = self.get_model_name(model)
@@ -83,11 +79,11 @@ class Anthropic(AccuracyMixin, ProviderInterface):
             if verbosity:
                 print(f"Tokens: {total_tokens}, Avg TBT: {tbt:.4f}s, TPS: {tps:.2f}")
                 self.display_response(response, elapsed)
-            return elapsed
+            return response.model_dump()
 
         except Exception as e:
             print(f"[ERROR] Inference failed for model '{model}': {e}")
-            return None, None
+            return e
 
     def perform_inference_streaming(
         self, model, prompt, max_output=100, verbosity=True
@@ -117,7 +113,9 @@ class Anthropic(AccuracyMixin, ProviderInterface):
                 stop_sequences=["\nUser:"],
                 timeout=500,
             ) as stream:
+                response_list = []
                 for chunk in stream.text_stream:
+                    response_list.append(chunk)
                     if timer() - start > 90:
                         elapsed = timer() - start
                         print("[WARN] Streaming exceeded 90s, stopping early.")
@@ -162,10 +160,11 @@ class Anthropic(AccuracyMixin, ProviderInterface):
             self.log_metrics(model, "timebetweentokens", avg_tbt)
             self.log_metrics(model, "totaltokens", token_count)
             self.log_metrics(model, "tps", (token_count / elapsed) if elapsed > 0 else 0.0)
+            return response_list
 
         except Exception as e:
             print(f"[ERROR] Streaming inference failed for model '{model}': {e}")
-            return None, None
+            return e
 
     @staticmethod
     def _split_system_and_messages(messages):
@@ -213,67 +212,6 @@ class Anthropic(AccuracyMixin, ProviderInterface):
             elapsed = timer() - start
             print(f"[ERROR] _chat_for_eval failed: {e}")
             return "", 0, float(elapsed)
-
-    def perform_trace_mode(self, proxy_server, load_generator, num_requests, verbosity):
-        # Set handler for proxy
-        async def data_handler(data, streaming):
-            if streaming:
-                print("\nRequest not sent. Streaming not allowed in trace mode.")
-                return [{"error": "Streaming not allowed in trace mode."}]
-
-            def inference_sync():
-                try:
-                    data.pop('stream')
-                    model_id = data.get('model')
-                    if not model_id or model_id not in self.model_map.values():
-                        raise Exception(f"Model {model_id} not found in model map.")
-                    model = next((k for k, v in self.model_map.items() if v == model_id))
-                    if 'timeout' not in data:
-                        data['timeout'] = 500
-
-                    # Non-streaming inference
-                    start_time = timer()
-                    response = self.client.messages.create(**data)
-                    elapsed_time = timer() - start_time
-
-                    usage = getattr(response, "usage", None)
-                    total_tokens = (getattr(usage, "output_tokens", 0) or 0) if usage else 0
-                    tbt = elapsed_time / max(total_tokens, 1)
-                    tps = (total_tokens / elapsed_time)
-                    self.log_metrics(model, "response_times", elapsed_time)
-                    self.log_metrics(model, "totaltokens", total_tokens)
-                    self.log_metrics(model, "timebetweentokens", tbt)
-                    self.log_metrics(model, "tps", tps)
-
-                    if verbosity:
-                        print()
-                        print(f"##### Generated in {elapsed_time:.2f} seconds")
-                        print(f"##### Tokens: {total_tokens}, Avg TBT: {tbt:.4f}s, TPS: {tps:.2f}")
-                        print("Response: ", end="")
-                        for block in response.content:
-                            print(block.text)
-
-                    return response.model_dump()
-
-                except Exception as e:
-                    print(f"\nInference failed: {e}")
-                    return [{"error": f"Inference failed: {e}"}] if streaming else {"error": f"Inference failed: {e}"}
-
-            response = await asyncio.to_thread(inference_sync)
-            return response
-
-        proxy_server.set_handler(data_handler)
-
-        # Start load generator
-        load_generator.send_loads(
-            self.trace_dataset_path,
-            self.trace_result_path,
-            sampling_rate=100,
-            recur_step=10,
-            limit=num_requests,
-            max_drift=100,
-            upscale='ars'
-        )
 
     def display_response(self, response, elapsed):
         """

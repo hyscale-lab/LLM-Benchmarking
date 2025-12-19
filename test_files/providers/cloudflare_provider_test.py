@@ -51,7 +51,7 @@ def test_perform_inference(mock_post, setup_cloudflare_provider):
     mock_response.json.return_value = {"result": {"response": "Test response"}}
     mock_post.return_value = mock_response
 
-    elapsed_time = provider.perform_inference(
+    response = provider.perform_inference(
         "google-gemma-2b-it", "Test prompt", max_output=100
     )
 
@@ -69,8 +69,8 @@ def test_perform_inference(mock_post, setup_cloudflare_provider):
         timeout=500,
     )
 
-    # Ensure the response time is a float
-    assert isinstance(elapsed_time, float)
+    # Ensure the response is a dict
+    assert isinstance(response, dict)
 
 
 @patch("providers.cloudflare_provider.requests.post")
@@ -86,7 +86,7 @@ def test_perform_inference_streaming(mock_post, setup_cloudflare_provider, capfd
     ]
     mock_post.return_value = mock_response
 
-    provider.perform_inference_streaming(
+    response_list = provider.perform_inference_streaming(
         "meta-llama-3.2-3b-instruct", "Test prompt", max_output=100
     )
     captured = capfd.readouterr()
@@ -114,3 +114,6 @@ def test_perform_inference_streaming(mock_post, setup_cloudflare_provider, capfd
     assert "chunk1" in captured.out
     assert "chunk2" in captured.out
     assert "chunk3" in captured.out
+
+    # Ensure the response is a list
+    assert isinstance(response_list, list)

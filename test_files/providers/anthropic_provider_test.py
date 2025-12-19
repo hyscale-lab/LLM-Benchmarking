@@ -13,6 +13,8 @@ class TextBlock:
 class Message:
     def __init__(self, content):
         self.content = content
+    def model_dump(self):
+        return {"content": "Test response"}
 
 
 @pytest.fixture
@@ -56,7 +58,7 @@ def test_perform_inference(mock_anthropic_client_class, setup_anthropic_provider
     provider.client = mock_client_instance  # Directly set the mock client
 
     # Call the method with verbosity enabled
-    elapsed_time = provider.perform_inference(
+    response = provider.perform_inference(
         "claude-3-haiku", "Test prompt", max_output=100, verbosity=True
     )
 
@@ -70,8 +72,8 @@ def test_perform_inference(mock_anthropic_client_class, setup_anthropic_provider
         timeout=500,
     )
 
-    # Check if elapsed_time is a float (indicating the timer was used)
-    assert isinstance(elapsed_time, float)
+    # Check if reponse is a dict
+    assert isinstance(response, dict)
 
 
 @patch("providers.anthropic_provider.anthropic.Anthropic")
@@ -91,7 +93,7 @@ def test_perform_inference_streaming(
     provider.client = mock_client_instance  # Directly set the mock client
 
     # Call the method and capture the output with verbosity enabled
-    provider.perform_inference_streaming(
+    response_list = provider.perform_inference_streaming(
         "claude-3-haiku", "Test prompt", max_output=100, verbosity=True
     )
     captured = capfd.readouterr()
@@ -112,3 +114,6 @@ def test_perform_inference_streaming(
     assert "chunk3" in captured.out
     assert "Time to First Token" in captured.out
     assert "Total Response Time" in captured.out
+
+    # Ensure the response is a list
+    assert isinstance(response_list, list)

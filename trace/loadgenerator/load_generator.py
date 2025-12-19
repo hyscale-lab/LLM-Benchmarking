@@ -20,7 +20,7 @@ class LoadGenerator():
             target_url (str): The target URL to send load against.
         """
 
-        self.binary = './loadgenerator/LLMLoadgen'
+        self.binary = './trace/loadgenerator/LLMLoadgen'
         self.target_url = target_url
 
     def send_loads(

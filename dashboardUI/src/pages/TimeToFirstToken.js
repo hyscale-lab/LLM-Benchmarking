@@ -4,7 +4,7 @@ export default function TimeToFirstToken() {
   return (
     <div>
       <div style={{ paddingBottom: "30px" }}>
-        <AppMetricsPage metricType="timetofirsttoken" title="Time To First Token Metrics" metricName="Time To First Token" min={500} cdf />
+        <AppMetricsPage metricType="timetofirsttoken" title="Time To First Token Metrics" metricName="Time To First Token" min={50} cdf />
       </div>
       <div style={{ paddingBottom: "30px" }}>
         <AppMetricsPage metricType="timetofirsttoken_median" title="Time To First Token Metrics Median Metrics" metricName="Time To First Token Metrics Median" />

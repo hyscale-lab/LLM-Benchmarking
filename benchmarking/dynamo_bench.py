@@ -51,8 +51,10 @@ class Benchmark:
         self.streaming = streaming
         self.max_output = max_output
         self.verbosity = verbosity
+        self.proxy_server = proxy_server
         self.run_id = str(uuid.uuid4())  # Generate a unique ID for each benchmark run
         self.dataset = dataset
+        self.input_type = "trace" if proxy_server else "static"
 
         base_dir = "streaming" if streaming else "end_to_end"
 
@@ -61,7 +63,10 @@ class Benchmark:
         )
         provider_dir_name = "_".join(provider_names)
 
-        self.graph_dir = os.path.join("benchmark_graph", base_dir, provider_dir_name)
+        if self.proxy_server:  # trace input type
+            self.graph_dir = os.path.join("benchmark_graph", "trace", base_dir, provider_dir_name)
+        else:
+            self.graph_dir = os.path.join("benchmark_graph", base_dir, provider_dir_name)
 
         # Create directories if they don't exist
         if not os.path.exists(self.graph_dir):
@@ -124,6 +129,7 @@ class Benchmark:
                         "prompt": self.benchmark_data["prompt"],
                         "metrics": json.dumps(metrics),  # Serialize metrics as JSON string
                         "streaming": self.streaming,
+                        "input_type": self.input_type
                     }
                     print(item)
                     table.put_item(Item=item)
@@ -320,4 +326,25 @@ class Benchmark:
             
         self.store_data_points()
 
+    def run_trace(self):
+        """
+        Execute the benchmark using trace input and store metrics in DynamoDB.
+        """
+        for provider in self.providers:
+            provider_name = provider.__class__.__name__
+            print(f"\n[{provider_name}]")
+
+            if provider_name == "vLLM":
+                provider.perform_trace(self.proxy_server, self.load_generator, self.num_requests, self.streaming, self.verbosity, self.vllm_ip)
+            else:
+                provider.perform_trace(self.proxy_server, self.load_generator, self.num_requests, self.streaming, self.verbosity)
+        print()
+
+        metrics_to_plot = (
+            ["timetofirsttoken", "response_times", "timebetweentokens", "tps"]
+        )
         
+        for metric in metrics_to_plot:
+            self.plot_metrics(metric)
+            
+        self.store_data_points()

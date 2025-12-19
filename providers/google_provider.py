@@ -1,5 +1,4 @@
 import os
-import asyncio
 from timeit import default_timer as timer
 import google.generativeai as genai
 from providers.provider_interface import ProviderInterface
@@ -76,11 +75,11 @@ class GoogleGemini(ProviderInterface):
                 print(f"Tokens: {total_tokens}, Avg TBT: {tbt:.4f}s, TPS: {tps:.2f}")
                 print(response.text)
                 print(f"\nGenerated in {elapsed:.2f} seconds")
-            return elapsed
+            return response.to_dict()
 
         except Exception as e:
             print(f"[ERROR] Inference failed for model '{model}': {e}")
-            return None, None
+            return e
 
     def perform_inference_streaming(
         self, model, prompt, max_output=100, verbosity=True
@@ -88,139 +87,85 @@ class GoogleGemini(ProviderInterface):
         """
         Performs streaming inference on a single prompt, capturing latency metrics and output.
         """
-        model_id = self.get_model_name(model)
-        if model_id is None:
-            raise ValueError(f"Model {model} is not supported by GoogleGeminiProvider.")
+        try:
+            model_id = self.get_model_name(model)
+            if model_id is None:
+                raise ValueError(f"Model {model} is not supported by GoogleGeminiProvider.")
 
-        self._initialize_model(model_id)
+            self._initialize_model(model_id)
 
-        start_time = timer()
-        response = self.model.generate_content(
-            prompt,
-            generation_config=genai.types.GenerationConfig(
-                max_output_tokens=max_output
-            ),
-            stream=True,
-        )
+            start_time = timer()
+            response = self.model.generate_content(
+                prompt,
+                generation_config=genai.types.GenerationConfig(
+                    max_output_tokens=max_output
+                ),
+                stream=True,
+            )
 
-        ttft = None
-        first_token_time = None
-        streamed_output = []
-        total_tokens = 0
-        first_chunk_tokens = 0
+            ttft = None
+            first_token_time = None
+            streamed_output = []
+            total_tokens = 0
+            first_chunk_tokens = 0
 
-        for chunk in response:
-            current_time = timer()
-            text = getattr(chunk, "text", "") or ""
+            response_list = []
+            for chunk in response:
+                response_list.append(chunk.to_dict())
+                current_time = timer()
+                text = getattr(chunk, "text", "") or ""
 
-            # Estimate the number of tokens in the current chunk
-            num_tokens = 0
+                # Estimate the number of tokens in the current chunk
+                num_tokens = 0
 
-            if timer() - start_time > 90:
-                print("[WARN] Streaming exceeded 90s, stopping early.")
-                break
-            if text:
-                try:
-                    num_tokens = int(self.model.count_tokens(text).total_tokens)
-                    if num_tokens <= 0:
+                if timer() - start_time > 90:
+                    print("[WARN] Streaming exceeded 90s, stopping early.")
+                    break
+                if text:
+                    try:
+                        num_tokens = int(self.model.count_tokens(text).total_tokens)
+                        if num_tokens <= 0:
+                            num_tokens = 1
+                    except Exception:
                         num_tokens = 1
-                except Exception:
-                    num_tokens = 1
 
-            if first_token_time is None and text:
-                first_token_time = current_time
-                ttft = first_token_time - start_time
-                first_chunk_tokens = max(num_tokens, 0)
-                if verbosity:
-                    print(f"Time to First Token (TTFT): {ttft:.4f} seconds")
-
-            # Calculate inter-token latency per token in the chunk
-            if num_tokens > 0:
-                total_tokens += num_tokens
-
-            if verbosity and text:
-                print(text, end="", flush=True)
-            streamed_output.append(text)
-
-        total_time = timer() - start_time
-        if ttft is None:
-            ttft = total_time
-        non_first_latency = max(total_time - ttft, 0.0)
-        subsequent_tokens = max(total_tokens - first_chunk_tokens, 0)
-        avg_tbt = (non_first_latency / subsequent_tokens) if subsequent_tokens > 0 else 0.0
-        
-        if verbosity:
-            print(f"\nTotal Response Time: {total_time:.4f} seconds")
-            print(f"total tokens {total_tokens}")
-            print(f"Avg TBT: {avg_tbt:.4f} seconds")
-
-        self.log_metrics(model, "timetofirsttoken", ttft)
-        self.log_metrics(model, "response_times", total_time)
-        self.log_metrics(model, "timebetweentokens", avg_tbt)
-        self.log_metrics(model, "totaltokens", total_tokens)
-        self.log_metrics(
-            model, "tps", total_tokens / total_time if total_time > 0 else 0
-        )
-
-        return streamed_output
-
-    def perform_trace_mode(self, proxy_server, load_generator, num_requests, verbosity):
-        # Set handler for proxy
-        async def data_handler(data, streaming):
-            if streaming:
-                print("\nRequest not sent. Streaming not allowed in trace mode.")
-                return [{"error": "Streaming not allowed in trace mode."}]
-
-            def inference_sync():
-                try:
-                    model_id = data.pop('model')
-                    if not model_id or model_id not in self.model_map.values():
-                        raise Exception(f"Model {model_id} not found in model map.")
-                    model = next((k for k, v in self.model_map.items() if v == model_id))
-                    self._initialize_model(model_id)
-
-                    # Non-streaming inference
-                    start_time = timer()
-                    response = self.model.generate_content(
-                        contents=data.pop('contents'),
-                        stream=data.pop('stream'),
-                        generation_config=data
-                    )
-                    elapsed_time = timer() - start_time
-
-                    usage = getattr(response, "usage_metadata", None)
-                    total_tokens = (getattr(usage, "candidates_token_count", 0) or 0) if usage else 0
-                    tbt = elapsed_time / max(total_tokens, 1)
-                    tps = (total_tokens / elapsed_time)
-                    self.log_metrics(model, "response_times", elapsed_time)
-                    self.log_metrics(model, "totaltokens", total_tokens)
-                    self.log_metrics(model, "timebetweentokens", tbt)
-                    self.log_metrics(model, "tps", tps)
-
+                if first_token_time is None and text:
+                    first_token_time = current_time
+                    ttft = first_token_time - start_time
+                    first_chunk_tokens = max(num_tokens, 0)
                     if verbosity:
-                        print()
-                        print(f"##### Generated in {elapsed_time:.2f} seconds")
-                        print(f"##### Tokens: {total_tokens}, Avg TBT: {tbt:.4f}s, TPS: {tps:.2f}")
-                        print(f"Response: {response.text}")
+                        print(f"Time to First Token (TTFT): {ttft:.4f} seconds")
 
-                    return response.to_dict()
+                # Calculate inter-token latency per token in the chunk
+                if num_tokens > 0:
+                    total_tokens += num_tokens
 
-                except Exception as e:
-                    print(f"\nInference failed: {e}")
-                    return [{"error": f"Inference failed: {e}"}] if streaming else {"error": f"Inference failed: {e}"}
+                if verbosity and text:
+                    print(text, end="", flush=True)
+                streamed_output.append(text)
 
-            response = await asyncio.to_thread(inference_sync)
-            return response
+            total_time = timer() - start_time
+            if ttft is None:
+                ttft = total_time
+            non_first_latency = max(total_time - ttft, 0.0)
+            subsequent_tokens = max(total_tokens - first_chunk_tokens, 0)
+            avg_tbt = (non_first_latency / subsequent_tokens) if subsequent_tokens > 0 else 0.0
+            
+            if verbosity:
+                print(f"\nTotal Response Time: {total_time:.4f} seconds")
+                print(f"total tokens {total_tokens}")
+                print(f"Avg TBT: {avg_tbt:.4f} seconds")
 
-        proxy_server.set_handler(data_handler)
+            self.log_metrics(model, "timetofirsttoken", ttft)
+            self.log_metrics(model, "response_times", total_time)
+            self.log_metrics(model, "timebetweentokens", avg_tbt)
+            self.log_metrics(model, "totaltokens", total_tokens)
+            self.log_metrics(
+                model, "tps", total_tokens / total_time if total_time > 0 else 0
+            )
 
-        # Start load generator
-        load_generator.send_loads(
-            self.trace_dataset_path,
-            self.trace_result_path,
-            sampling_rate=100,
-            recur_step=10,
-            limit=num_requests,
-            max_drift=100,
-            upscale='ars'
-        )
+            return response_list
+
+        except Exception as e:
+            print(f"[ERROR] Streaming inference failed for model '{model}': {e}")
+            return e

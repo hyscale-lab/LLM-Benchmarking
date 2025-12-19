@@ -78,6 +78,7 @@ const AppMetricsDate = ({ title, subheader, metrics, dateArray, yaxis }) => {
                 formatter: (value) => (value !== null ? `${(10 ** value).toFixed(3)}` : "N/A"),
             },
             type: "linear", // Since we've manually log-transformed, keep this linear
+            max: (max) => max + 0.1,
         },
         tooltip: {
             shared: true,

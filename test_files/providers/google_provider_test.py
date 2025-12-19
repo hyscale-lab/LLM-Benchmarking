@@ -45,11 +45,12 @@ def test_perform_inference(mock_gen_model_class, setup_google_gemini):
     mock_response = MagicMock()
     mock_response.text = "Test response"
     mock_response.usage_metadata.candidates_token_count = 100
+    mock_response.to_dict.return_value = {"content": "Test response"}
     mock_gen_model_instance.generate_content.return_value = mock_response
     mock_gen_model_class.return_value = mock_gen_model_instance
 
     # Call the method with max_output and verbosity enabled
-    elapsed_time = provider.perform_inference(
+    response = provider.perform_inference(
         "gemini-2.5-flash", "Test prompt", max_output=100, verbosity=True,
     )
 
@@ -59,8 +60,8 @@ def test_perform_inference(mock_gen_model_class, setup_google_gemini):
         generation_config=genai.types.GenerationConfig(max_output_tokens=100),
     )
 
-    # Check if elapsed_time is a float (indicating the timer was used)
-    assert isinstance(elapsed_time, float)
+    # Ensure the response is a dict
+    assert isinstance(response, dict)
 
 
 @patch("providers.google_provider.genai.GenerativeModel")
@@ -80,7 +81,7 @@ def test_perform_inference_streaming(mock_gen_model_class, setup_google_gemini, 
     mock_gen_model_class.return_value = mock_gen_model_instance
 
     # Call the method and capture the output with verbosity enabled
-    provider.perform_inference_streaming(
+    response_list = provider.perform_inference_streaming(
         "gemini-2.5-flash", "Test prompt", max_output=100, verbosity=True,
     )
     captured = capfd.readouterr()
@@ -98,3 +99,6 @@ def test_perform_inference_streaming(mock_gen_model_class, setup_google_gemini, 
     assert "chunk3" in captured.out
     assert "Time to First Token" in captured.out
     assert "Total Response Time" in captured.out
+
+    # Ensure the response is a list
+    assert isinstance(response_list, list)

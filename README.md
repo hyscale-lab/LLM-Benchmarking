@@ -34,9 +34,9 @@ cd LLMetrics
 Create a .env file in the repository root with your API keys and credentials:
 
 ```
-AWS_REGION=us-east-1
-AWS_ACCESS_KEY_ID=your_access_key
-AWS_SECRET_ACCESS_KEY=your_secret_key
+AWS_REGION=your_aws_region
+AWS_ACCESS_KEY_ID=your_aws_access_key_id
+AWS_SECRET_ACCESS_KEY=your_aws_secret_access_key
 CLOUDFLARE_ACCOUNT_ID="your-cloudflare-account-id"
 CLOUDFLARE_AI_TOKEN="your-cloudflare-ai-token"
 TOGETHER_AI_API="your-together-ai-api-key"
@@ -51,10 +51,10 @@ AWS_BEDROCK_ACCESS_KEY_ID="your-aws-bedrock-access-key-id"
 AWS_BEDROCK_SECRET_ACCESS_KEY="your-aws-bedrock-secret-key"
 AWS_BEDROCK_REGION="your-aws-bedrock-region"
 DYNAMODB_ENDPOINT_URL="your-dynamodb-endpoint-url"
+AZURE_OPENAI_ENDPOINT="your-azure-openai-endpoint"
 AZURE_AI_ENDPOINT="your-azure-ai-endpoint"
 AZURE_AI_API_KEY="your-azure-ai-api-key"
 ```
-
 ## **Usage**
 
 ### **1. Create a Configuration File**
@@ -67,9 +67,11 @@ Create a config.json file to define your benchmarking experiment:
     [ "common-model" ], 
   "num_requests": 100, 
   "input_tokens": 10, 
-  "streaming": true, 
+  "streaming": true,
+  "input_type": "static",  # or "trace"
   "max_output": 100, 
-  "verbose": true
+  "verbose": true,
+  "dataset": "aime.jsonl"
 }
 ```
 ### **2. Run the Benchmark**
@@ -83,6 +85,12 @@ python main.py -c config.json --vllm_ip <host ip>
 ### **3. View Results**
 
 LLMetrics saves plots (latency graphs - CDF Plots) in the designated output directory `benchmark_graph`
+
+## **Input Type**
+
+LLMetrics supports these input types, which can be set in the consiguration file using `input_type`. This does not apply to `Accuracy` metrics since it uses its own input.
+- `static`: Use the same prompt for every request.
+- `trace`: Use a preprocessed input derived from Azure trace dataset. See [releases](https://github.com/hyscale-lab/LLM-Benchmarking/releases).
 
 ## **Continuous Benchmarking Workflow**
 

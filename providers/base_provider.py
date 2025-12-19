@@ -1,6 +1,5 @@
 # base_provider.py for chat completions api
 from timeit import default_timer as timer
-import asyncio
 import json
 from providers.provider_interface import ProviderInterface
 from utils.accuracy_mixin import AccuracyMixin
@@ -57,11 +56,11 @@ class BaseProvider(AccuracyMixin, ProviderInterface):
             if verbosity:
                 print(f"Tokens: {total_tokens}, Avg TBT: {tbt:.4f}s, TPS: {tps:.2f}")
                 self.display_response(response, elapsed)
-            return elapsed
+            return json.loads(response.json())
 
         except Exception as e:
             print(f"[ERROR] Inference failed for model '{model}': {e}")
-            return None
+            return e
 
     def perform_inference_streaming(
         self, model, prompt, max_output=100, verbosity=True
@@ -88,7 +87,9 @@ class BaseProvider(AccuracyMixin, ProviderInterface):
                 timeout=(1, 2)
             )
 
+            response_list = []
             for chunk in response:
+                response_list.append(json.loads(chunk.json()))
                 if timer() - start > 90:
                     elapsed = timer() - start
                     print("[WARN] Streaming exceeded 90s, stopping early.")
@@ -134,70 +135,11 @@ class BaseProvider(AccuracyMixin, ProviderInterface):
             self.log_metrics(model, "timebetweentokens", avg_tbt)
             self.log_metrics(model, "totaltokens", token_count)
             self.log_metrics(model, "tps", (token_count / elapsed) if elapsed > 0 else 0.0)
+            return response_list
 
         except Exception as e:
             print(f"[ERROR] Streaming inference failed for model '{model}': {e}")
-            return None, None
-
-    def perform_trace_mode(self, proxy_server, load_generator, num_requests, verbosity):
-        # Set handler for proxy
-        async def data_handler(data, streaming):
-            if streaming:
-                print("\nRequest not sent. Streaming not allowed in trace mode.")
-                return [{"error": "Streaming not allowed in trace mode."}]
-
-            def inference_sync():
-                try:
-                    model_id = data.get('model')
-                    if not model_id or model_id not in self.model_map.values():
-                        raise Exception(f"Model {model_id} not found in model map.")
-                    model = next((k for k, v in self.model_map.items() if v == model_id))
-                    if 'timeout' not in data:
-                        data['timeout'] = (1, 2)
-
-                    # Non-streaming inference
-                    start_time = timer()
-                    response = self.client.chat.completions.create(**data)
-                    elapsed_time = timer() - start_time
-
-                    usage = getattr(response, "usage", None)
-                    total_tokens = 0
-                    if usage:
-                        total_tokens = getattr(usage, "completion_tokens", None) or getattr(usage, "output_tokens", None) or 0
-                    tbt = elapsed_time / max(total_tokens, 1)
-                    tps = (total_tokens / elapsed_time)
-                    self.log_metrics(model, "totaltokens", total_tokens)
-                    self.log_metrics(model, "timebetweentokens", tbt)
-                    self.log_metrics(model, "tps", tps)
-                    self.log_metrics(model, "response_times", elapsed_time)
-
-                    if verbosity:
-                        print()
-                        print(f"##### Generated in {elapsed_time:.2f} seconds")
-                        print(f"##### Tokens: {total_tokens}, Avg TBT: {tbt:.4f}s, TPS: {tps:.2f}")
-                        print(f"Response: {response.choices[0].message.content}")
-
-                    return json.loads(response.json())
-
-                except Exception as e:
-                    print(f"\nInference failed: {e}")
-                    return [{"error": f"Inference failed: {e}"}] if streaming else {"error": f"Inference failed: {e}"}
-
-            response = await asyncio.to_thread(inference_sync)
-            return response
-
-        proxy_server.set_handler(data_handler)
-
-        # Start load generator
-        load_generator.send_loads(
-            self.trace_dataset_path,
-            self.trace_result_path,
-            sampling_rate=100,
-            recur_step=10,
-            limit=num_requests,
-            max_drift=100,
-            upscale='ars'
-        )
+            return e
 
     def display_response(self, response, elapsed):
         """Display response."""
