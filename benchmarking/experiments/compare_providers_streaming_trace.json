@@ -1,0 +1,22 @@
+{
+    "providers": [
+        "Anthropic",
+        "AWSBedrock",
+        "Azure",
+        "Cloudflare",
+        "Google",
+        "Groq",
+        "Hyperbolic",
+        "OpenAI",
+        "PerplexityAI",
+        "TogetherAI"
+    ],
+    "models": [
+        "common-model"
+    ],
+    "num_requests": 100,
+    "streaming": true,
+    "input_type": "trace",
+    "verbose": true,
+    "backend": true
+}
