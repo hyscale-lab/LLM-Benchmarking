@@ -35,7 +35,9 @@ const AppMetrics = ({ title, metricType, subheader, metrics, min }) => {
         }).filter(Boolean); // Remove null entries
     }).flat();
     const colors = chartData.map((entry) => entry.color);
-    const allLatencies = chartData.flatMap(series => series.data.map(point => point.x));
+    const allLatencies = chartData
+        .flatMap(series => series.data.map(point => point.x))
+        .filter(x => Number.isFinite(x));
     const maxLatency = Math.max(...allLatencies);
     const minLatency = Math.min(...allLatencies);
     const computedMin = (min != null && min > 0) ? Math.log10(min) : minLatency;
