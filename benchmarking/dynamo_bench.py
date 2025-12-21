@@ -332,12 +332,14 @@ class Benchmark:
         """
         for provider in self.providers:
             provider_name = provider.__class__.__name__
-            print(f"\n[{provider_name}]")
+            for model in self.models:
+                model_name = provider.get_model_name(model)
+                print(f"\n[{provider_name}] - Model: {model_name}")
 
-            if provider_name == "vLLM":
-                provider.perform_trace(self.proxy_server, self.load_generator, self.num_requests, self.streaming, self.verbosity, self.vllm_ip)
-            else:
-                provider.perform_trace(self.proxy_server, self.load_generator, self.num_requests, self.streaming, self.verbosity)
+                if provider_name == "vLLM":
+                    provider.perform_trace(model, self.proxy_server, self.load_generator, self.streaming, self.num_requests, self.verbosity, self.vllm_ip)
+                else:
+                    provider.perform_trace(model, self.proxy_server, self.load_generator, self.streaming, self.num_requests, self.verbosity)
         print()
 
         metrics_to_plot = (

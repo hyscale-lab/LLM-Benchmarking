@@ -67,7 +67,7 @@ class ProviderInterface(ABC):
         perform_inference_streaming
         """
 
-    def perform_trace(self, proxy_server, load_generator, num_requests, streaming, verbosity, model='common-model'):
+    def perform_trace(self, model, proxy_server, load_generator, streaming, num_requests, verbosity):
         """
         Perform using trace input
         """
