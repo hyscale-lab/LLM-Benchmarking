@@ -108,10 +108,10 @@ jobs:
         
   download-artifacts:
     runs-on: ubuntu-latest
-    needs: [normal-benchmark, trace-benchmark]
+    needs: [static-benchmark, trace-benchmark]
 
     # Run if at least one of the previous jobs succeed
-    if: always() && (needs.normal-benchmark.result == 'success' || needs.trace-benchmark.result == 'success')
+    if: always() && (needs.static-benchmark.result == 'success' || needs.trace-benchmark.result == 'success')
     steps:
       - name: Download Artifacts
         uses: actions/download-artifact@v4
