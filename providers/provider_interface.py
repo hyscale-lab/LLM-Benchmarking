@@ -56,13 +56,13 @@ class ProviderInterface(ABC):
         """
 
     @abstractmethod
-    def perform_inference(self, model, prompt):
+    def perform_inference(self, model, prompt, max_output, verbosity):
         """
         perform_inference
         """
 
     @abstractmethod
-    def perform_inference_streaming(self, model, prompt):
+    def perform_inference_streaming(self, model, prompt, max_output, verbosity):
         """
         perform_inference_streaming
         """
