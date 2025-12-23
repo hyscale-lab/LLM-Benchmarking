@@ -2,43 +2,82 @@ name: Compare Providers Streaming
 
 on:
   workflow_dispatch:
-  # push:
+    inputs:
+      run_static:
+        description: 'Run Static Benchmark'
+        type: boolean
+        default: true
+      run_trace:
+        description: 'Run Trace Benchmark'
+        type: boolean
+        default: true
   schedule:
+    # Monday (Static)
     - cron: "0 0 * * 1"
+    # Tuesday (Trace)
+    - cron: "0 0 * * 2"
 
+env:
+  CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+  CLOUDFLARE_AI_TOKEN: ${{ secrets.CLOUDFLARE_AI_TOKEN }}
+  GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+  GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+  HYPERBOLIC_API: ${{ secrets.HYPERBOLIC_API }}
+  OPEN_AI_API: ${{ secrets.OPEN_AI_API }}
+  PERPLEXITY_AI_API: ${{ secrets.PERPLEXITY_AI_API }}
+  TOGETHER_AI_API: ${{ secrets.TOGETHER_AI_API }}
+  ANTHROPIC_API: ${{ secrets.ANTHROPIC_API }}
+  AZURE_LLAMA_70B_API: ${{ secrets.AZURE_LLAMA_70B_API }}
+  AZURE_LLAMA_8B_API: ${{ secrets.AZURE_LLAMA_70B_API }}
+  AWS_BEDROCK_ACCESS_KEY_ID: ${{ secrets.AWS_BEDROCK_ACCESS_KEY_ID }}
+  AWS_BEDROCK_SECRET_ACCESS_KEY: ${{ secrets.AWS_BEDROCK_SECRET_ACCESS_KEY }}
+  AWS_BEDROCK_REGION: ${{ secrets.AWS_BEDROCK_REGION }}
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  MISTRAL_LARGE_API: ${{ secrets.MISTRAL_LARGE_API }}
+  AZURE_AI_ENDPOINT: ${{ secrets.AZURE_AI_ENDPOINT }}
+  AZURE_AI_API_KEY: ${{ secrets.AZURE_AI_API_KEY }}
+  AZURE_OPENAI_ENDPOINT: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
 
 jobs:
-  compare-providers:
-    name: Compare Providers
+  static-benchmark:
+    name: Static Benchmark
     runs-on: ubuntu-latest
-    env:
-        CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        CLOUDFLARE_AI_TOKEN: ${{ secrets.CLOUDFLARE_AI_TOKEN }}
-        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-        HYPERBOLIC_API: ${{ secrets.HYPERBOLIC_API }}
-        OPEN_AI_API: ${{ secrets.OPEN_AI_API }}
-        PERPLEXITY_AI_API: ${{ secrets.PERPLEXITY_AI_API }}
-        TOGETHER_AI_API: ${{ secrets.TOGETHER_AI_API }}
-        ANTHROPIC_API: ${{ secrets.ANTHROPIC_API }}
-        AZURE_LLAMA_70B_API: ${{ secrets.AZURE_LLAMA_70B_API }}
-        AZURE_LLAMA_8B_API: ${{ secrets.AZURE_LLAMA_70B_API }}
-        AWS_BEDROCK_ACCESS_KEY_ID: ${{ secrets.AWS_BEDROCK_ACCESS_KEY_ID }}
-        AWS_BEDROCK_SECRET_ACCESS_KEY: ${{ secrets.AWS_BEDROCK_SECRET_ACCESS_KEY }}
-        AWS_BEDROCK_REGION: ${{ secrets.AWS_BEDROCK_REGION }}
-        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        AWS_REGION: ${{ secrets.AWS_REGION }}
-        MISTRAL_LARGE_API: ${{ secrets.MISTRAL_LARGE_API }}
-        AZURE_AI_ENDPOINT: ${{ secrets.AZURE_AI_ENDPOINT }}
-        AZURE_AI_API_KEY: ${{ secrets.AZURE_AI_API_KEY }}
-        AZURE_OPENAI_ENDPOINT: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
-        
+  
+    if: ${{ (github.event_name == 'workflow_dispatch' && inputs.run_static == true) || (github.event_name == 'schedule' && github.event.schedule == '0 0 * * 1') }}
     steps:
     - name: Check out repository
       uses: actions/checkout@v3
-      # with:
-      #   ref: feat/continuous-experiments
+    
+    - name: Set up Python 3.12
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.12
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Run Experiment
+      run: python main.py -c benchmarking/experiments/compare_providers_streaming.json
+
+    - name: Upload Experiment Outputs
+      if: success()
+      uses: actions/upload-artifact@v4
+      with:
+        name: results-static
+        path: ${{ github.workspace }}/benchmark_graph
+
+  trace-benchmark:
+    name: Trace Benchmark
+    runs-on: ubuntu-latest
+
+    if: ${{ (github.event_name == 'workflow_dispatch' && inputs.run_trace == true) || (github.event_name == 'schedule' && github.event.schedule == '0 0 * * 2') }}
+    steps:
+    - name: Check out repository
+      uses: actions/checkout@v3
     
     - name: Set up Python 3.12
       uses: actions/setup-python@v4
@@ -56,9 +95,6 @@ jobs:
       run: |
         gh release download -p "trace_conv.json"
         echo "TRACE_DATASET_PATH=${{ github.workspace }}/trace_conv.json" >> $GITHUB_ENV
-    
-    - name: Run Experiment
-      run: python main.py -c benchmarking/experiments/compare_providers_streaming.json
 
     - name: Run Trace Experiment
       run: python main.py -c benchmarking/experiments/compare_providers_streaming_trace.json
@@ -67,17 +103,19 @@ jobs:
       if: success()
       uses: actions/upload-artifact@v4
       with:
-        name: results
+        name: results-trace
         path: ${{ github.workspace }}/benchmark_graph
         
   download-artifacts:
     runs-on: ubuntu-latest
-    needs: compare-providers
+    needs: [normal-benchmark, trace-benchmark]
+
+    # Run if at least one of the previous jobs succeed
+    if: always() && (needs.normal-benchmark.result == 'success' || needs.trace-benchmark.result == 'success')
     steps:
       - name: Download Artifacts
         uses: actions/download-artifact@v4
         with:
-          name: results
           path: artifacts
 
       - name: List Downloaded Artifacts
