@@ -200,23 +200,21 @@ def run_benchmark(config, vllm_ip=None):
         get_common_models(selected_providers) if len(selected_providers) > 1 else []
     )
     if not common_models and len(selected_providers) > 1:
-        # logging.error("No common models found among selected providers.")
         print("No common models found among selected providers.")
         return
 
     # Validate models
     valid_models = validate_selected_models(models, common_models, selected_providers)
+    if not valid_models:
+        print(
+            "No valid/common models selected. Ensure models are available across providers."
+        )
+        display_available_providers()
+        return
+
+    print(f"Selected Models: {valid_models}")
+
     if input_type != "trace":
-        if not valid_models:
-            print(
-                "No valid/common models selected. Ensure models are available across providers."
-            )
-            display_available_providers()
-            return
-
-        # logging.info(f"Selected Models: {valid_models}")
-        print(f"Selected Models: {valid_models}")
-
         # handling input tokens
         if input_tokens not in input_sizes:
             print(f"Please enter an input token from the following choices: {input_sizes}")

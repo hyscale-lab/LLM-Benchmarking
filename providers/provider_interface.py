@@ -56,18 +56,18 @@ class ProviderInterface(ABC):
         """
 
     @abstractmethod
-    def perform_inference(self, model, prompt):
+    def perform_inference(self, model, prompt, max_output, verbosity):
         """
         perform_inference
         """
 
     @abstractmethod
-    def perform_inference_streaming(self, model, prompt):
+    def perform_inference_streaming(self, model, prompt, max_output, verbosity):
         """
         perform_inference_streaming
         """
 
-    def perform_trace(self, proxy_server, load_generator, num_requests, streaming, verbosity, model='common-model'):
+    def perform_trace(self, model, proxy_server, load_generator, streaming, num_requests, verbosity):
         """
         Perform using trace input
         """

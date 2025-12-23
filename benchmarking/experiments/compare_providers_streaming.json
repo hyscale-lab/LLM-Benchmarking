@@ -14,6 +14,7 @@
     "models": [
         "common-model"
     ],
+    "input_type": "static",
     "num_requests": 100,
     "input_tokens": 10,
     "streaming": true,

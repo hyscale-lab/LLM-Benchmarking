@@ -51,7 +51,9 @@ class Benchmark:
         self.streaming = streaming
         self.max_output = max_output
         self.verbosity = verbosity
+        self.vllm_ip = vllm_ip
         self.proxy_server = proxy_server
+        self.load_generator = load_generator
         self.run_id = str(uuid.uuid4())  # Generate a unique ID for each benchmark run
         self.dataset = dataset
         self.input_type = "trace" if proxy_server else "static"
@@ -332,12 +334,14 @@ class Benchmark:
         """
         for provider in self.providers:
             provider_name = provider.__class__.__name__
-            print(f"\n[{provider_name}]")
+            for model in self.models:
+                model_name = provider.get_model_name(model)
+                print(f"\n[{provider_name}] - Model: {model_name}")
 
-            if provider_name == "vLLM":
-                provider.perform_trace(self.proxy_server, self.load_generator, self.num_requests, self.streaming, self.verbosity, self.vllm_ip)
-            else:
-                provider.perform_trace(self.proxy_server, self.load_generator, self.num_requests, self.streaming, self.verbosity)
+                if provider_name == "vLLM":
+                    provider.perform_trace(model, self.proxy_server, self.load_generator, self.streaming, self.num_requests, self.verbosity, self.vllm_ip)
+                else:
+                    provider.perform_trace(model, self.proxy_server, self.load_generator, self.streaming, self.num_requests, self.verbosity)
         print()
 
         metrics_to_plot = (
