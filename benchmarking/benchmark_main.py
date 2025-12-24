@@ -259,3 +259,35 @@ class Benchmark:
             self.plot_metrics("timetofirsttoken", "timetofirsttoken")
             self.plot_metrics("response_times", "totaltime")
             self.plot_metrics("timebetweentokens", "timebetweentokens")
+
+    def run_multiturn(self):
+        """
+        Runs the benchmark for the selected providers and models, and plots the results.
+
+        This method sends a number of requests to each model for each provider, collects
+        performance metrics, and generates plots based on those metrics.
+        """
+
+        # Time between each request in seconds
+        time_interval = 15
+
+        for provider in self.providers:
+            provider_name = provider.__class__.__name__
+            for model in self.models:
+                model_name = provider.get_model_name(model)
+                print(f"\n[{provider_name}] - Model: {model_name}")
+
+                if provider_name == "vLLM":
+                    provider.perform_multiturn(model, time_interval, self.streaming, self.num_requests, self.verbosity, self.vllm_ip)
+                else:
+                    provider.perform_multiturn(model, time_interval, self.streaming, self.num_requests, self.verbosity)
+        print()
+
+        if not self.streaming:
+            self.plot_metrics("response_times", "response_times")
+        else:
+            # Save all the relevant metrics plots when streaming is true
+            self.plot_metrics("timetofirsttoken", "timetofirsttoken")
+            self.plot_metrics("response_times", "totaltime")
+            self.plot_metrics("timebetweentokens", "timebetweentokens")
+
