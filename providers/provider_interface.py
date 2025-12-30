@@ -74,17 +74,17 @@ class ProviderInterface(ABC):
         # Set handler for proxy
         async def data_handler(data):
             prompt = data.pop('prompt')
-            gen_tokens = data.pop('generated_tokens')
+            target_tokens = data.pop('generated_tokens')
 
             def inference_sync():
                 try:
                     if streaming:
-                        response_list = self.perform_inference_streaming(model, prompt, gen_tokens, verbosity)
+                        response_list = self.perform_inference_streaming(model, prompt, target_tokens, verbosity)
                         if isinstance(response_list, Exception):
                             return [{"error": f"Inference failed: {response_list}"}]
                         return response_list
                     else:
-                        response = self.perform_inference(model, prompt, gen_tokens, verbosity)
+                        response = self.perform_inference(model, prompt, target_tokens, verbosity)
                         if isinstance(response, Exception):
                             return {"error": f"Inference failed: {response}"}
                         return response
