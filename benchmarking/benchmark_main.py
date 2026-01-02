@@ -175,6 +175,11 @@ class Benchmark:
                 model_name = provider.get_model_name(model)
                 print(f"Model: {model_name}\nPrompt: {self.prompt}")
 
+                # --- START TIME ---
+                start_time = datetime.now()
+                print(f"Start Time:  {start_time.strftime('%Y-%m-%d %H:%M:%S')}")
+                # ------------------
+
                 for i in range(self.num_requests):
                     if self.verbosity:
                         print(f"Request {i + 1}/{self.num_requests}")
@@ -200,6 +205,13 @@ class Benchmark:
                             provider.perform_inference(
                                 model, self.prompt, self.max_output, self.verbosity
                             )
+
+                # --- FINISH TIME & DURATION ---
+                end_time = datetime.now()
+                duration = end_time - start_time
+                print(f"Finish Time: {end_time.strftime('%Y-%m-%d %H:%M:%S')}")
+                print(f"Duration:    {duration}")
+                # ------------------------------
 
         if not self.streaming:
             self.plot_metrics("response_times", "response_times")
@@ -246,10 +258,23 @@ class Benchmark:
                 model_name = provider.get_model_name(model)
                 print(f"\n[{provider_name}] - Model: {model_name}")
 
+                # --- START TIME ---
+                start_time = datetime.now()
+                print(f"Start Time:  {start_time.strftime('%Y-%m-%d %H:%M:%S')}")
+                # ------------------
+
                 if provider_name == "vLLM":
                     provider.perform_trace(model, self.proxy_server, self.load_generator, self.streaming, self.num_requests, self.verbosity, self.vllm_ip)
                 else:
                     provider.perform_trace(model, self.proxy_server, self.load_generator, self.streaming, self.num_requests, self.verbosity)
+
+                # --- FINISH TIME & DURATION ---
+                end_time = datetime.now()
+                duration = end_time - start_time
+                print(f"Finish Time: {end_time.strftime('%Y-%m-%d %H:%M:%S')}")
+                print(f"Duration:    {duration}")
+                # ------------------------------
+        
         print()
 
         if not self.streaming:
