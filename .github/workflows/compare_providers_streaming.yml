@@ -99,6 +99,16 @@ jobs:
     - name: Run Trace Experiment
       run: python main.py -c benchmarking/experiments/compare_providers_streaming_trace.json
 
+    - name: Upload Trace Logs
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: logs-trace
+        path: |
+          ${{ github.workspace }}/trace/proxy/*.log
+          ${{ github.workspace }}/trace/*.result
+        if-no-files-found: warn  # Prevents failure if logs weren't created yet
+
     - name: Upload Experiment Outputs
       if: success()
       uses: actions/upload-artifact@v4
