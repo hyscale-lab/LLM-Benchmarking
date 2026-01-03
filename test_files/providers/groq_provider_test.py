@@ -41,7 +41,7 @@ def test_groq_provider_client_initialization(mock_groq_client):
         provider = GroqProvider()
 
     # Ensure the client is created with the correct API key
-    mock_groq_client.assert_called_once_with(api_key="test_api_key")
+    mock_groq_client.assert_called_once_with(api_key="test_api_key", max_retries=0)
 
 
 @patch("providers.groq_provider.Groq")

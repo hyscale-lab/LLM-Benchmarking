@@ -45,7 +45,7 @@ def test_hyperbolic_provider_client_initialization(mock_openai_client):
 
     # Verify the client is created with the correct API key and base URL
     mock_openai_client.assert_called_once_with(
-        api_key="test_api_key", base_url="https://api.hyperbolic.xyz/v1"
+        api_key="test_api_key", base_url="https://api.hyperbolic.xyz/v1", max_retries=0
     )
 
 
