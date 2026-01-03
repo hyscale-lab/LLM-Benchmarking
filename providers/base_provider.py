@@ -12,9 +12,9 @@ class BaseProvider(AccuracyMixin, ProviderInterface):
         if not api_key:
             raise ValueError("API key must be provided as an environment variable.")
         if base_url:
-            self.client = client_class(api_key=api_key, base_url=base_url)
+            self.client = client_class(api_key=api_key, base_url=base_url, max_retries=0)
         else:
-            self.client = client_class(api_key=api_key)
+            self.client = client_class(api_key=api_key, max_retries=0)
 
         self.model_map = {}
         self.timeout = (1, 2)
