@@ -18,7 +18,7 @@ class TestPerplexityAI(unittest.TestCase):
 
             # Assert that the client is correctly initialized
             mock_openai_client.assert_called_with(
-                api_key="test_api_key", base_url="https://api.perplexity.ai"
+                api_key="test_api_key", base_url="https://api.perplexity.ai", max_retries=0
             )
             self.assertEqual(provider.client, mock_openai_client.return_value)
 
