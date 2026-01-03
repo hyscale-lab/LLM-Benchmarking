@@ -1,5 +1,10 @@
 {
     "providers": [
+        "Anthropic",
+        "AWSBedrock",
+        "Azure",
+        "Cloudflare",
+        "Google",
         "Groq",
         "Hyperbolic",
         "OpenAI",
