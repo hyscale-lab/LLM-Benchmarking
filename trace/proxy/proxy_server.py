@@ -22,19 +22,19 @@ class ProxyServer(threading.Thread):
                 return {"status": "error", "message": "Handler not set"}
             
             data = await request.json()  # dict
-            # Log data
-            with open(self._log_path, 'a') as f:
-                f.write(f'[Client] {json.dumps(data)}\n')
+            # # Log data
+            # with open(self._log_path, 'a') as f:
+            #     f.write(f'[Client] {json.dumps(data)}\n')
 
             response = await self._on_receive(data)  # List[dict] if streaming, else dict
             
-            # Log response
-            with open(self._log_path, 'a') as f:
-                if self._streaming:
-                    for line in response:
-                        f.write(f'[Server] {json.dumps(line)}\n')
-                else:
-                    f.write(f'[Server] {json.dumps(response)}\n')
+            # # Log response
+            # with open(self._log_path, 'a') as f:
+            #     if self._streaming:
+            #         for line in response:
+            #             f.write(f'[Server] {json.dumps(line)}\n')
+            #     else:
+            #         f.write(f'[Server] {json.dumps(response)}\n')
 
             return {"streaming_response": response} if self._streaming else response
 
