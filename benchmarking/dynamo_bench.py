@@ -26,10 +26,9 @@ class Benchmark:
         max_output,
         prompt,
         streaming=False,
+        input_type="static",
         verbosity=False,
         vllm_ip=None,
-        proxy_server=None,
-        load_generator=None,
         dataset=None,
     ):
         """
@@ -49,14 +48,12 @@ class Benchmark:
         self.models = models
         self.prompt = prompt
         self.streaming = streaming
+        self.input_type = input_type
         self.max_output = max_output
         self.verbosity = verbosity
         self.vllm_ip = vllm_ip
-        self.proxy_server = proxy_server
-        self.load_generator = load_generator
         self.run_id = str(uuid.uuid4())  # Generate a unique ID for each benchmark run
         self.dataset = dataset
-        self.input_type = "trace" if proxy_server else "static"
 
         base_dir = "streaming" if streaming else "end_to_end"
 
@@ -65,10 +62,10 @@ class Benchmark:
         )
         provider_dir_name = "_".join(provider_names)
 
-        if self.proxy_server:  # trace input type
-            self.graph_dir = os.path.join("benchmark_graph", "trace", base_dir, provider_dir_name)
-        else:
+        if self.input_type == "static":
             self.graph_dir = os.path.join("benchmark_graph", base_dir, provider_dir_name)
+        elif self.input_type == "trace":
+            self.graph_dir = os.path.join("benchmark_graph", "trace", base_dir, provider_dir_name)
 
         # Create directories if they don't exist
         if not os.path.exists(self.graph_dir):
