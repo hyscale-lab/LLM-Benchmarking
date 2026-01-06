@@ -12,6 +12,8 @@ import boto3
 import numpy as np
 from botocore.exceptions import ClientError
 from matplotlib.ticker import LogLocator, FormatStrFormatter
+from trace.proxy import ProxyServer
+from trace.loadgenerator import LoadGenerator
 
 class Benchmark:
     """
@@ -341,6 +343,15 @@ class Benchmark:
         """
         for provider in self.providers:
             provider_name = provider.__class__.__name__
+
+            print(f"Starting proxy server for {provider_name}...")
+            proxy_server = ProxyServer()
+            proxy_server.start()
+            while not getattr(proxy_server.server, 'started', False):  # Wait for server startup
+                pass
+            print("Loading load generator...")
+            load_generator = LoadGenerator(proxy_server.get_url())
+
             for model in self.models:
                 model_name = provider.get_model_name(model)
                 print(f"\n[{provider_name}] - Model: {model_name}")
@@ -351,9 +362,9 @@ class Benchmark:
                 # ------------------
 
                 if provider_name == "vLLM":
-                    provider.perform_trace(model, self.proxy_server, self.load_generator, self.streaming, self.num_requests, self.verbosity, self.vllm_ip)
+                    provider.perform_trace(model, proxy_server, load_generator, self.streaming, self.num_requests, self.verbosity, self.vllm_ip)
                 else:
-                    provider.perform_trace(model, self.proxy_server, self.load_generator, self.streaming, self.num_requests, self.verbosity)
+                    provider.perform_trace(model, proxy_server, load_generator, self.streaming, self.num_requests, self.verbosity)
 
                 # --- FINISH TIME & DURATION ---
                 end_time = datetime.now()
@@ -361,6 +372,10 @@ class Benchmark:
                 print(f"Finish Time: {end_time.strftime('%Y-%m-%d %H:%M:%S')}")
                 print(f"Duration:    {duration}")
                 # ------------------------------
+
+            print(f"Stopping proxy server for provider...")
+            proxy_server.stop()
+
         print()
 
         metrics_to_plot = (

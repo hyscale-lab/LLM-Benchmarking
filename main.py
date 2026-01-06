@@ -17,8 +17,6 @@ from providers import (
     AWSBedrock,
     vLLM
 )
-from trace.proxy import ProxyServer
-from trace.loadgenerator import LoadGenerator
 from utils.prompt_generator import get_prompt
 
 # Load environment variables
@@ -177,13 +175,6 @@ def run_benchmark(config, vllm_ip=None):
         print("Using static input type.")
     elif input_type == "trace":
         print("Using trace input type.")
-        # print("Starting proxy server...")
-        # proxy_server = ProxyServer()
-        # proxy_server.start()
-        # while not proxy_server.server.started:  # Wait for server startup
-        #     pass
-        # print("Loading load generator...")
-        # load_generator = LoadGenerator(proxy_server.get_url())
     else:
         print(f"Invalid input type: {input_type}")
         return
