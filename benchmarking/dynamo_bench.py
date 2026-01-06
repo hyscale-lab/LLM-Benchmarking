@@ -12,6 +12,8 @@ import boto3
 import numpy as np
 from botocore.exceptions import ClientError
 from matplotlib.ticker import LogLocator, FormatStrFormatter
+from trace.proxy import ProxyServer
+from trace.loadgenerator import LoadGenerator
 
 class Benchmark:
     """
@@ -26,10 +28,9 @@ class Benchmark:
         max_output,
         prompt,
         streaming=False,
+        input_type="static",
         verbosity=False,
         vllm_ip=None,
-        proxy_server=None,
-        load_generator=None,
         dataset=None,
     ):
         """
@@ -49,14 +50,12 @@ class Benchmark:
         self.models = models
         self.prompt = prompt
         self.streaming = streaming
+        self.input_type = input_type
         self.max_output = max_output
         self.verbosity = verbosity
         self.vllm_ip = vllm_ip
-        self.proxy_server = proxy_server
-        self.load_generator = load_generator
         self.run_id = str(uuid.uuid4())  # Generate a unique ID for each benchmark run
         self.dataset = dataset
-        self.input_type = "trace" if proxy_server else "static"
 
         base_dir = "streaming" if streaming else "end_to_end"
 
@@ -65,10 +64,10 @@ class Benchmark:
         )
         provider_dir_name = "_".join(provider_names)
 
-        if self.proxy_server:  # trace input type
-            self.graph_dir = os.path.join("benchmark_graph", "trace", base_dir, provider_dir_name)
-        else:
+        if self.input_type == "static":
             self.graph_dir = os.path.join("benchmark_graph", base_dir, provider_dir_name)
+        elif self.input_type == "trace":
+            self.graph_dir = os.path.join("benchmark_graph", "trace", base_dir, provider_dir_name)
 
         # Create directories if they don't exist
         if not os.path.exists(self.graph_dir):
@@ -344,6 +343,15 @@ class Benchmark:
         """
         for provider in self.providers:
             provider_name = provider.__class__.__name__
+
+            print(f"Starting proxy server for {provider_name}...")
+            proxy_server = ProxyServer()
+            proxy_server.start()
+            while not getattr(proxy_server.server, 'started', False):  # Wait for server startup
+                pass
+            print("Loading load generator...")
+            load_generator = LoadGenerator(proxy_server.get_url())
+
             for model in self.models:
                 model_name = provider.get_model_name(model)
                 print(f"\n[{provider_name}] - Model: {model_name}")
@@ -354,9 +362,9 @@ class Benchmark:
                 # ------------------
 
                 if provider_name == "vLLM":
-                    provider.perform_trace(model, self.proxy_server, self.load_generator, self.streaming, self.num_requests, self.verbosity, self.vllm_ip)
+                    provider.perform_trace(model, proxy_server, load_generator, self.streaming, self.num_requests, self.verbosity, self.vllm_ip)
                 else:
-                    provider.perform_trace(model, self.proxy_server, self.load_generator, self.streaming, self.num_requests, self.verbosity)
+                    provider.perform_trace(model, proxy_server, load_generator, self.streaming, self.num_requests, self.verbosity)
 
                 # --- FINISH TIME & DURATION ---
                 end_time = datetime.now()
@@ -364,6 +372,10 @@ class Benchmark:
                 print(f"Finish Time: {end_time.strftime('%Y-%m-%d %H:%M:%S')}")
                 print(f"Duration:    {duration}")
                 # ------------------------------
+
+            print(f"Stopping proxy server for {provider_name}...")
+            proxy_server.stop()
+
         print()
 
         metrics_to_plot = (

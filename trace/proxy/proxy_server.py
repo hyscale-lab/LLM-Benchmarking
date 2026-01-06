@@ -64,6 +64,15 @@ class ProxyServer(threading.Thread):
         self.server = uvicorn.Server(config)
         self.server.run()
 
+    def stop(self):
+        if self.server:
+            self.server.should_exit = True
+
+        self.join(timeout=5)
+
+        if self.is_alive():
+            print("Warning: Proxy thread did not exit cleanly.")
+
 
 if __name__ == '__main__':
     proxy_server = ProxyServer()
