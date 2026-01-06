@@ -373,7 +373,7 @@ class Benchmark:
                 print(f"Duration:    {duration}")
                 # ------------------------------
 
-            print(f"Stopping proxy server for provider...")
+            print(f"Stopping proxy server for {provider_name}...")
             proxy_server.stop()
 
         print()

@@ -73,6 +73,7 @@ class ProxyServer(threading.Thread):
         if self.is_alive():
             print("Warning: Proxy thread did not exit cleanly.")
 
+
 if __name__ == '__main__':
     proxy_server = ProxyServer()
     proxy_server.start()
