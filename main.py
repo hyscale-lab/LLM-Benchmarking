@@ -171,13 +171,11 @@ def run_benchmark(config, vllm_ip=None):
         from benchmarking.benchmark_main import Benchmark
     
     # Input type
-    if input_type == "static":
-        print("Using static input type.")
-    elif input_type == "trace":
-        print("Using trace input type.")
-    else:
+    if input_type not in ["static", "trace", "multiturn"]:
         print(f"Invalid input type: {input_type}")
         return
+    else:
+        print(f"Using {input_type} input type.")
     
     # Validate and initialize providers
     selected_providers = validate_providers(providers)
@@ -204,7 +202,7 @@ def run_benchmark(config, vllm_ip=None):
 
     print(f"Selected Models: {valid_models}")
 
-    if input_type != "trace":
+    if input_type == "static":
         # handling input tokens
         if input_tokens not in input_sizes:
             print(f"Please enter an input token from the following choices: {input_sizes}")
@@ -238,13 +236,14 @@ def run_benchmark(config, vllm_ip=None):
         vllm_ip=vllm_ip,
         dataset=dataset,
     )
-    if input_type == "trace":
-        print("\nRunning benchmark with trace input...")
-        benchmark.run_trace()
-    else:
-        print("\nRunning benchmark...")
-        benchmark.run()
 
+    print(f"\nRunning benchmark with {input_type} input...")
+    if input_type == "static":
+        benchmark.run()
+    elif input_type == "trace":
+        benchmark.run_trace()
+    elif input_type == "multiturn":
+        benchmark.run_multiturn(time_interval=30)
 
 def main():
     """Main function to parse arguments and run the program."""
