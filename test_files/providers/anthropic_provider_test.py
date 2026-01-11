@@ -64,6 +64,7 @@ def test_perform_inference(mock_anthropic_client_class, setup_anthropic_provider
 
     # Verify messages.create is called with correct parameters
     provider.client.messages.create.assert_called_once_with(
+        system=provider.system_prompt,
         model="claude-3-5-haiku-20241022",
         max_tokens=100,
         messages=[{"role": "user", "content": "Test prompt"}],
@@ -100,6 +101,7 @@ def test_perform_inference_streaming(
 
     # Verify messages.stream is called with correct parameters
     provider.client.messages.stream.assert_called_once_with(
+        system=provider.system_prompt,
         model="claude-3-5-haiku-20241022",
         max_tokens=100,
         messages=[{"role": "user", "content": "Test prompt"}],
