@@ -28,6 +28,18 @@ class vLLM(ProviderInterface):
     def get_model_name(self, model):
         """Get the model name, defaulting to 'default-model' if not found."""
         return self.model_map.get(model, "facebook/opt-125m")
+    
+    def normalize_messages(self, messages):
+        """
+        Empty
+        """
+        pass
+    
+    def construct_text_response(self, raw_response):
+        """
+        Empty
+        """
+        pass
 
     def perform_inference(self, model, prompt, vllm_ip, max_output=100, verbosity=True):
         """
@@ -208,3 +220,88 @@ class vLLM(ProviderInterface):
             max_drift=100,
             upscale='ars'
         )
+
+    def perform_multiturn(self, model, time_interval, streaming, num_requests, verbosity, vllm_ip):
+        """
+        Perform using multiturn input
+        """
+        def _load_conversation_iterator(path):
+            """
+            Generator that yields one conversation at a time.
+            It does not load the whole file into memory.
+            """
+            if path is None:
+                print("Error: Multiturn dataset path is None.")
+                return
+
+            try:
+                with open(path, 'r', encoding='utf-8') as f:
+                    for line in f:
+                        line = line.strip()
+                        if line:
+                            yield json.loads(line)
+            except FileNotFoundError:
+                print(f"Error: Dataset not found at {path}")
+                return
+
+        conv_iter = _load_conversation_iterator(self.multiturn_dataset_path)
+
+        for i, conversation in enumerate(conv_iter):
+            if i >= num_requests:
+                break
+
+            print(f"============ Conversation: {i + 1}/{num_requests} ============")
+
+            current_messages = []
+
+            idx = 0
+            while idx < len(conversation):
+                # Safety check for pairs
+                if idx + 1 >= len(conversation):
+                    break
+
+                turn_input = conversation[idx]
+                turn_target = conversation[idx + 1]
+
+                if turn_input['role'] == 'human':
+                    current_messages.append({
+                        "role": "user",
+                        "content": turn_input['value']
+                    })
+                target_tokens = turn_target['generated_tokens']
+
+                # Perform Inference
+                print(f"------------ Turn: {(idx // 2) + 1}/{len(conversation) // 2} ------------")
+                if streaming:
+                    response = self.perform_inference_streaming(
+                        model,
+                        current_messages,
+                        vllm_ip,
+                        target_tokens,
+                        verbosity
+                    )
+                else:
+                    response = self.perform_inference(
+                        model,
+                        current_messages,
+                        vllm_ip,
+                        target_tokens,
+                        verbosity
+                    )
+
+                if isinstance(response, Exception):
+                    print(f"\nTurn failed: {response}")
+                    print("Skipping conversation...\n")
+                    break
+
+                # Update Context with actual response
+                current_messages.append({
+                    "role": "assistant",
+                    "content": self.construct_text_response(response)
+                })
+
+                # Move to next pair
+                idx += 2
+
+                # Mimic when human pauses to read response
+                time.sleep(time_interval)

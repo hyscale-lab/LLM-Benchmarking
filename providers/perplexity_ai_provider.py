@@ -35,7 +35,7 @@ class PerplexityAI(BaseProvider):
         self.timeout = (10, 180)
 
     def perform_inference_streaming(
-        self, model, prompt, max_output=100, verbosity=True
+        self, model, messages, max_output=100, verbosity=True
     ):
         try:
             model_id = self.get_model_name(model)
@@ -47,10 +47,7 @@ class PerplexityAI(BaseProvider):
             start = timer()
             response = self.client.chat.completions.create(
                 model=model_id,
-                messages=[
-                    {"role": "system", "content": self.system_prompt},
-                    {"role": "user", "content": prompt},
-                ],
+                messages=self.normalize_messages(messages),
                 stream=True,
                 max_tokens=max_output,
                 timeout=500

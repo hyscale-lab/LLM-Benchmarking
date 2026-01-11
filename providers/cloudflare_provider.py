@@ -42,7 +42,37 @@ class Cloudflare(AccuracyMixin, ProviderInterface):
     def get_model_name(self, model):
         return self.model_map.get(model, None)  # or model
 
-    def perform_inference(self, model, prompt, max_output=100, verbosity=True):
+    def normalize_messages(self, messages):
+        if isinstance(messages, str):
+            normalized_msgs = [
+                {"role": "system", "content": self.system_prompt},
+                {"role": "user", "content": messages}
+            ]
+        elif isinstance(messages, list):
+            normalized_msgs = [{"role": "system", "content": self.system_prompt}]
+            for msg in messages:
+                role = msg["role"]
+
+                if role in ["user", "assistant"]:
+                    normalized_msgs.append(msg)
+                else:
+                    print(f"Invalid role found in messages: {role}")
+
+        return normalized_msgs
+    
+    def construct_text_response(self, raw_response):
+        if isinstance(raw_response, dict):
+            text_response = raw_response["result"]["response"]
+        elif isinstance(raw_response, list):
+            text_response = "".join(
+                str(block['response'])
+                for block in raw_response
+                if isinstance(block, dict) and 'response' in block
+            )
+
+        return text_response
+
+    def perform_inference(self, model, messages, max_output=100, verbosity=True):
         try:
             model_id = self.get_model_name(model)
             if model_id is None:
@@ -52,11 +82,7 @@ class Cloudflare(AccuracyMixin, ProviderInterface):
                 f"https://api.cloudflare.com/client/v4/accounts/{self.cloudflare_account_id}/ai/run/{model_id}",
                 headers={"Authorization": f"Bearer {self.cloudflare_api_token}"},
                 json={
-                    "messages": [
-                        # {"role": "system", "content": "Explain your answer step-by-step."},
-                        {"role": "system", "content": self.system_prompt},
-                        {"role": "user", "content": prompt},
-                    ],
+                    "messages": self.normalize_messages(messages),
                     "max_tokens": max_output,  # self.max_tokens
                 },
                 timeout=500,
@@ -92,7 +118,7 @@ class Cloudflare(AccuracyMixin, ProviderInterface):
             return e
 
     def perform_inference_streaming(
-        self, model, prompt, max_output=100, verbosity=True
+        self, model, messages, max_output=100, verbosity=True
     ):
 
         try:
@@ -108,10 +134,7 @@ class Cloudflare(AccuracyMixin, ProviderInterface):
                 },
                 json={
                     "stream": True,
-                    "messages": [
-                        {"role": "system", "content": self.system_prompt},
-                        {"role": "user", "content": prompt},
-                    ],
+                    "messages": self.normalize_messages(messages),
                     "max_tokens": max_output,
                 },
                 stream=True,

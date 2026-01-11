@@ -137,6 +137,7 @@ const AppMetricsPage = ({ metricType, streaming = true, title = "Metrics Dashboa
                                 >
                                     <MenuItem value="static">Static</MenuItem>
                                     <MenuItem value="trace">Trace</MenuItem>
+                                    <MenuItem value="multiturn">Multiturn</MenuItem>
                                 </Select>
                             </Stack>
                         )}
