@@ -88,9 +88,13 @@ LLMetrics saves plots (latency graphs - CDF Plots) in the designated output dire
 
 ## **Input Type**
 
-LLMetrics supports these input types, which can be set in the consiguration file using `input_type`. This does not apply to `Accuracy` metrics since it uses its own input.
+LLMetrics supports these input types, which can be set in the consiguration file using `input_type`. This does not apply to `Accuracy` metrics since it uses its own input. 
+
+For datasets, see [releases](https://github.com/hyscale-lab/LLM-Benchmarking/releases).
+
 - `static`: Use the same prompt for every request.
-- `trace`: Use a preprocessed input derived from Azure trace dataset. See [releases](https://github.com/hyscale-lab/LLM-Benchmarking/releases).
+- `trace`: Use a preprocessed input derived from Azure trace dataset.
+- `multiturn`: Use a preprocessed input derived from **sharegpt** dataset to perform multiturn conversations.
 
 ## **Continuous Benchmarking Workflow**
 
