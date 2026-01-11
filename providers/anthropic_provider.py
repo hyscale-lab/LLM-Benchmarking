@@ -41,13 +41,39 @@ class Anthropic(AccuracyMixin, ProviderInterface):
         """
         return self.model_map.get(model, None)
 
-    def perform_inference(self, model, prompt, max_output=100, verbosity=True):
+    def normalize_messages(self, messages):
+        if isinstance(messages, str):
+            normalized_msgs = [{"role": "user", "content": messages}]
+        elif isinstance(messages, list):
+            normalized_msgs = []
+            for msg in messages:
+                role = msg["role"]
+                content = msg["content"]
+
+                if role in ["user", "assistant"]:
+                    normalized_msgs.append({"role": role, "content": content})
+                else:
+                    print(f"Invalid role found in messages: {role}")
+
+        return normalized_msgs
+    
+    def construct_text_response(self, raw_response):
+        if isinstance(raw_response, dict):
+            text_response = ""
+            for block in raw_response['content']:
+                text_response += block['text']
+        elif isinstance(raw_response, list):
+            text_response = "".join(raw_response)
+
+        return text_response
+
+    def perform_inference(self, model, messages, max_output=100, verbosity=True):
         """
         Performs a synchronous inference call to the Anthropic API.
 
         Args:
             model (str): The model name to use for inference.
-            prompt (str): The user prompt for the chat completion.
+            messages: The messages for the chat completion.
         """
         try:
             model_id = self.get_model_name(model)
@@ -56,9 +82,10 @@ class Anthropic(AccuracyMixin, ProviderInterface):
 
             start = timer()
             response = self.client.messages.create(
+                system=self.system_prompt,
                 model=model_id,
                 max_tokens=max_output,
-                messages=[{"role": "user", "content": prompt}],
+                messages=self.normalize_messages(messages),
                 # temperature=0.7,
                 stop_sequences=["\nUser:"],
                 timeout=500,
@@ -86,14 +113,14 @@ class Anthropic(AccuracyMixin, ProviderInterface):
             return e
 
     def perform_inference_streaming(
-        self, model, prompt, max_output=100, verbosity=True
+        self, model, messages, max_output=100, verbosity=True
     ):
         """
         Performs a streaming inference call to the Anthropic API.
 
         Args:
             model (str): The model name to use for inference.
-            prompt (str): The user prompt for the chat completion.
+            messages: The messages for the chat completion.
         """
         try:
             model_id = self.get_model_name(model)
@@ -106,9 +133,10 @@ class Anthropic(AccuracyMixin, ProviderInterface):
 
             start = timer()
             with self.client.messages.stream(
+                system=self.system_prompt,
                 model=model_id,
                 max_tokens=max_output,
-                messages=[{"role": "user", "content": prompt}],
+                messages=self.normalize_messages(messages),
                 # temperature=0.7,
                 stop_sequences=["\nUser:"],
                 timeout=500,

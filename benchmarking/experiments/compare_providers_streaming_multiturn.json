@@ -1,0 +1,22 @@
+{
+    "providers": [
+        "Anthropic",
+        "AWSBedrock",
+        "Azure",
+        "Cloudflare",
+        "Google",
+        "Groq",
+        "Hyperbolic",
+        "OpenAI",
+        "PerplexityAI",
+        "TogetherAI"
+    ],
+    "models": [
+        "common-model"
+    ],
+    "input_type": "multiturn",
+    "num_requests": 30,
+    "streaming": true,
+    "verbose": true,
+    "backend": true
+}

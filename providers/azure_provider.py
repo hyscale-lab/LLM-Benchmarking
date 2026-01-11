@@ -2,7 +2,7 @@ import os
 from utils.accuracy_mixin import AccuracyMixin
 from time import perf_counter as timer
 from azure.ai.inference import ChatCompletionsClient
-from azure.ai.inference.models import SystemMessage, UserMessage
+from azure.ai.inference.models import SystemMessage, UserMessage, AssistantMessage
 from azure.core.credentials import AzureKeyCredential
 from providers.base_provider import ProviderInterface
 from openai import AzureOpenAI
@@ -61,7 +61,40 @@ class Azure(AccuracyMixin, ProviderInterface):
         """Retrieve the model name based on the input key."""
         return self.model_map.get(model, None)
 
-    def perform_inference(self, model, prompt, max_output=100, verbosity=True):
+    def normalize_messages(self, messages):
+        if isinstance(messages, str):
+            normalized_msgs = [
+                SystemMessage(content=self.system_prompt),
+                UserMessage(content=messages)
+            ]
+        elif isinstance(messages, list):
+            normalized_msgs = [SystemMessage(content=self.system_prompt)]
+            for msg in messages:
+                role = msg["role"]
+                content = msg["content"]
+
+                if role == "user":
+                    normalized_msgs.append(UserMessage(content=content))
+                elif role == "assistant":
+                    normalized_msgs.append(AssistantMessage(content=content))
+                else:
+                    print(f"Invalid role found in messages: {role}")
+
+        return normalized_msgs
+
+    def construct_text_response(self, raw_response):
+        if isinstance(raw_response, dict):
+            text_response = raw_response['choices'][0]['message']['content']
+        elif isinstance(raw_response, list):
+            text_response = "".join(
+                block['choices'][0]['delta']['content']
+                for block in raw_response
+                if len(block['choices']) > 0
+            )
+
+        return text_response
+
+    def perform_inference(self, model, messages, max_output=100, verbosity=True):
         """Performs non-streaming inference request to Azure."""
         try:
             self._ensure_client()
@@ -72,10 +105,7 @@ class Azure(AccuracyMixin, ProviderInterface):
                 return None
             start_time = timer()
             response = client.complete(
-                messages=[
-                    SystemMessage(content=self.system_prompt),
-                    UserMessage(content=prompt),
-                ],
+                messages=self.normalize_messages(messages),
                 max_tokens=max_output,
                 model=model_id
             )
@@ -101,7 +131,7 @@ class Azure(AccuracyMixin, ProviderInterface):
             return e
 
     def perform_inference_streaming(
-        self, model, prompt, max_output=100, verbosity=True
+        self, model, messages, max_output=100, verbosity=True
     ):
         """Performs streaming inference request to Azure."""
         self._ensure_client()
@@ -118,10 +148,7 @@ class Azure(AccuracyMixin, ProviderInterface):
         try:
             with client.complete(
                 stream=True,
-                messages=[
-                    SystemMessage(content=self.system_prompt),
-                    UserMessage(content=prompt),
-                ],
+                messages=self.normalize_messages(messages),
                 max_tokens=max_output,
                 model=model_id
             ) as response:
