@@ -28,6 +28,18 @@ class vLLM(ProviderInterface):
     def get_model_name(self, model):
         """Get the model name, defaulting to 'default-model' if not found."""
         return self.model_map.get(model, "facebook/opt-125m")
+    
+    def normalize_messages(self, messages):
+        """
+        Empty
+        """
+        pass
+    
+    def construct_text_response(self, raw_response):
+        """
+        Empty
+        """
+        pass
 
     def perform_inference(self, model, prompt, vllm_ip, max_output=100, verbosity=True):
         """

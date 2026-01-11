@@ -38,9 +38,50 @@ class GoogleGemini(ProviderInterface):
         """
         Initializes the generative model instance for the specified model_id.
         """
-        self.model = genai.GenerativeModel(model_id)
+        if self.system_prompt:
+            self.model = genai.GenerativeModel(
+                model_name=model_id,
+                system_instruction=self.system_prompt # <--- MUST be here
+            )
+        else:
+            self.model = genai.GenerativeModel(model_name=model_id)
 
-    def perform_inference(self, model, prompt, max_output=100, verbosity=True):
+    def normalize_messages(self, messages):
+        if isinstance(messages, str):
+            normalized_msgs = messages
+        elif isinstance(messages, list):
+            normalized_msgs = []
+            for msg in messages:
+                role = msg["role"]
+                content = msg["content"]
+
+                if role == "user":
+                    normalized_msgs.append({
+                        "role": "user",
+                        "parts": [content]
+                    })
+                elif role == "assistant":
+                    normalized_msgs.append({
+                        "role": "model",
+                        "parts": [content]
+                    })
+                else:
+                    print(f"Invalid role found in messages: {role}")
+
+        return normalized_msgs
+    
+    def construct_text_response(self, raw_response):
+        if isinstance(raw_response, dict):
+            text_response = raw_response['candidates'][0]['content']['parts'][0]['text']
+        elif isinstance(raw_response, list):
+            text_response = "".join(
+                block['candidates'][0]['content']['parts'][0]['text']
+                for block in raw_response
+            )
+
+        return text_response
+
+    def perform_inference(self, model, messages, max_output=100, verbosity=True):
         """
         Performs inference on a single prompt and returns the time taken for response generation.
         """
@@ -53,7 +94,7 @@ class GoogleGemini(ProviderInterface):
 
             start_time = timer()
             response = self.model.generate_content(
-                prompt,
+                self.normalize_messages(messages),
                 generation_config=genai.types.GenerationConfig(
                     max_output_tokens=max_output
                 ),
@@ -82,7 +123,7 @@ class GoogleGemini(ProviderInterface):
             return e
 
     def perform_inference_streaming(
-        self, model, prompt, max_output=100, verbosity=True
+        self, model, messages, max_output=100, verbosity=True
     ):
         """
         Performs streaming inference on a single prompt, capturing latency metrics and output.
@@ -96,7 +137,7 @@ class GoogleGemini(ProviderInterface):
 
             start_time = timer()
             response = self.model.generate_content(
-                prompt,
+                self.normalize_messages(messages),
                 generation_config=genai.types.GenerationConfig(
                     max_output_tokens=max_output
                 ),

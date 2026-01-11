@@ -124,7 +124,7 @@ class ProviderInterface(ABC):
         Standardizes varied input formats into a list of compatible message dictionaries.
 
         This function accepts either a single prompt string or a list of message dictionaries.
-        If a list is provided, it normalizes role names (e.g., converting 'human' to 'user')
+        If a list is provided, it normalizes role names (e.g., converting 'assistant' to 'model')
         to ensure compatibility with LLM provider APIs.
         """
 
@@ -143,6 +143,10 @@ class ProviderInterface(ABC):
             Generator that yields one conversation at a time.
             It does not load the whole file into memory.
             """
+            if path is None:
+                print("Error: Multiturn dataset path is None.")
+                return
+
             try:
                 with open(path, 'r', encoding='utf-8') as f:
                     for line in f:
@@ -195,6 +199,11 @@ class ProviderInterface(ABC):
                         target_tokens,
                         verbosity
                     )
+
+                if isinstance(response, Exception):
+                    print(f"\nTurn failed: {response}")
+                    print("Skipping conversation...\n")
+                    break
 
                 # Update Context with actual response
                 current_messages.append({

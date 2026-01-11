@@ -32,49 +32,67 @@ class AWSBedrock(AccuracyMixin, ProviderInterface):
 
     def get_model_name(self, model):
         return self.model_map.get(model, None)  # or model
+    
+    def normalize_messages(self, messages):
+        if isinstance(messages, str):
+            normalized_msgs = [{
+                "role": "user", 
+                "content": [{"text": messages}]
+            }]
+        elif isinstance(messages, list):
+            normalized_msgs = []
+            for msg in messages:
+                role = msg["role"]
+                content = msg["content"]
 
-    def format_prompt(self, user_prompt):
-        """
-        Combines the system prompt and user prompt into a single formatted prompt.
-        """
-        return f"""
-        <|begin_of_text|><|start_header_id|>system<|end_header_id|>
-        {self.system_prompt}
-        <|start_header_id|>user<|end_header_id|>
-        {user_prompt}
-        <|eot_id|>
-        <|start_header_id|>assistant<|end_header_id|>
-        """
+                if role in ["user", "assistant"]:
+                    normalized_msgs.append({
+                        "role": role,
+                        "content": [{"text": content}]
+                    })
+                else:
+                    print(f"Invalid role found in messages: {role}")
 
-    def perform_inference(self, model, prompt, max_output=100, verbosity=True):
+        return normalized_msgs
+    
+    def construct_text_response(self, raw_response):
+        if isinstance(raw_response, dict):
+            text_response = raw_response['output']['message']['content'][0]['text']
+        elif isinstance(raw_response, list):
+            text_response = "".join(
+                block['contentBlockDelta']['delta']['text']
+                for block in raw_response
+                if 'contentBlockDelta' in block
+            )
+
+        return text_response
+
+    def perform_inference(self, model, messages, max_output=100, verbosity=True):
         """
         Performs a single-prompt inference using AWS Bedrock.
         """
 
         print("[INFO] Performing inference...")
         model_id = self.get_model_name(model)
-        formatted_prompt = self.format_prompt(prompt)
-        print(formatted_prompt)
-        # Prepare the request payload
-        native_request = {
-            "prompt": formatted_prompt,
-            "max_gen_len": max_output,
-        }
-        request_body = json.dumps(native_request)
 
         try:
             start_time = time.perf_counter()
-            response = self.bedrock_client.invoke_model(
-                modelId=model_id, body=request_body
+            response = self.bedrock_client.converse(
+                modelId=model_id,
+                messages=self.normalize_messages(messages),
+                system=[{"text": self.system_prompt}],
+                inferenceConfig={
+                    "maxTokens": max_output
+                }
             )
             end_time = time.perf_counter()
             total_time = end_time - start_time
             self.log_metrics(model, "response_times", total_time)
 
-            model_response = json.loads(response["body"].read())
-            generated_text = model_response.get("generation", "")
-
-            total_tokens = model_response.get("generation_token_count") or 0
+            output_response = response['output']
+            usage = response['usage']
+            total_tokens = usage.get('outputTokens', 0)
+            generated_text = output_response['message']['content'][0]['text']
 
             tbt = total_time / max(total_tokens - 1, 1)
             tps = (total_tokens / total_time)
@@ -89,14 +107,14 @@ class AWSBedrock(AccuracyMixin, ProviderInterface):
                 print("[INFO] Generated response:")
                 print(generated_text)
 
-            return model_response
+            return response
 
         except Exception as e:
             print(f"[ERROR] Inference failed: {e}")
             return e
 
     def perform_inference_streaming(
-        self, model, prompt, max_output=100, verbosity=True
+        self, model, messages, max_output=100, verbosity=True
     ):
         """
         Performs a streaming inference using AWS Bedrock.
@@ -105,70 +123,60 @@ class AWSBedrock(AccuracyMixin, ProviderInterface):
 
         model_id = self.get_model_name(model)
 
-        # Prepare the request payload
-        formatted_prompt = self.format_prompt(prompt)
-
-        native_request = {
-            "prompt": formatted_prompt,
-            "max_gen_len": max_output,
-        }
-        request_body = json.dumps(native_request)
-
         inter_token_latencies = []
         first_token_time = None
         ttft = None
         start_time = time.perf_counter()
         try:
-            streaming_response = self.bedrock_client.invoke_model_with_response_stream(
-                modelId=model_id, body=request_body
+            response = self.bedrock_client.converse_stream(
+                modelId=model_id,
+                messages=self.normalize_messages(messages),
+                system=[{"text": self.system_prompt}],
+                inferenceConfig={
+                    "maxTokens": max_output
+                }
             )
 
             # Process the streaming response
             response_list = []
-            for event in streaming_response["body"]:
-                if event:
-                    try:
-                        # print(f"[DEBUG] {event}")
-                        chunk = json.loads(event["chunk"]["bytes"].decode("utf-8"))
-                        # print(chunk)
-                        response_list.append(chunk)
-                    except Exception:
-                        # print(f"[DEBUG] Failed to decode chunk: {e}")
+            for event in response["stream"]:
+                response_list.append(event)
+
+                if timer() - start_time > 90:
+                    print("[WARN] Streaming exceeded 90s, stopping early.")
+                    break
+
+                if 'messageStop' in event:
+                    stop_reason = event['messageStop']['stopReason']
+                    if stop_reason == 'max_tokens':
+                        print(f"\n[INFO] Stopped due to stop reason: {stop_reason}")
+                        break
+
+                if 'contentBlockDelta' in event:
+                    chunk = event['contentBlockDelta']
+                    current_token = chunk['delta']['text']
+
+                    # Calculate timing
+                    current_time = time.perf_counter()
+                    if first_token_time is None:
+                        first_token_time = current_time
+                        ttft = first_token_time - start_time
+                        prev_token_time = first_token_time
+                        print(
+                            f"\n##### Time to First Token (TTFT): {ttft:.4f} seconds"
+                        )
                         continue
 
-                    if timer() - start_time > 90:
-                        print("[WARN] Streaming exceeded 90s, stopping early.")
-                        break
-
-                    if chunk["stop_reason"] == 'length':
-                        total_time = time.perf_counter() - start_time
-                        print(chunk)
-                        break
-
-                    if "generation" in chunk:
-                        current_token = chunk["generation"]
-
-                        # Calculate timing
-                        current_time = time.perf_counter()
-                        if first_token_time is None:
-                            first_token_time = current_time
-                            ttft = first_token_time - start_time
-                            prev_token_time = first_token_time
-                            print(
-                                f"\n##### Time to First Token (TTFT): {ttft:.4f} seconds"
-                            )
-                            continue
-
-                        # Capture token timing
-                        time_to_next_token = time.perf_counter()
-                        inter_token_latency = time_to_next_token - prev_token_time
-                        prev_token_time = time_to_next_token
-                        inter_token_latencies.append(inter_token_latency)
-                        if verbosity:
-                            if len(inter_token_latencies) < 20:
-                                print(current_token, end="")  # Print the token
-                            elif len(inter_token_latencies) == 21:
-                                print("...")
+                    # Capture token timing
+                    time_to_next_token = time.perf_counter()
+                    inter_token_latency = time_to_next_token - prev_token_time
+                    prev_token_time = time_to_next_token
+                    inter_token_latencies.append(inter_token_latency)
+                    if verbosity:
+                        if len(inter_token_latencies) < 20:
+                            print(current_token, end="")  # Print the token
+                        elif len(inter_token_latencies) == 21:
+                            print("...")
 
             # Measure total response time
             total_time = time.perf_counter() - start_time
