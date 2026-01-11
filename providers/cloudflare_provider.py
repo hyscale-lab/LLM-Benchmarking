@@ -66,7 +66,8 @@ class Cloudflare(AccuracyMixin, ProviderInterface):
         elif isinstance(raw_response, list):
             text_response = "".join(
                 str(block['response'])
-                for block in raw_response[:-3]
+                for block in raw_response
+                if isinstance(block, dict) and 'response' in block
             )
 
         return text_response
