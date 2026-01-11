@@ -243,7 +243,7 @@ def run_benchmark(config, vllm_ip=None):
     elif input_type == "trace":
         benchmark.run_trace()
     elif input_type == "multiturn":
-        benchmark.run_multiturn(time_interval=30)
+        benchmark.run_multiturn(time_interval=10)
 
 def main():
     """Main function to parse arguments and run the program."""
