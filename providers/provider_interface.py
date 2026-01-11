@@ -181,6 +181,9 @@ class ProviderInterface(ABC):
                         "role": "user",
                         "content": turn_input['value']
                     })
+                else:
+                    print(f"Unexpected role: {turn_input['role']}")
+
                 target_tokens = turn_target['generated_tokens']
 
                 # Perform Inference
