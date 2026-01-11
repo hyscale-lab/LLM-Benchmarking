@@ -36,7 +36,7 @@ class AWSBedrock(AccuracyMixin, ProviderInterface):
     def normalize_messages(self, messages):
         if isinstance(messages, str):
             normalized_msgs = [{
-                "role": "user", 
+                "role": "user",
                 "content": [{"text": messages}]
             }]
         elif isinstance(messages, list):

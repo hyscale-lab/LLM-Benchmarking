@@ -156,14 +156,14 @@ class ProviderInterface(ABC):
             except FileNotFoundError:
                 print(f"Error: Dataset not found at {path}")
                 return
-            
+
         conv_iter = _load_conversation_iterator(self.multiturn_dataset_path)
 
         for i, conversation in enumerate(conv_iter):
             if i >= num_requests:
                 break
 
-            print(f"============ Conversation: {i+1}/{num_requests} ============")
+            print(f"============ Conversation: {i + 1}/{num_requests} ============")
 
             current_messages = []
 
@@ -171,10 +171,10 @@ class ProviderInterface(ABC):
             while idx < len(conversation):
                 # Safety check for pairs
                 if idx + 1 >= len(conversation):
-                    break 
-                
+                    break
+
                 turn_input = conversation[idx]
-                turn_target = conversation[idx+1]
+                turn_target = conversation[idx + 1]
 
                 if turn_input['role'] == 'human':
                     current_messages.append({
@@ -187,15 +187,15 @@ class ProviderInterface(ABC):
                 print(f"------------ Turn: {(idx // 2) + 1}/{len(conversation) // 2} ------------")
                 if streaming:
                     response = self.perform_inference_streaming(
-                        model, 
-                        current_messages, 
+                        model,
+                        current_messages,
                         target_tokens,
                         verbosity
                     )
                 else:
                     response = self.perform_inference(
-                        model, 
-                        current_messages, 
+                        model,
+                        current_messages,
                         target_tokens,
                         verbosity
                     )
@@ -207,7 +207,7 @@ class ProviderInterface(ABC):
 
                 # Update Context with actual response
                 current_messages.append({
-                    "role": "assistant", 
+                    "role": "assistant",
                     "content": self.construct_text_response(response)
                 })
 

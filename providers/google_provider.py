@@ -41,7 +41,7 @@ class GoogleGemini(ProviderInterface):
         if self.system_prompt:
             self.model = genai.GenerativeModel(
                 model_name=model_id,
-                system_instruction=self.system_prompt # <--- MUST be here
+                system_instruction=self.system_prompt
             )
         else:
             self.model = genai.GenerativeModel(model_name=model_id)
