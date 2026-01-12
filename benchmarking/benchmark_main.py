@@ -247,7 +247,7 @@ class Benchmark:
                         )
                         print(f"[SUMMARY] {provider_name} - {model_name}: {acc_summary}")
                     except Exception as e:
-                        print(f"[WARN] measure_accuracy failed for "f"{provider.__class__.__name__}/{model_name}: {e!r}")
+                        print(f"[WARN] measure_accuracy failed for "f"{provider_name}/{model_name}: {e!r}")
 
     def run_trace(self):
         """
