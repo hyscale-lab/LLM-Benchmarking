@@ -269,7 +269,7 @@ class Benchmark:
                     if self.verbosity:
                         print(f"Request {i + 1}/{self.num_requests}")
 
-                    if i % 15 == 0:
+                    if i % 20 == 0:
                         time.sleep(120)
 
                     if self.streaming:
