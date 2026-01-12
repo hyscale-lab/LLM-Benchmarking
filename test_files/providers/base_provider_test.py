@@ -39,7 +39,7 @@ def test_perform_inference(
             {"role": "user", "content": "What is the test prompt?"},
         ],
         max_tokens=100,
-        timeout=(1,2)
+        timeout=base_provider.timeout
     )
 
     mock_log_metrics.assert_called_with("test-model", "response_times", 1.0)
@@ -92,7 +92,7 @@ def test_perform_inference_streaming(
         ],
         stream=True,
         max_tokens=100,
-        timeout=(1,2)
+        timeout=base_provider.timeout
     )
 
     avg_tbt = sum([0.5, 0.5]) / len([0.5, 0.5])
