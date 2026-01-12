@@ -17,7 +17,7 @@ class BaseProvider(AccuracyMixin, ProviderInterface):
             self.client = client_class(api_key=api_key, max_retries=0)
 
         self.model_map = {}
-        self.timeout = (1, 2)
+        self.timeout = 500
 
     def get_model_name(self, model):
         return self.model_map.get(model, None)
@@ -108,7 +108,7 @@ class BaseProvider(AccuracyMixin, ProviderInterface):
                 messages=self.normalize_messages(messages),
                 stream=True,
                 max_tokens=max_output,
-                timeout=(1, 2)
+                timeout=self.timeout
             )
 
             response_list = []

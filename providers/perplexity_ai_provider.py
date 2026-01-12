@@ -50,7 +50,7 @@ class PerplexityAI(BaseProvider):
                 messages=self.normalize_messages(messages),
                 stream=True,
                 max_tokens=max_output,
-                timeout=500
+                timeout=self.timeout
             )
             previous_completion_tokens = 0  # Initialize previous token count
             ttft = None
