@@ -186,7 +186,7 @@ class Benchmark:
                     if self.verbosity:
                         print(f"Request {i + 1}/{self.num_requests}")
 
-                    if i % 20 == 0:
+                    if i % 15 == 0:
                         time.sleep(120)
 
                     if self.streaming:
@@ -224,14 +224,16 @@ class Benchmark:
             self.plot_metrics("timebetweentokens", "timebetweentokens")
 
         if self.dataset:
-            print("\nRunning accuracy evaluation...")
             for provider in self.providers:
+                provider_name = provider.__class__.__name__
                 model_names = provider.get_model_name("reasoning-model")
                 if not model_names:
+                    print(f"[SKIP] Reasoning models not set for {provider_name}")
                     continue
                 for model_name in model_names:
+                    print(f"\nRunning accuracy evaluation for {provider_name} - {model_name}...")
                     if not hasattr(provider, "measure_accuracy"):
-                        print(f"[SKIP] {provider.__class__.__name__} has no measure_accuracy().")
+                        print(f"[SKIP] {provider_name} has no measure_accuracy().")
                         continue
                     try:
                         acc_summary = provider.measure_accuracy(
@@ -243,9 +245,9 @@ class Benchmark:
                         provider.log_metrics(
                             model_name, "aime_2024_accuracy", acc_summary.get("accuracy")
                         )
-                        print(f"[ACCURACY] {provider.__class__.__name__} – "f"{model_name}: {acc_summary}")
+                        print(f"[SUMMARY] {provider_name} - {model_name}: {acc_summary}")
                     except Exception as e:
-                        print(f"[WARN] measure_accuracy failed for "f"{provider.__class__.__name__}/{model_name}: {e!r}")
+                        print(f"[WARN] measure_accuracy failed for "f"{provider_name}/{model_name}: {e!r}")
 
     def run_trace(self):
         """

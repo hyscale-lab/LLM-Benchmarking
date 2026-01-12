@@ -33,7 +33,7 @@ def test_anthropic_provider_initialization(setup_anthropic_provider):
         "claude-3-opus": "claude-3-opus-20240229",  # approx 2T
         "claude-3-haiku": "claude-3-5-haiku-20241022",  # approx 20b
         "common-model": "claude-3-5-haiku-20241022",
-        "reasoning-model": ["claude-3-7-sonnet-20250219"]
+        "reasoning-model": ["claude-sonnet-4-5-20250929"]
     }
 
 
