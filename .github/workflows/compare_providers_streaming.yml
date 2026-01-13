@@ -67,7 +67,7 @@ jobs:
         pip install -r requirements.txt
 
     - name: Run Experiment
-      run: python main.py -c benchmarking/experiments/compare_providers_streaming.json
+      run: python -u main.py -c benchmarking/experiments/compare_providers_streaming.json
 
     - name: Upload Experiment Outputs
       if: success()
@@ -103,7 +103,7 @@ jobs:
         echo "TRACE_DATASET_PATH=${{ github.workspace }}/trace_conv.json" >> $GITHUB_ENV
 
     - name: Run Trace Experiment
-      run: python main.py -c benchmarking/experiments/compare_providers_streaming_trace.json
+      run: python -u main.py -c benchmarking/experiments/compare_providers_streaming_trace.json
 
     - name: Upload Trace Logs
       if: always()
@@ -149,7 +149,7 @@ jobs:
         echo "MULTITURN_DATASET_PATH=${{ github.workspace }}/multiturn.json" >> $GITHUB_ENV
 
     - name: Run Multiturn Experiment
-      run: python main.py -c benchmarking/experiments/compare_providers_streaming_multiturn.json
+      run: python -u main.py -c benchmarking/experiments/compare_providers_streaming_multiturn.json
 
     - name: Upload Experiment Outputs
       if: success()
