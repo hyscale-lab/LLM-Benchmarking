@@ -1,6 +1,8 @@
 import threading
+import asyncio
 import uvicorn
 from fastapi import FastAPI, Request
+from concurrent.futures import ThreadPoolExecutor
 
 # import json
 import time
@@ -15,6 +17,13 @@ class ProxyServer(threading.Thread):
         self._streaming = None
         self.server = None
         self._log_path = './trace/proxy/traffic.log'
+
+        self.executor = ThreadPoolExecutor(max_workers=50)
+
+        @self._app.on_event("startup")
+        async def startup_event():
+            loop = asyncio.get_running_loop()
+            loop.set_default_executor(self.executor)
 
         @self._app.post("/")
         async def endpoint(request: Request):
@@ -59,7 +68,10 @@ class ProxyServer(threading.Thread):
             host=self._host,
             port=self._port,
             log_level="info",
-            access_log=False
+            access_log=False,
+            timeout_graceful_shutdown=1,
+            timeout_keep_alive=1,
+            loop="asyncio"
         )
         self.server = uvicorn.Server(config)
         self.server.run()
