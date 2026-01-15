@@ -225,7 +225,7 @@ def run_benchmark(config, vllm_ip=None):
     prompt = get_prompt(input_tokens)
     
     benchmark = Benchmark(
-        selected_providers,
+        providers,
         num_requests,
         valid_models,
         max_output,
