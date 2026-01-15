@@ -120,7 +120,7 @@ class Benchmark:
             "AWSBedrock": AWSBedrock,
             "vLLM": vLLM
         }
-        return available_providers[provider_str]
+        return available_providers[provider_str]()
 
     @staticmethod
     def clean_data(data):
