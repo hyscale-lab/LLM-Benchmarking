@@ -10,7 +10,7 @@ import time
 class NuclearExecutor(ThreadPoolExecutor):
     def shutdown(self, wait=True, **kwargs):
         print("☢️ NuclearExecutor: Abandoning stuck threads immediately.")
-        super().shutdown(wait=wait, cancel_futures=True)
+        super().shutdown(wait=False, cancel_futures=True)
 
 
 class ProxyServer(threading.Thread):
