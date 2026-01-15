@@ -15,7 +15,7 @@
         "common-model"
     ],
     "input_type": "multiturn",
-    "num_requests": 30,
+    "num_requests": 100,
     "streaming": true,
     "verbose": true,
     "backend": true

@@ -165,11 +165,9 @@ class ProviderInterface(ABC):
 
         conv_iter = _load_conversation_iterator(self.multiturn_dataset_path)
 
+        request_id = 0
         for i, conversation in enumerate(conv_iter):
-            if i >= num_requests:
-                break
-
-            print(f"============ Conversation: {i + 1}/{num_requests} ============")
+            print(f"============ Conversation: {i + 1} ============")
 
             current_messages = []
 
@@ -219,6 +217,13 @@ class ProviderInterface(ABC):
                     "role": "assistant",
                     "content": self.construct_text_response(response)
                 })
+
+                request_id += 1
+
+                # Check num requests limit
+                if request_id == num_requests:
+                    print("\nRequest limit hit. Stopping...\n")
+                    return
 
                 # Move to next pair
                 idx += 2
