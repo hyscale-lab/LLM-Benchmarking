@@ -7,9 +7,6 @@ from concurrent.futures import ThreadPoolExecutor
 # import json
 import time
 
-def make_thread_daemon():
-    threading.current_thread().daemon = True
-
 class NuclearExecutor(ThreadPoolExecutor):
     def shutdown(self, wait=True, **kwargs):
         print("☢️ NuclearExecutor: Abandoning stuck threads immediately.")
@@ -27,7 +24,7 @@ class ProxyServer(threading.Thread):
         self.server = None
         self._log_path = './trace/proxy/traffic.log'
 
-        self.executor = NuclearExecutor(max_workers=50, initializer=make_thread_daemon)
+        self.executor = NuclearExecutor(max_workers=50)
 
         @self._app.on_event("startup")
         async def startup_event():
