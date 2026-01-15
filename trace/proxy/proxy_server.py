@@ -7,6 +7,9 @@ from concurrent.futures import ThreadPoolExecutor
 # import json
 import time
 
+def make_thread_daemon():
+    threading.current_thread().daemon = True
+
 class NuclearExecutor(ThreadPoolExecutor):
     def shutdown(self, wait=True, **kwargs):
         print("☢️ NuclearExecutor: Abandoning stuck threads immediately.")
@@ -24,7 +27,7 @@ class ProxyServer(threading.Thread):
         self.server = None
         self._log_path = './trace/proxy/traffic.log'
 
-        self.executor = NuclearExecutor(max_workers=50)
+        self.executor = NuclearExecutor(max_workers=50, initializer=make_thread_daemon)
 
         @self._app.on_event("startup")
         async def startup_event():
@@ -75,8 +78,8 @@ class ProxyServer(threading.Thread):
             port=self._port,
             log_level="info",
             access_log=False,
-            timeout_graceful_shutdown=1,
-            timeout_keep_alive=1,
+            timeout_graceful_shutdown=30,
+            timeout_keep_alive=5,
             loop="asyncio"
         )
         self.server = uvicorn.Server(config)
@@ -86,7 +89,7 @@ class ProxyServer(threading.Thread):
         if self.server:
             self.server.should_exit = True
 
-        self.join(timeout=5)
+        self.join(timeout=35)
 
         if self.is_alive():
             print("Warning: Proxy thread did not exit cleanly.")
