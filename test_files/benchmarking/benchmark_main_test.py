@@ -22,6 +22,9 @@ class MockProvider:
         }
         self.model_map = model_map
 
+    def initialize_client(self):
+        pass
+
     def log_metrics(self, model_name, metric, value):
         pass
 
