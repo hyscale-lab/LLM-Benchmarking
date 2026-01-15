@@ -20,7 +20,6 @@ class Open_AI(BaseProvider):
             "common-model": "gpt-4o",
             "reasoning-model": ["o4-mini", "gpt-4o"]
         }
-        self.timeout = (10, 20)
 
     def _chat_for_eval(self, model_id, messages):
         start = timer()
