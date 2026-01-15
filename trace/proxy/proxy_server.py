@@ -84,6 +84,8 @@ class ProxyServer(threading.Thread):
 
         if self.is_alive():
             print("Warning: Proxy thread did not exit cleanly.")
+            print("Forcing shutdown...")
+            self.executor.shutdown(wait=False, cancel_futures=True)
 
 
 if __name__ == '__main__':
