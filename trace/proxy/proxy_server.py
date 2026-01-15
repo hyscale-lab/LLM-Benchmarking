@@ -24,6 +24,9 @@ class ProxyServer(threading.Thread):
         self.server = None
         self._log_path = './trace/proxy/traffic.log'
 
+        self._active_reqs = 0
+        self._req_lock = threading.Lock()
+
         self.executor = NuclearExecutor(max_workers=50)
 
         @self._app.on_event("startup")
@@ -36,22 +39,30 @@ class ProxyServer(threading.Thread):
             if not self._on_receive:
                 return {"status": "error", "message": "Handler not set"}
             
-            data = await request.json()  # dict
-            # # Log data
-            # with open(self._log_path, 'a') as f:
-            #     f.write(f'[Client] {json.dumps(data)}\n')
-
-            response = await self._on_receive(data)  # List[dict] if streaming, else dict
+            with self._req_lock:
+                self._active_reqs += 1
             
-            # # Log response
-            # with open(self._log_path, 'a') as f:
-            #     if self._streaming:
-            #         for line in response:
-            #             f.write(f'[Server] {json.dumps(line)}\n')
-            #     else:
-            #         f.write(f'[Server] {json.dumps(response)}\n')
+            try:
+                data = await request.json()  # dict
+                # # Log data
+                # with open(self._log_path, 'a') as f:
+                #     f.write(f'[Client] {json.dumps(data)}\n')
 
-            return {"streaming_response": response} if self._streaming else response
+                response = await self._on_receive(data)  # List[dict] if streaming, else dict
+                
+                # # Log response
+                # with open(self._log_path, 'a') as f:
+                #     if self._streaming:
+                #         for line in response:
+                #             f.write(f'[Server] {json.dumps(line)}\n')
+                #     else:
+                #         f.write(f'[Server] {json.dumps(response)}\n')
+            
+                return {"streaming_response": response} if self._streaming else response
+
+            finally:
+                with self._req_lock:
+                    self._active_reqs -= 1
 
     def set_handler(self, handler):
         """
@@ -83,6 +94,24 @@ class ProxyServer(threading.Thread):
         self.server.run()
 
     def stop(self):
+        print("ProxyServer: Draining requests...")
+        for _ in range(20):
+            with self._req_lock:
+                if self._active_reqs == 0:
+                    break
+                else:
+                    print(f"ProxyServer: waiting for {self._active_reqs} active requests ")
+            time.sleep(5)
+        
+        remaining = 0
+        with self._req_lock:
+            remaining = self._active_reqs
+            
+        if remaining == 0:
+            print("ProxyServer: All requests finished. Stopping.")
+        else:
+            print(f"ProxyServer: Forcing stop with {remaining} active requests (Timeout).")
+
         if self.server:
             self.server.should_exit = True
 
