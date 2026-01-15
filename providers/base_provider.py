@@ -9,15 +9,25 @@ class BaseProvider(AccuracyMixin, ProviderInterface):
     def __init__(self, api_key, client_class, base_url=None):
         super().__init__()
 
+        self._api_key = api_key
+        self._client_class = client_class
+        self._base_url = base_url
+
+        self.model_map = {}
+        self.timeout = 60
+
+    def initialize_client(self):
+            
+        api_key = self._api_key
+        client_class = self._client_class
+        base_url = self._base_url
+
         if not api_key:
             raise ValueError("API key must be provided as an environment variable.")
         if base_url:
             self.client = client_class(api_key=api_key, base_url=base_url, max_retries=0)
         else:
             self.client = client_class(api_key=api_key, max_retries=0)
-
-        self.model_map = {}
-        self.timeout = 60
 
     def get_model_name(self, model):
         return self.model_map.get(model, None)
@@ -103,7 +113,6 @@ class BaseProvider(AccuracyMixin, ProviderInterface):
             elapsed = 0.0
 
             start = timer()
-            print("SENDING RESPONSE")
             response = self.client.chat.completions.create(
                 model=model_id,
                 messages=self.normalize_messages(messages),
@@ -111,8 +120,6 @@ class BaseProvider(AccuracyMixin, ProviderInterface):
                 max_tokens=max_output,
                 timeout=self.timeout
             )
-            print("RESPONSE SENT")
-            print(response)
 
             response_list = []
             for chunk in response:

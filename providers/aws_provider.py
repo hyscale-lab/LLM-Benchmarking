@@ -16,19 +16,20 @@ class AWSBedrock(AccuracyMixin, ProviderInterface):
         load_dotenv()
         super().__init__()
 
-        self.bedrock_client = boto3.client(
-            "bedrock-runtime",
-            aws_access_key_id=os.getenv("AWS_BEDROCK_ACCESS_KEY_ID"),
-            aws_secret_access_key=os.getenv("AWS_BEDROCK_SECRET_ACCESS_KEY"),
-            region_name=os.getenv("AWS_BEDROCK_REGION"),
-        )
-
         # model names
         self.model_map = {
             "meta-llama-3-70b-instruct": "meta.llama3-70b-instruct-v1:0",
             "common-model": "meta.llama3-70b-instruct-v1:0",
             "reasoning-model": ["us.anthropic.claude-3-7-sonnet-20250219-v1:0"]
         }
+
+    def initialize_client(self):
+        self.bedrock_client = boto3.client(
+            "bedrock-runtime",
+            aws_access_key_id=os.getenv("AWS_BEDROCK_ACCESS_KEY_ID"),
+            aws_secret_access_key=os.getenv("AWS_BEDROCK_SECRET_ACCESS_KEY"),
+            region_name=os.getenv("AWS_BEDROCK_REGION"),
+        )
 
     def get_model_name(self, model):
         return self.model_map.get(model, None)  # or model

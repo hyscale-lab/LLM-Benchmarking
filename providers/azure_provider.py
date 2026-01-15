@@ -13,10 +13,6 @@ class Azure(AccuracyMixin, ProviderInterface):
         """Initialize AzureProvider with required API information."""
         super().__init__()
 
-        self.endpoint = os.getenv("AZURE_AI_ENDPOINT")
-        self.api_key = os.getenv("AZURE_AI_API_KEY")
-        self.openai_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
-
         # Map model names to Azure model IDs
         self.model_map = {
             "llama-3.3-70b-instruct": "Llama-3.3-70B-Instruct",
@@ -28,33 +24,38 @@ class Azure(AccuracyMixin, ProviderInterface):
         self._client = None
         self._openai_client = None
 
-    def _ensure_client(self):
+    def initialize_client(self):
         """
         Create the Azure client only when first used.
         Raise a clear error if env vars are missing.
         """
+
+        endpoint = os.getenv("AZURE_AI_ENDPOINT")
+        api_key = os.getenv("AZURE_AI_API_KEY")
+        openai_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
+
         if self._client is not None:
             return
 
-        if not self.api_key or not isinstance(self.api_key, str):
+        if not api_key or not isinstance(api_key, str):
             raise RuntimeError(
                 "Azure provider misconfigured: AZURE_AI_API_KEY is missing or not a string."
             )
-        if not self.endpoint:
+        if not endpoint:
             raise RuntimeError(
                 "Azure provider misconfigured: AZURE_AI_ENDPOINT is missing."
             )
 
-        credential = AzureKeyCredential(self.api_key)
+        credential = AzureKeyCredential(api_key)
         self._client = ChatCompletionsClient(
-            endpoint=self.endpoint,
+            endpoint=endpoint,
             credential=credential,
             api_version="2024-05-01-preview",
         )
         self._openai_client = AzureOpenAI(
             api_version="2024-12-01-preview",
-            azure_endpoint=self.openai_endpoint,
-            api_key=self.api_key,
+            azure_endpoint=openai_endpoint,
+            api_key=api_key,
         )
 
     def get_model_name(self, model):
@@ -97,7 +98,6 @@ class Azure(AccuracyMixin, ProviderInterface):
     def perform_inference(self, model, messages, max_output=100, verbosity=True):
         """Performs non-streaming inference request to Azure."""
         try:
-            self._ensure_client()
             client = self._client
             model_id = self.get_model_name(model)
             if model_id is None:
@@ -134,7 +134,6 @@ class Azure(AccuracyMixin, ProviderInterface):
         self, model, messages, max_output=100, verbosity=True
     ):
         """Performs streaming inference request to Azure."""
-        self._ensure_client()
         client = self._client
         model_id = self.get_model_name(model)
         if model_id is None:
@@ -213,7 +212,6 @@ class Azure(AccuracyMixin, ProviderInterface):
         return out
 
     def _chat_for_eval(self, model_id, messages):
-        self._ensure_client()
         client = self._openai_client
         azure_msgs = self._to_azure_messages(messages)
         max_tokens = 40000 if model_id == "o4-mini" else 16384

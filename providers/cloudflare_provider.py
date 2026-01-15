@@ -17,17 +17,6 @@ class Cloudflare(AccuracyMixin, ProviderInterface):
         """
         super().__init__()
 
-        cloudflare_account_id = os.environ.get("CLOUDFLARE_ACCOUNT_ID")
-        cloudflare_api_token = os.environ.get("CLOUDFLARE_AI_TOKEN")
-
-        if not cloudflare_account_id or not cloudflare_api_token:
-            raise ValueError(
-                "Cloudflare account ID and API token must be provided either as arguments or environment variables."
-            )
-
-        self.cloudflare_account_id = cloudflare_account_id
-        self.cloudflare_api_token = cloudflare_api_token
-
         # model names
         self.model_map = {
             "google-gemma-2b-it": "@cf/google/gemma-2b-it-lora",
@@ -38,6 +27,18 @@ class Cloudflare(AccuracyMixin, ProviderInterface):
             "common-model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
             "reasoning-model": ["@cf/openai/gpt-oss-120b"]
         }
+
+    def initialize_client(self):
+        cloudflare_account_id = os.environ.get("CLOUDFLARE_ACCOUNT_ID")
+        cloudflare_api_token = os.environ.get("CLOUDFLARE_AI_TOKEN")
+
+        if not cloudflare_account_id or not cloudflare_api_token:
+            raise ValueError(
+                "Cloudflare account ID and API token must be provided either as arguments or environment variables."
+            )
+        
+        self.cloudflare_account_id = cloudflare_account_id
+        self.cloudflare_api_token = cloudflare_api_token
 
     def get_model_name(self, model):
         return self.model_map.get(model, None)  # or model

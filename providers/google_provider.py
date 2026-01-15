@@ -20,19 +20,13 @@ class GoogleGemini(ProviderInterface):
             "common-model": "gemini-2.0-flash-001",
         }
 
+    def initialize_client(self):
         # Configure API key for Google Gemini
         api_key = os.getenv("GEMINI_API_KEY")
         if not api_key:
             raise EnvironmentError("GEMINI_API_KEY is not set in the environment.")
 
         genai.configure(api_key=api_key)
-        self.model = None
-
-    def get_model_name(self, model):
-        """
-        Retrieves the model ID from the model_map.
-        """
-        return self.model_map.get(model)
 
     def _initialize_model(self, model_id):
         """
@@ -45,6 +39,12 @@ class GoogleGemini(ProviderInterface):
             )
         else:
             self.model = genai.GenerativeModel(model_name=model_id)
+
+    def get_model_name(self, model):
+        """
+        Retrieves the model ID from the model_map.
+        """
+        return self.model_map.get(model)
 
     def normalize_messages(self, messages):
         if isinstance(messages, str):

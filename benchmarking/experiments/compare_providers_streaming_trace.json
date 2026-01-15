@@ -15,7 +15,7 @@
         "common-model"
     ],
     "input_type": "trace",
-    "num_requests": 20,
+    "num_requests": 100,
     "streaming": true,
     "verbose": true,
     "backend": true

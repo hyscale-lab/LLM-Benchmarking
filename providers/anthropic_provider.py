@@ -13,14 +13,6 @@ class Anthropic(AccuracyMixin, ProviderInterface):
         """
         super().__init__()
 
-        # Load API key from environment
-        self.api_key = os.getenv("ANTHROPIC_API")
-        if not self.api_key:
-            raise ValueError("API key must be provided as an environment variable.")
-
-        # Initialize the Anthropic client
-        self.client = anthropic.Anthropic(api_key=self.api_key)
-
         # Model mapping for Anthropic models
         self.model_map = {
             "claude-3-opus": "claude-3-opus-20240229",  # approx 2T
@@ -28,6 +20,15 @@ class Anthropic(AccuracyMixin, ProviderInterface):
             "common-model": "claude-3-5-haiku-20241022",
             "reasoning-model": ["claude-sonnet-4-5-20250929"]
         }
+
+    def initialize_client(self):
+        # Load API key from environment
+        api_key = os.getenv("ANTHROPIC_API")
+        if not api_key:
+            raise ValueError("API key must be provided as an environment variable.")
+        
+        # Initialize the Anthropic client
+        self.client = anthropic.Anthropic(api_key=api_key)
 
     def get_model_name(self, model):
         """

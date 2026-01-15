@@ -173,6 +173,7 @@ class Benchmark:
         for provider in self.providers:
             provider_name = provider.__class__.__name__
             print(f"{provider_name}")
+            provider.initialize_client()
             for model in self.models:
                 model_name = provider.get_model_name(model)
                 print(f"Model: {model_name}\nPrompt: {self.prompt}")
@@ -230,6 +231,7 @@ class Benchmark:
                 if not model_names:
                     print(f"[SKIP] Reasoning models not set for {provider_name}")
                     continue
+                provider.initialize_client()
                 for model_name in model_names:
                     print(f"\nRunning accuracy evaluation for {provider_name} - {model_name}...")
                     if not hasattr(provider, "measure_accuracy"):
@@ -267,6 +269,7 @@ class Benchmark:
             print("Loading load generator...")
             load_generator = LoadGenerator(proxy_server.get_url())
 
+            provider.initialize_client()
             for model in self.models:
                 model_name = provider.get_model_name(model)
                 print(f"\n[{provider_name}] - Model: {model_name}")
@@ -310,6 +313,7 @@ class Benchmark:
         """
         for provider in self.providers:
             provider_name = provider.__class__.__name__
+            provider.initialize_client()
             for model in self.models:
                 model_name = provider.get_model_name(model)
                 print(f"\n[{provider_name}] - Model: {model_name}")

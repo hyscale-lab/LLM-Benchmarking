@@ -25,6 +25,12 @@ class vLLM(ProviderInterface):
             "common-model-small": "meta-llama/Llama-3.1-8B"
         }
 
+    def initialize_client(self):
+        """
+        Empty
+        """
+        pass
+
     def get_model_name(self, model):
         """Get the model name, defaulting to 'default-model' if not found."""
         return self.model_map.get(model, "facebook/opt-125m")

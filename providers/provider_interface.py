@@ -55,6 +55,12 @@ class ProviderInterface(ABC):
         self.metrics[metric][model_name].append(value)
 
     @abstractmethod
+    def initialize_client(self):
+        """
+        initialize client
+        """
+
+    @abstractmethod
     def get_model_name(self, model):
         """
         get model names
