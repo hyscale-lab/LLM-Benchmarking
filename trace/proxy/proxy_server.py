@@ -1,8 +1,10 @@
+import os
 import threading
 import asyncio
 import uvicorn
 from fastapi import FastAPI, Request
 from concurrent.futures import ThreadPoolExecutor
+
 
 # import json
 import time
@@ -120,7 +122,8 @@ class ProxyServer(threading.Thread):
         if self.is_alive():
             print("Warning: Proxy thread did not exit cleanly.")
             print("Forcing shutdown...")
-            self.executor.shutdown(wait=False)
+            os._exit(1)
+            # self.executor.shutdown(wait=False)
 
 
 if __name__ == '__main__':
