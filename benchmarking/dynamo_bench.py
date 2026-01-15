@@ -14,6 +14,19 @@ from botocore.exceptions import ClientError
 from matplotlib.ticker import LogLocator, FormatStrFormatter
 from trace.proxy import ProxyServer
 from trace.loadgenerator import LoadGenerator
+from providers import (
+    TogetherAI,
+    Cloudflare,
+    Open_AI,
+    GoogleGemini,
+    GroqProvider,
+    Anthropic,
+    PerplexityAI,
+    Hyperbolic,
+    Azure,
+    AWSBedrock,
+    vLLM
+)
 
 class Benchmark:
     """
@@ -91,6 +104,23 @@ class Benchmark:
             "prompt": self.prompt,
             "providers": {},
         }
+
+    def get_provider_object(self, provider_str):
+        """Returns a dictionary of available providers and their instances."""
+        available_providers = {
+            "TogetherAI": TogetherAI,
+            "Cloudflare": Cloudflare,
+            "OpenAI": Open_AI,
+            "PerplexityAI": PerplexityAI,
+            "Hyperbolic": Hyperbolic,
+            "Google": GoogleGemini,
+            "Anthropic": Anthropic,
+            "Groq": GroqProvider,
+            "Azure": Azure,
+            "AWSBedrock": AWSBedrock,
+            "vLLM": vLLM
+        }
+        return available_providers[provider_str]
 
     @staticmethod
     def clean_data(data):
@@ -257,7 +287,8 @@ class Benchmark:
         """
         Execute the benchmark and store metrics in DynamoDB.
         """
-        for provider in self.providers:
+        for provider_str in self.providers:
+            provider = self.get_provider_object(provider_str)
             provider_name = provider.__class__.__name__
             print(f"{provider_name}")
             for model in self.models:
@@ -298,7 +329,8 @@ class Benchmark:
                 # ------------------------------
 
         if self.dataset:
-            for provider in self.providers:
+            for provider_str in self.providers:
+                provider = self.get_provider_object(provider_str)
                 provider_name = provider.__class__.__name__
                 model_names = provider.get_model_name("reasoning-model")
                 if not model_names:
@@ -344,7 +376,8 @@ class Benchmark:
         """
         Execute the benchmark using trace input and store metrics in DynamoDB.
         """
-        for provider in self.providers:
+        for provider_str in self.providers:
+            provider = self.get_provider_object(provider_str)
             provider_name = provider.__class__.__name__
 
             print(f"Starting proxy server for {provider_name}...")
@@ -397,7 +430,8 @@ class Benchmark:
         This method sends a number of requests to each model for each provider, collects
         performance metrics, and generates plots based on those metrics.
         """
-        for provider in self.providers:
+        for provider_str in self.providers:
+            provider = self.get_provider_object(provider_str)
             provider_name = provider.__class__.__name__
             for model in self.models:
                 model_name = provider.get_model_name(model)
