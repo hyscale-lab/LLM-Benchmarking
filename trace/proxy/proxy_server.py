@@ -7,6 +7,12 @@ from concurrent.futures import ThreadPoolExecutor
 # import json
 import time
 
+class NuclearExecutor(ThreadPoolExecutor):
+    def shutdown(self, wait=True, **kwargs):
+        print("☢️ NuclearExecutor: Abandoning stuck threads immediately.")
+        super().shutdown(wait=wait, cancel_futures=True)
+
+
 class ProxyServer(threading.Thread):
     def __init__(self, host="127.0.0.1", port=8001):
         super().__init__(daemon=True)
@@ -18,7 +24,7 @@ class ProxyServer(threading.Thread):
         self.server = None
         self._log_path = './trace/proxy/traffic.log'
 
-        self.executor = ThreadPoolExecutor(max_workers=50)
+        self.executor = NuclearExecutor(max_workers=50)
 
         @self._app.on_event("startup")
         async def startup_event():
@@ -85,7 +91,7 @@ class ProxyServer(threading.Thread):
         if self.is_alive():
             print("Warning: Proxy thread did not exit cleanly.")
             print("Forcing shutdown...")
-            self.executor.shutdown(wait=False, cancel_futures=True)
+            self.executor.shutdown(wait=False)
 
 
 if __name__ == '__main__':
