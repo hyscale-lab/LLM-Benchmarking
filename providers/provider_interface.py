@@ -166,6 +166,7 @@ class ProviderInterface(ABC):
         conv_iter = _load_conversation_iterator(self.multiturn_dataset_path)
 
         request_id = 0
+        max_retries = 3
         for i, conversation in enumerate(conv_iter):
             print(f"============ Conversation: {i + 1} ============")
 
@@ -192,25 +193,34 @@ class ProviderInterface(ABC):
 
                 # Perform Inference
                 print(f"------------ Turn: {(idx // 2) + 1}/{len(conversation) // 2} ------------")
-                if streaming:
-                    response = self.perform_inference_streaming(
-                        model,
-                        current_messages,
-                        target_tokens,
-                        verbosity
-                    )
-                else:
-                    response = self.perform_inference(
-                        model,
-                        current_messages,
-                        target_tokens,
-                        verbosity
-                    )
+                for attempt in range(max_retries):
+                    if attempt > 0:
+                        print(f"Retrying... (Attempt {attempt + 1}/{max_retries})")
+                        time.sleep(5)
 
-                if isinstance(response, Exception):
-                    print(f"\nTurn failed: {response}")
-                    print("Skipping conversation...\n")
-                    break
+                    if streaming:
+                        response = self.perform_inference_streaming(
+                            model,
+                            current_messages,
+                            target_tokens,
+                            verbosity
+                        )
+                    else:
+                        response = self.perform_inference(
+                            model,
+                            current_messages,
+                            target_tokens,
+                            verbosity
+                        )
+
+                    if isinstance(response, Exception):
+                        print(f"\nAttempt {attempt + 1} failed: {response}")
+                        continue
+
+                    break  # Turn success. EXIT for loop, SKIP else to next turn
+                else:
+                    print("Turn failed. Skipping conversation...\n")
+                    break  # Turn failed. SKIP conversation
 
                 # Update Context with actual response
                 current_messages.append({
