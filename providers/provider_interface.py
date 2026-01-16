@@ -2,6 +2,7 @@ import os
 import time
 import json
 import asyncio
+import threading
 from abc import ABC, abstractmethod
 
 
@@ -37,6 +38,7 @@ class ProviderInterface(ABC):
         }
 
         # for trace input type
+        self._lock = threading.Lock()
         self.trace_dataset_path = os.getenv('TRACE_DATASET_PATH', './trace/sample.json')
         self.trace_result_path = f'./trace/{self.__class__.__name__}.result'
 
@@ -47,12 +49,13 @@ class ProviderInterface(ABC):
         """
         Logs metrics
         """
-        if metric not in self.metrics:
-            raise ValueError(f"Metric type '{metric}' is not defined.")
-        if model_name not in self.metrics[metric]:
-            self.metrics[metric][model_name] = []
+        with self._lock:
+            if metric not in self.metrics:
+                raise ValueError(f"Metric type '{metric}' is not defined.")
+            if model_name not in self.metrics[metric]:
+                self.metrics[metric][model_name] = []
 
-        self.metrics[metric][model_name].append(value)
+            self.metrics[metric][model_name].append(value)
 
     @abstractmethod
     def initialize_client(self):
@@ -111,8 +114,7 @@ class ProviderInterface(ABC):
         proxy_server.set_streaming(streaming)
 
         # For plots from load generator
-        if not os.path.exists('plots'):
-            os.makedirs('plots')
+        os.makedirs('plots', exist_ok=True)
 
         # Start load generator
         load_generator.send_loads(
