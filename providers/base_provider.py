@@ -113,6 +113,7 @@ class BaseProvider(AccuracyMixin, ProviderInterface):
             elapsed = 0.0
 
             start = timer()
+            print("SENDING")
             response = self.client.chat.completions.create(
                 model=model_id,
                 messages=self.normalize_messages(messages),
@@ -120,6 +121,7 @@ class BaseProvider(AccuracyMixin, ProviderInterface):
                 max_tokens=max_output,
                 timeout=self.timeout
             )
+            print("SENT")
 
             response_list = []
             for chunk in response:
