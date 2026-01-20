@@ -39,7 +39,7 @@ class ProviderInterface(ABC):
 
         # for trace input type
         self._lock = threading.Lock()
-        self.trace_dataset_path = os.getenv('TRACE_DATASET_PATH', './trace/sample.json')
+        self.trace_dataset_path = os.getenv('TRACE_DATASET_PATH')
         self.trace_result_path = f'./trace/{self.__class__.__name__}.result'
 
         # for multiturn input type
