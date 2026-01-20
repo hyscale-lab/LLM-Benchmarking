@@ -19,7 +19,7 @@ class ProxyServer(threading.Thread):
         self.server = None
         self._log_path = './trace/proxy/traffic.log'
 
-        self.executor = ThreadPoolExecutor(max_workers=50)
+        self.executor = ThreadPoolExecutor(max_workers=15)
 
         @self._app.on_event("startup")
         async def startup_event():
