@@ -14,7 +14,7 @@ class BaseProvider(AccuracyMixin, ProviderInterface):
         self._base_url = base_url
 
         self.model_map = {}
-        self.timeout = 60
+        self.timeout = 30
 
     def initialize_client(self):
             

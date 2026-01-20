@@ -5,7 +5,11 @@
         "Azure",
         "Cloudflare",
         "Google",
-        "Groq"
+        "Groq",
+        "Hyperbolic",
+        "OpenAI",
+        "PerplexityAI",
+        "TogetherAI"
     ],
     "models": [
         "common-model"
