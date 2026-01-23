@@ -15,13 +15,13 @@ on:
         description: 'Run Multiturn Benchmark'
         type: boolean
         default: true
-  schedule:
-    # Monday (Static)
-    - cron: "0 0 * * 1"
-    # Tuesday (Trace)
-    - cron: "0 0 * * 2"
-    # Wednesday (Multiturn)
-    - cron: "0 0 * * 3"
+  # schedule:
+  #   # Monday (Static)
+  #   - cron: "0 0 * * 1"
+  #   # Tuesday (Trace)
+  #   - cron: "0 0 * * 2"
+  #   # Wednesday (Multiturn)
+  #   - cron: "0 0 * * 3"
 
 env:
   CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
