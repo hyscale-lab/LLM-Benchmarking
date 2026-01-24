@@ -167,78 +167,78 @@ class ProviderInterface(ABC):
 
         conv_iter = _load_conversation_iterator(self.multiturn_dataset_path)
 
-        request_id = 0
         max_retries = 3
         for i, conversation in enumerate(conv_iter):
-            print(f"============ Conversation: {i + 1} ============")
+            if i == num_requests:
+                print("\nRequest limit hit. Stopping...\n")
+                return
 
-            current_messages = []
+            print(f"============ Request: {i + 1} ============")
 
+            # Construct messages
+            messages = []
             idx = 0
             while idx < len(conversation):
                 # Safety check for pairs
                 if idx + 1 >= len(conversation):
+                    print(f"Unexpected length: {len(conversation)}")
                     break
 
                 turn_input = conversation[idx]
-                turn_target = conversation[idx + 1]
+                turn_response = conversation[idx + 1]
 
                 if turn_input['role'] == 'human':
-                    current_messages.append({
+                    messages.append({
                         "role": "user",
                         "content": turn_input['value']
                     })
                 else:
                     print(f"Unexpected role: {turn_input['role']}")
 
-                target_tokens = turn_target['generated_tokens']
-
-                # Perform Inference
-                print(f"------------ Turn: {(idx // 2) + 1}/{len(conversation) // 2} ------------")
-                for attempt in range(max_retries):
-                    if attempt > 0:
-                        print(f"Retrying... (Attempt {attempt + 1}/{max_retries})")
-                        time.sleep(5)
-
-                    if streaming:
-                        response = self.perform_inference_streaming(
-                            model,
-                            current_messages,
-                            target_tokens,
-                            verbosity
-                        )
+                if turn_response['role'] == 'gpt':
+                    if 'value' in turn_response:
+                        messages.append({
+                            "role": "assistant",
+                            "content": turn_response['value']
+                        })
+                    elif 'generated_tokens' in turn_response:
+                        target_tokens = turn_response['generated_tokens']
                     else:
-                        response = self.perform_inference(
-                            model,
-                            current_messages,
-                            target_tokens,
-                            verbosity
-                        )
-
-                    if isinstance(response, Exception):
-                        print(f"\nAttempt {attempt + 1} failed: {response}")
-                        continue
-
-                    break  # Turn success. EXIT for loop, SKIP else to next turn
+                        print(f"Missing keys: value and generated_tokens")
                 else:
-                    print("Turn failed. Skipping conversation...\n")
-                    break  # Turn failed. SKIP conversation
+                    print(f"Unexpected role: {turn_input['role']}")
 
-                # Update Context with actual response
-                current_messages.append({
-                    "role": "assistant",
-                    "content": self.construct_text_response(response)
-                })
-
-                request_id += 1
-
-                # Check num requests limit
-                if request_id == num_requests:
-                    print("\nRequest limit hit. Stopping...\n")
-                    return
-
-                # Move to next pair
                 idx += 2
 
-                # Mimic when human pauses to read response
-                time.sleep(time_interval)
+            # Perform Inference
+            for attempt in range(max_retries):
+                if attempt > 0:
+                    print(f"Retrying... (Attempt {attempt + 1}/{max_retries})")
+                    time.sleep(5)
+
+                if streaming:
+                    response = self.perform_inference_streaming(
+                        model,
+                        messages,
+                        target_tokens,
+                        verbosity
+                    )
+                else:
+                    response = self.perform_inference(
+                        model,
+                        messages,
+                        target_tokens,
+                        verbosity
+                    )
+
+                if isinstance(response, Exception):
+                    print(f"\nAttempt {attempt + 1} failed: {response}")
+                    continue
+
+                break
+
+            else:
+                print("Request failed. Skipping request...\n")
+
+            # Mimic human behaviour
+            time.sleep(time_interval)
