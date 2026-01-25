@@ -120,7 +120,7 @@ class ProviderInterface(ABC):
         load_generator.send_loads(
             self.trace_dataset_path,
             self.trace_result_path,
-            sampling_rate=200,
+            sampling_rate=100,
             recur_step=3,
             limit=num_requests,
             max_drift=1000,
