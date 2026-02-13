@@ -3,15 +3,6 @@ import AppMetricsPage from "../sections/@dashboard/app/AppMetricsPage";
 export default function ResponseTimes() {
   return (
     <div>
-      <div>
-        <p>AWS_ACCESS_KEY_ID: {process.env.REACT_APP_AWS_ACCESS_KEY_ID}</p>
-        <p>AWS_SECRET_ACCESS_KEY: {process.env.REACT_APP_AWS_SECRET_ACCESS_KEY}</p>
-        <p>AWS_REGION: {process.env.REACT_APP_AWS_REGION}</p>
-        <p>AWS_BEDROCK_ACCESS_KEY_ID: {process.env.REACT_APP_AWS_BEDROCK_ACCESS_KEY_ID}</p>
-        <p>AWS_BEDROCK_SECRET_ACCESS_KEY: {process.env.REACT_APP_AWS_BEDROCK_SECRET_ACCESS_KEY}</p>
-        <p>AWS_BEDROCK_REGION: {process.env.REACT_APP_AWS_BEDROCK_REGION}</p>
-      </div>
-      
       <div style={{ paddingBottom: "30px" }}>
         <AppMetricsPage metricType="response_times" title="Response Times Metrics" metricName="Response Times" min={100} cdf />
       </div>
