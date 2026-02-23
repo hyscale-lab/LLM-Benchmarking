@@ -18,6 +18,7 @@ class GoogleGemini(ProviderInterface):
             "gemini-2.5-flash-lite": "gemini-2.5-flash-lite",
             "gemini-2.0-flash": "gemini-2.0-flash-001",
             "common-model": "gemini-2.0-flash-001",
+            "vision-model": "meta/llama-4-maverick-17b-128e-instruct-maas"
         }
 
     def initialize_client(self):
