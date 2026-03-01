@@ -26,7 +26,8 @@ on:
 env:
   CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
   CLOUDFLARE_AI_TOKEN: ${{ secrets.CLOUDFLARE_AI_TOKEN }}
-  GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+  GOOGLE_CLOUD_PROJECT: ${{ secrets.GOOGLE_CLOUD_PROJECT }}
+  GOOGLE_CLOUD_LOCATION: ${{ secrets.GOOGLE_CLOUD_LOCATION }}
   GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
   HYPERBOLIC_API: ${{ secrets.HYPERBOLIC_API }}
   OPEN_AI_API: ${{ secrets.OPEN_AI_API }}
@@ -55,6 +56,11 @@ jobs:
     steps:
     - name: Check out repository
       uses: actions/checkout@v3
+
+    - name: Authenticate to Google Cloud
+      uses: 'google-github-actions/auth@v2'
+      with:
+        credentials_json: '${{ secrets.GOOGLE_CREDENTIALS }}'
     
     - name: Set up Python 3.12
       uses: actions/setup-python@v4
@@ -84,6 +90,11 @@ jobs:
     steps:
     - name: Check out repository
       uses: actions/checkout@v3
+
+    - name: Authenticate to Google Cloud
+      uses: 'google-github-actions/auth@v2'
+      with:
+        credentials_json: '${{ secrets.GOOGLE_CREDENTIALS }}'
     
     - name: Set up Python 3.12
       uses: actions/setup-python@v4
@@ -130,6 +141,11 @@ jobs:
     steps:
     - name: Check out repository
       uses: actions/checkout@v3
+
+    - name: Authenticate to Google Cloud
+      uses: 'google-github-actions/auth@v2'
+      with:
+        credentials_json: '${{ secrets.GOOGLE_CREDENTIALS }}'
     
     - name: Set up Python 3.12
       uses: actions/setup-python@v4
