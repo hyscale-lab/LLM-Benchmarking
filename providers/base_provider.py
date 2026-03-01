@@ -1,4 +1,5 @@
 # base_provider.py for chat completions api
+import os
 from timeit import default_timer as timer
 import json
 import base64
@@ -60,7 +61,7 @@ class BaseProvider(AccuracyMixin, ProviderInterface):
                                 img_path = item["image_path"]
 
                                 # Process image
-                                ext = img_path.split('.')[-1].lower()
+                                ext = os.path.splitext(img_path)[1][1:].lower()
                                 mime_type = "jpeg" if ext in ["jpg", "jpeg"] else ext
 
                                 # Encode image into base64 format

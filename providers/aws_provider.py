@@ -64,7 +64,7 @@ class AWSBedrock(AccuracyMixin, ProviderInterface):
                                 img_path = item["image_path"]
                                 
                                 # Bedrock strictly requires the format to be explicitly stated
-                                ext = img_path.split('.')[-1].lower()
+                                ext = os.path.splitext(img_path)[1][1:].lower()
                                 img_format = "jpeg" if ext in ["jpg", "jpeg"] else ext
                                 
                                 # Bedrock supports jpeg, png, webp, and gif

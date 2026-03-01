@@ -95,7 +95,7 @@ class Azure(AccuracyMixin, ProviderInterface):
                                 img_path = item["image_path"]
 
                                 # Process image
-                                ext = img_path.split('.')[-1].lower()
+                                ext = os.path.splitext(img_path)[1][1:].lower()
                                 img_format = "jpeg" if ext in ["jpg", "jpeg"] else ext
                                 image_url = ImageUrl.load(
                                     image_file=img_path,
