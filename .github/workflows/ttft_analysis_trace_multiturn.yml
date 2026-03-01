@@ -59,8 +59,8 @@ jobs:
       env:
         GH_TOKEN: ${{ github.token }}
       run: |
-        gh release download input-type-v2.0-ttft-analysis -p "trace_conv_sampled.json"
-        echo "TRACE_DATASET_PATH=${{ github.workspace }}/trace_conv_sampled.json" >> $GITHUB_ENV
+        gh release download input-type-v2.0-ttft-analysis -p "trace_conv_sampled_40min.json"
+        echo "TRACE_DATASET_PATH=${{ github.workspace }}/trace_conv_sampled_40min.json" >> $GITHUB_ENV
 
     - name: Run Trace Experiment
       run: python -u main.py -c benchmarking/experiments/compare_providers_streaming_trace.json
