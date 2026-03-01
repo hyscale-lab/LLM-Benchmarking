@@ -171,7 +171,7 @@ def run_benchmark(config, vllm_ip=None):
         from benchmarking.benchmark_main import Benchmark
     
     # Input type
-    if input_type not in ["static", "trace", "multiturn"]:
+    if input_type not in ["static", "trace", "multiturn", "vqa"]:
         print(f"Invalid input type: {input_type}")
         return
     else:
@@ -244,6 +244,8 @@ def run_benchmark(config, vllm_ip=None):
         benchmark.run_trace()
     elif input_type == "multiturn":
         benchmark.run_multiturn(time_interval=10)
+    elif input_type == "vqa":
+        benchmark.run_vqa()
 
 def main():
     """Main function to parse arguments and run the program."""
