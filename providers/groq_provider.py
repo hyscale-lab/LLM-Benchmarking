@@ -18,5 +18,4 @@ class GroqProvider(BaseProvider):
             "meta-llama-3.1-70b-instruct": "llama-3.3-70b-versatile",
             "common-model": "llama-3.3-70b-versatile",
             "reasoning-model": ["openai/gpt-oss-120b"],
-            "vision-model": "meta-llama/llama-4-maverick-17b-128e-instruct"
         }
