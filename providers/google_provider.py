@@ -1,4 +1,5 @@
 import os
+import mimetypes
 from timeit import default_timer as timer
 from google import genai
 from google.genai import types
@@ -56,15 +57,36 @@ class GoogleGemini(ProviderInterface):
                 content = msg["content"]
 
                 if role == "user":
-                    normalized_msgs.append({
-                        "role": "user",
-                        "parts": [content]
-                    })
+                    parts = []
+                    if isinstance(content, str):
+                        parts.append(types.Part.from_text(text=content))
+                    elif isinstance(content, list):
+                        for item in content:
+                            if item.get("type") == "text":
+                                parts.append(types.Part.from_text(text=item["text"]))
+                            elif item.get("type") == "image":
+                                path = item["image_path"]
+
+                                # Process image
+                                mime_type, _ = mimetypes.guess_type(path)
+                                mime_type = mime_type or "image/jpeg"
+                                with open(path, "rb") as f:
+                                    image_bytes = f.read()
+
+                                parts.append(types.Part.from_bytes(
+                                    data=image_bytes, 
+                                    mime_type=mime_type
+                                ))
+                            else:
+                                print(f"Invalid content item type: {item.get('type')}")
+
+                    normalized_msgs.append(
+                        types.Content(role="user", parts=parts)
+                    )
                 elif role == "assistant":
-                    normalized_msgs.append({
-                        "role": "model",
-                        "parts": [content]
-                    })
+                    normalized_msgs.append(
+                        types.Content(role="model", parts=parts)
+                    )
                 else:
                     print(f"Invalid role found in messages: {role}")
 
