@@ -205,7 +205,11 @@ jobs:
       env:
         GH_TOKEN: ${{ github.token }}
       run: |
-        gh release download -p "vqa.jsonl"
+        gh release download -p "vqa_dataset.tar.gz"
+        tar -xzf vqa_dataset.tar.gz
+        mv vqa_dataset/vqa.jsonl .
+        mv vqa_dataset/val2014 .
+        rm -rf vqa_dataset vqa_dataset.tar.gz
         echo "VQA_DATASET_PATH=${{ github.workspace }}/vqa.jsonl" >> $GITHUB_ENV
 
     - name: Run VQA Experiment
