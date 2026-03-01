@@ -1,0 +1,16 @@
+{
+    "providers": [
+        "AWSBedrock",
+        "Azure",
+        "Google",
+        "TogetherAI"
+    ],
+    "models": [
+        "vision-model"
+    ],
+    "input_type": "vqa",
+    "num_requests": 100,
+    "streaming": true,
+    "verbose": true,
+    "backend": true
+}
