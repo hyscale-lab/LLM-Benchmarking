@@ -4,8 +4,8 @@
         "AWSBedrock",
         "Azure",
         "Cloudflare",
-        "Google",
-        "Groq"
+        "Groq",
+        "TogetherAI"
     ],
     "models": [
         "common-model"
