@@ -1,6 +1,8 @@
 import os
+import mimetypes
 from timeit import default_timer as timer
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 from providers.provider_interface import ProviderInterface
 
 
@@ -18,27 +20,26 @@ class GoogleGemini(ProviderInterface):
             "gemini-2.5-flash-lite": "gemini-2.5-flash-lite",
             "gemini-2.0-flash": "gemini-2.0-flash-001",
             "common-model": "gemini-2.0-flash-001",
+            "vision-model": "meta/llama-4-maverick-17b-128e-instruct-maas"
         }
 
     def initialize_client(self):
         # Configure API key for Google Gemini
-        api_key = os.getenv("GEMINI_API_KEY")
-        if not api_key:
-            raise EnvironmentError("GEMINI_API_KEY is not set in the environment.")
+        if not os.getenv("GOOGLE_APPLICATION_CREDENTIALS"):
+            raise EnvironmentError("Google cloud credentials not set.")
 
-        genai.configure(api_key=api_key)
+        project = os.getenv("GOOGLE_CLOUD_PROJECT")
+        location = os.getenv("GOOGLE_CLOUD_LOCATION")
+        if not project:
+            raise EnvironmentError("GOOGLE_CLOUD_PROJECT is not set in the environment.")
+        if not location:
+            raise EnvironmentError("GOOGLE_CLOUD_LOCATION is not set in the environment.")
 
-    def _initialize_model(self, model_id):
-        """
-        Initializes the generative model instance for the specified model_id.
-        """
-        if self.system_prompt:
-            self.model = genai.GenerativeModel(
-                model_name=model_id,
-                system_instruction=self.system_prompt
-            )
-        else:
-            self.model = genai.GenerativeModel(model_name=model_id)
+        self._client = genai.Client(
+            vertexai=True,
+            project=project,
+            location=location
+        )
 
     def get_model_name(self, model):
         """
@@ -56,20 +57,41 @@ class GoogleGemini(ProviderInterface):
                 content = msg["content"]
 
                 if role == "user":
-                    normalized_msgs.append({
-                        "role": "user",
-                        "parts": [content]
-                    })
+                    parts = []
+                    if isinstance(content, str):
+                        parts.append(types.Part.from_text(text=content))
+                    elif isinstance(content, list):
+                        for item in content:
+                            if item.get("type") == "text":
+                                parts.append(types.Part.from_text(text=item["text"]))
+                            elif item.get("type") == "image":
+                                path = item["image_path"]
+
+                                # Process image
+                                mime_type, _ = mimetypes.guess_type(path)
+                                mime_type = mime_type or "image/jpeg"
+                                with open(path, "rb") as f:
+                                    image_bytes = f.read()
+
+                                parts.append(types.Part.from_bytes(
+                                    data=image_bytes,
+                                    mime_type=mime_type
+                                ))
+                            else:
+                                print(f"Invalid content item type: {item.get('type')}")
+
+                    normalized_msgs.append(
+                        types.Content(role="user", parts=parts)
+                    )
                 elif role == "assistant":
-                    normalized_msgs.append({
-                        "role": "model",
-                        "parts": [content]
-                    })
+                    normalized_msgs.append(
+                        types.Content(role="model", parts=[types.Part.from_text(text=content)])
+                    )
                 else:
                     print(f"Invalid role found in messages: {role}")
 
         return normalized_msgs
-    
+
     def construct_text_response(self, raw_response):
         if isinstance(raw_response, dict):
             text_response = raw_response['candidates'][0]['content']['parts'][0]['text']
@@ -90,12 +112,12 @@ class GoogleGemini(ProviderInterface):
             if model_id is None:
                 raise ValueError(f"Model {model} is not supported by GoogleGeminiProvider.")
 
-            self._initialize_model(model_id)
-
             start_time = timer()
-            response = self.model.generate_content(
-                self.normalize_messages(messages),
-                generation_config=genai.types.GenerationConfig(
+            response = self._client.models.generate_content(
+                model=model_id,
+                contents=self.normalize_messages(messages),
+                config=types.GenerateContentConfig(
+                    system_instruction=self.system_prompt,
                     max_output_tokens=max_output
                 ),
             )
@@ -116,7 +138,7 @@ class GoogleGemini(ProviderInterface):
                 print(f"Tokens: {total_tokens}, Avg TBT: {tbt:.4f}s, TPS: {tps:.2f}")
                 print(response.text)
                 print(f"\nGenerated in {elapsed:.2f} seconds")
-            return response.to_dict()
+            return response.model_dump()
 
         except Exception as e:
             print(f"[ERROR] Inference failed for model '{model}': {e}")
@@ -133,15 +155,14 @@ class GoogleGemini(ProviderInterface):
             if model_id is None:
                 raise ValueError(f"Model {model} is not supported by GoogleGeminiProvider.")
 
-            self._initialize_model(model_id)
-
             start_time = timer()
-            response = self.model.generate_content(
-                self.normalize_messages(messages),
-                generation_config=genai.types.GenerationConfig(
+            response = self._client.models.generate_content_stream(
+                model=model_id,
+                contents=self.normalize_messages(messages),
+                config=types.GenerateContentConfig(
+                    system_instruction=self.system_prompt,
                     max_output_tokens=max_output
                 ),
-                stream=True,
             )
 
             ttft = None
@@ -152,7 +173,7 @@ class GoogleGemini(ProviderInterface):
 
             response_list = []
             for chunk in response:
-                response_list.append(chunk.to_dict())
+                response_list.append(chunk.model_dump())
                 current_time = timer()
                 text = getattr(chunk, "text", "") or ""
 
@@ -191,7 +212,7 @@ class GoogleGemini(ProviderInterface):
             non_first_latency = max(total_time - ttft, 0.0)
             subsequent_tokens = max(total_tokens - first_chunk_tokens, 0)
             avg_tbt = (non_first_latency / subsequent_tokens) if subsequent_tokens > 0 else 0.0
-            
+
             if verbosity:
                 print(f"\nTotal Response Time: {total_time:.4f} seconds")
                 print(f"total tokens {total_tokens}")

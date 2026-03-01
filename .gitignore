@@ -26,3 +26,6 @@ azure-test.py
 # Logs from trace runs
 trace/*.result
 trace/proxy/*.log
+
+# Logs from vqa runs
+vqa

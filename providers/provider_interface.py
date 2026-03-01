@@ -1,6 +1,7 @@
 import os
 import time
 import json
+import csv
 import asyncio
 import threading
 from abc import ABC, abstractmethod
@@ -27,6 +28,7 @@ class ProviderInterface(ABC):
             "timetofirsttoken": {},
             "timetofirsttoken_median": {},
             "timetofirsttoken_p95": {},
+            "vision_encoder_timetofirsttoken": {},
             "totaltokens": {},
             "tps": {},
             "tps_median": {},
@@ -44,6 +46,10 @@ class ProviderInterface(ABC):
 
         # for multiturn input type
         self.multiturn_dataset_path = os.getenv('MULTITURN_DATASET_PATH')
+
+        # for vqa input type
+        self.vqa_dataset_path = os.getenv('VQA_DATASET_PATH')
+        self.vqa_log_path = './vqa/logs'
 
     def log_metrics(self, model_name, metric, value):
         """
@@ -162,7 +168,7 @@ class ProviderInterface(ABC):
                         if line:
                             yield json.loads(line)
             except FileNotFoundError:
-                print(f"Error: Dataset not found at {path}")
+                print(f"Error: Multiturn dataset not found at {path}")
                 return
 
         conv_iter = _load_conversation_iterator(self.multiturn_dataset_path)
@@ -242,3 +248,152 @@ class ProviderInterface(ABC):
 
                 # Mimic when human pauses to read response
                 time.sleep(time_interval)
+
+    def perform_vqa(self, model, streaming, num_requests, verbosity):
+        """
+        Perform using vqa input
+        """
+        def _load_vqa_iterator(path):
+            """
+            Generator that yields one VQA benchmark sample at a time.
+            Streams directly from the JSONL file with near-zero memory footprint.
+            """
+            if path is None:
+                print("Error: VQA dataset path is None.")
+                return
+
+            try:
+                with open(path, 'r', encoding='utf-8') as f:
+                    for line in f:
+                        line = line.strip()
+                        if line:
+                            yield json.loads(line)
+            except FileNotFoundError:
+                print(f"Error: VQA dataset not found at {path}")
+                return
+
+        # Initialize a log file
+        safe_model_name = self.get_model_name(model).replace("/", "_").replace(":", "_")
+        csv_filename = f"vqa_ttft_results_{self.__class__.__name__}_{safe_model_name}.csv"
+
+        print(f"Initializing log file: {csv_filename}")
+        os.makedirs(self.vqa_log_path, exist_ok=True)
+        with open(os.path.join(self.vqa_log_path, csv_filename), mode='w', newline='', encoding='utf-8') as f:
+            writer = csv.writer(f)
+            writer.writerow(["question_id", "multimodal_ttft", "text_only_ttft", "vision_encoder_ttft"])
+
+        vqa_iter = _load_vqa_iterator(self.vqa_dataset_path)
+
+        self.system_prompt = "Analyze image. Answer with exactly one word. No sentences. No punctuation."
+        max_retries = 3
+        for i, item in enumerate(vqa_iter):
+            if i >= num_requests:
+                print("\nRequest limit hit. Stopping...\n")
+                break
+
+            print(f"============ VQA Item: {i + 1}/{num_requests}  ============")
+
+            vqa_dataset_dir = os.path.dirname(self.vqa_dataset_path)
+            question_id = item["question_id"]
+            image_path = os.path.join(vqa_dataset_dir, item["image_path"])
+            question = item["question"]
+            dummy_text = item["dummy_text"]
+
+            # Prepare messages
+            multimodal_messages = [
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "image", "image_path": image_path},
+                        {"type": "text", "text": question}
+                    ]
+                }
+            ]
+            text_only_messages = [
+                {
+                    "role": "user",
+                    "content": [{"type": "text", "text": dummy_text}]
+                }
+            ]
+
+            # --- PASS 1 ---
+            print("--> Running Multimodal Pass...")
+            for attempt in range(max_retries):
+                if attempt > 0:
+                    print(f"Retrying... (Attempt {attempt + 1}/{max_retries})")
+                    time.sleep(5)
+
+                # We only generate small number of tokens since we focus strictly on TTFT.
+                if streaming:
+                    response = self.perform_inference_streaming(
+                        model,
+                        multimodal_messages,
+                        max_output=10,
+                        verbosity=verbosity
+                    )
+                else:
+                    print("Non-streaming not supported.")
+                    return
+
+                if isinstance(response, Exception):
+                    print(f"Multimodal attempt {attempt + 1} failed: {response}")
+                    continue
+
+                break  # Success, exit retry loop
+            else:
+                print("Multimodal passes failed. Skipping sample...\n")
+                continue
+
+            # --- PASS 2 ---
+            print("--> Running Text-Only Baseline Pass...")
+            for attempt in range(max_retries):
+                if attempt > 0:
+                    print(f"Retrying... (Attempt {attempt + 1}/{max_retries})")
+                    time.sleep(5)
+
+                if streaming:
+                    response = self.perform_inference_streaming(
+                        model,
+                        text_only_messages,
+                        max_output=10,
+                        verbosity=verbosity
+                    )
+                else:
+                    print("Non-streaming not supported.")
+                    return
+
+                if isinstance(response, Exception):
+                    print(f"\nText attempt {attempt + 1} failed: {response}")
+                    continue
+
+                break  # Success, exit retry loop
+            else:
+                print("Text passes failed. Skipping sample...\n")
+                continue
+
+            # --- CALCULATE VISION ENCODER LATENCY ---
+            ttft_multimodal = self.metrics['timetofirsttoken'][model][-2]
+            ttft_text = self.metrics['timetofirsttoken'][model][-1]
+
+            ttft_vision_encoder = ttft_multimodal - ttft_text
+
+            if verbosity:
+                print(f"Results for Item {i + 1}:")
+                print(f"  Total Multimodal TTFT : {ttft_multimodal:.4f} s")
+                print(f"  Text-Only Prefill TTFT: {ttft_text:.4f} s")
+                print(f"  Isolated Vision TTFT  : {ttft_vision_encoder:.4f} s")
+
+            self.log_metrics(model, "vision_encoder_timetofirsttoken", ttft_vision_encoder)
+
+            # Append results to log
+            with open(os.path.join(self.vqa_log_path, csv_filename), mode='a', newline='', encoding='utf-8') as f:
+                writer = csv.writer(f)
+                writer.writerow([
+                    f"{question_id}",
+                    f"{ttft_multimodal}",
+                    f"{ttft_text}",
+                    f"{ttft_vision_encoder}"
+                ])
+
+            # Optional cooldown to let VRAM flush and prevent thermal throttling
+            time.sleep(15)

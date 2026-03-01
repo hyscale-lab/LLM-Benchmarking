@@ -20,7 +20,8 @@ class AWSBedrock(AccuracyMixin, ProviderInterface):
         self.model_map = {
             "meta-llama-3-70b-instruct": "meta.llama3-70b-instruct-v1:0",
             "common-model": "meta.llama3-70b-instruct-v1:0",
-            "reasoning-model": ["us.anthropic.claude-3-7-sonnet-20250219-v1:0"]
+            "reasoning-model": ["us.anthropic.claude-3-7-sonnet-20250219-v1:0"],
+            "vision-model": "us.meta.llama4-maverick-17b-instruct-v1:0"
         }
 
     def initialize_client(self):
@@ -46,7 +47,48 @@ class AWSBedrock(AccuracyMixin, ProviderInterface):
                 role = msg["role"]
                 content = msg["content"]
 
-                if role in ["user", "assistant"]:
+                if role == "user":
+                    if isinstance(content, str):
+                        normalized_msgs.append({
+                            "role": role,
+                            "content": [{"text": content}]
+                        })
+
+                    elif isinstance(content, list):
+                        new_content = []
+                        for item in content:
+                            if item.get("type") == "text":
+                                new_content.append({"text": item["text"]})
+                            
+                            elif item.get("type") == "image":
+                                img_path = item["image_path"]
+                                
+                                # Bedrock strictly requires the format to be explicitly stated
+                                ext = os.path.splitext(img_path)[1][1:].lower()
+                                img_format = "jpeg" if ext in ["jpg", "jpeg"] else ext
+                                
+                                # Bedrock supports jpeg, png, webp, and gif
+                                if img_format not in ["jpeg", "png", "webp", "gif"]:
+                                    print(f"Warning: Unsupported image format '{ext}'. Defaulting to jpeg.")
+                                    img_format = "jpeg"
+
+                                # Read the raw bytes (No Base64 encoding needed for Bedrock Converse API)
+                                with open(img_path, "rb") as img_file:
+                                    img_bytes = img_file.read()
+                                    
+                                new_content.append({
+                                    "image": {
+                                        "format": img_format,
+                                        "source": {"bytes": img_bytes}
+                                    }
+                                })
+                                    
+                        normalized_msgs.append({
+                            "role": role,
+                            "content": new_content
+                        })
+
+                elif role == "assistant":
                     normalized_msgs.append({
                         "role": role,
                         "content": [{"text": content}]

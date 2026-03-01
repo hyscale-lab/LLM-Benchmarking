@@ -2,7 +2,14 @@ import os
 from utils.accuracy_mixin import AccuracyMixin
 from time import perf_counter as timer
 from azure.ai.inference import ChatCompletionsClient
-from azure.ai.inference.models import SystemMessage, UserMessage, AssistantMessage
+from azure.ai.inference.models import (
+    SystemMessage,
+    UserMessage,
+    AssistantMessage,
+    TextContentItem,
+    ImageContentItem,
+    ImageUrl
+)
 from azure.core.credentials import AzureKeyCredential
 from providers.base_provider import ProviderInterface
 from openai import AzureOpenAI
@@ -19,6 +26,7 @@ class Azure(AccuracyMixin, ProviderInterface):
             "meta-llama-3.1-8b-instruct": "Meta-Llama-3.1-8B-Instruct",
             "common-model": "Meta-Llama-3.1-8B-Instruct",
             "reasoning-model": ["o4-mini", "gpt-4o"],
+            "vision-model": "Llama-4-Maverick-17B-128E-Instruct-FP8"
         }
 
         self._client = None
@@ -75,7 +83,31 @@ class Azure(AccuracyMixin, ProviderInterface):
                 content = msg["content"]
 
                 if role == "user":
-                    normalized_msgs.append(UserMessage(content=content))
+                    if isinstance(content, str):
+                        normalized_msgs.append(UserMessage(content=content))
+
+                    elif isinstance(content, list):
+                        content_items = []
+                        for item in content:
+                            if item.get("type") == "text":
+                                content_items.append(TextContentItem(text=item["text"]))
+                            elif item.get("type") == "image":
+                                img_path = item["image_path"]
+
+                                # Process image
+                                ext = os.path.splitext(img_path)[1][1:].lower()
+                                img_format = "jpeg" if ext in ["jpg", "jpeg"] else ext
+                                image_url = ImageUrl.load(
+                                    image_file=img_path,
+                                    image_format=img_format
+                                )
+
+                                content_items.append(ImageContentItem(image_url=image_url))
+                            else:
+                                print(f"Invalid content item type: {item.get('type')}")
+
+                        normalized_msgs.append(UserMessage(content=content_items))
+
                 elif role == "assistant":
                     normalized_msgs.append(AssistantMessage(content=content))
                 else:

@@ -1,6 +1,8 @@
 # base_provider.py for chat completions api
+import os
 from timeit import default_timer as timer
 import json
+import base64
 from providers.provider_interface import ProviderInterface
 from utils.accuracy_mixin import AccuracyMixin
 
@@ -17,7 +19,7 @@ class BaseProvider(AccuracyMixin, ProviderInterface):
         self.timeout = 30
 
     def initialize_client(self):
-            
+
         api_key = self._api_key
         client_class = self._client_class
         base_url = self._base_url
@@ -42,14 +44,46 @@ class BaseProvider(AccuracyMixin, ProviderInterface):
             normalized_msgs = [{"role": "system", "content": self.system_prompt}]
             for msg in messages:
                 role = msg["role"]
+                content = msg["content"]
 
                 if role in ["user", "assistant"]:
-                    normalized_msgs.append(msg)
+                    if isinstance(content, str):
+                        normalized_msgs.append(msg)
+
+                    elif isinstance(content, list):
+                        new_content = []
+
+                        for item in content:
+                            if item.get("type") == "text":
+                                new_content.append({"type": "text", "text": item["text"]})
+
+                            elif item.get("type") == "image":
+                                img_path = item["image_path"]
+
+                                # Process image
+                                ext = os.path.splitext(img_path)[1][1:].lower()
+                                mime_type = "jpeg" if ext in ["jpg", "jpeg"] else ext
+
+                                # Encode image into base64 format
+                                with open(img_path, "rb") as img_file:
+                                    base64_img = base64.b64encode(img_file.read()).decode('utf-8')
+
+                                # Append in the OpenAI Vision format
+                                new_content.append({
+                                    "type": "image_url",
+                                    "image_url": {
+                                        "url": f"data:image/{mime_type};base64,{base64_img}"
+                                    }
+                                })
+                            else:
+                                print(f"Invalid content item type: {item.get('type')}")
+                        normalized_msgs.append({"role": role, "content": new_content})
+
                 else:
                     print(f"Invalid role found in messages: {role}")
 
         return normalized_msgs
-    
+
     def construct_text_response(self, raw_response):
         if isinstance(raw_response, dict):
             text_response = raw_response['choices'][0]['message']['content']
@@ -159,7 +193,7 @@ class BaseProvider(AccuracyMixin, ProviderInterface):
             token_count = (len(inter_token_latencies) + 1) if ttft is not None else 0
             non_first_latency = max(elapsed - (ttft or 0.0), 0.0)
             avg_tbt = (non_first_latency / (token_count)) if token_count > 0 else 0.0
-            
+
             if verbosity:
 
                 print(
