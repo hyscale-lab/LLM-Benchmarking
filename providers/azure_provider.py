@@ -3,8 +3,8 @@ from utils.accuracy_mixin import AccuracyMixin
 from time import perf_counter as timer
 from azure.ai.inference import ChatCompletionsClient
 from azure.ai.inference.models import (
-    SystemMessage, 
-    UserMessage, 
+    SystemMessage,
+    UserMessage,
     AssistantMessage,
     TextContentItem,
     ImageContentItem,

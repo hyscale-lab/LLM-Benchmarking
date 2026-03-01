@@ -74,7 +74,7 @@ class GoogleGemini(ProviderInterface):
                                     image_bytes = f.read()
 
                                 parts.append(types.Part.from_bytes(
-                                    data=image_bytes, 
+                                    data=image_bytes,
                                     mime_type=mime_type
                                 ))
                             else:
@@ -91,7 +91,7 @@ class GoogleGemini(ProviderInterface):
                     print(f"Invalid role found in messages: {role}")
 
         return normalized_msgs
-    
+
     def construct_text_response(self, raw_response):
         if isinstance(raw_response, dict):
             text_response = raw_response['candidates'][0]['content']['parts'][0]['text']
@@ -212,7 +212,7 @@ class GoogleGemini(ProviderInterface):
             non_first_latency = max(total_time - ttft, 0.0)
             subsequent_tokens = max(total_tokens - first_chunk_tokens, 0)
             avg_tbt = (non_first_latency / subsequent_tokens) if subsequent_tokens > 0 else 0.0
-            
+
             if verbosity:
                 print(f"\nTotal Response Time: {total_time:.4f} seconds")
                 print(f"total tokens {total_tokens}")

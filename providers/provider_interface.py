@@ -275,7 +275,7 @@ class ProviderInterface(ABC):
         # Initialize a log file
         safe_model_name = self.get_model_name(model).replace("/", "_").replace(":", "_")
         csv_filename = f"vqa_ttft_results_{self.__class__.__name__}_{safe_model_name}.csv"
-        
+
         print(f"Initializing log file: {csv_filename}")
         os.makedirs(self.vqa_log_path, exist_ok=True)
         with open(os.path.join(self.vqa_log_path, csv_filename), mode='w', newline='', encoding='utf-8') as f:
@@ -317,7 +317,7 @@ class ProviderInterface(ABC):
             ]
 
             # --- PASS 1 ---
-            print(f"--> Running Multimodal Pass...")
+            print("--> Running Multimodal Pass...")
             for attempt in range(max_retries):
                 if attempt > 0:
                     print(f"Retrying... (Attempt {attempt + 1}/{max_retries})")
@@ -338,14 +338,14 @@ class ProviderInterface(ABC):
                 if isinstance(response, Exception):
                     print(f"Multimodal attempt {attempt + 1} failed: {response}")
                     continue
-                    
+
                 break  # Success, exit retry loop
             else:
                 print("Multimodal passes failed. Skipping sample...\n")
                 continue
 
             # --- PASS 2 ---
-            print(f"--> Running Text-Only Baseline Pass...")            
+            print("--> Running Text-Only Baseline Pass...")
             for attempt in range(max_retries):
                 if attempt > 0:
                     print(f"Retrying... (Attempt {attempt + 1}/{max_retries})")
@@ -371,7 +371,6 @@ class ProviderInterface(ABC):
                 print("Text passes failed. Skipping sample...\n")
                 continue
 
-                
             # --- CALCULATE VISION ENCODER LATENCY ---
             ttft_multimodal = self.metrics['timetofirsttoken'][model][-2]
             ttft_text = self.metrics['timetofirsttoken'][model][-1]
@@ -385,7 +384,6 @@ class ProviderInterface(ABC):
                 print(f"  Isolated Vision TTFT  : {ttft_vision_encoder:.4f} s")
 
             self.log_metrics(model, "vision_encoder_timetofirsttoken", ttft_vision_encoder)
-
 
             # Append results to log
             with open(os.path.join(self.vqa_log_path, csv_filename), mode='a', newline='', encoding='utf-8') as f:

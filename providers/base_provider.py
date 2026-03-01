@@ -18,7 +18,7 @@ class BaseProvider(AccuracyMixin, ProviderInterface):
         self.timeout = 30
 
     def initialize_client(self):
-            
+
         api_key = self._api_key
         client_class = self._client_class
         base_url = self._base_url
@@ -55,7 +55,7 @@ class BaseProvider(AccuracyMixin, ProviderInterface):
                         for item in content:
                             if item.get("type") == "text":
                                 new_content.append({"type": "text", "text": item["text"]})
-                            
+
                             elif item.get("type") == "image":
                                 img_path = item["image_path"]
 
@@ -66,7 +66,7 @@ class BaseProvider(AccuracyMixin, ProviderInterface):
                                 # Encode image into base64 format
                                 with open(img_path, "rb") as img_file:
                                     base64_img = base64.b64encode(img_file.read()).decode('utf-8')
-                                    
+
                                 # Append in the OpenAI Vision format
                                 new_content.append({
                                     "type": "image_url",
@@ -76,13 +76,13 @@ class BaseProvider(AccuracyMixin, ProviderInterface):
                                 })
                             else:
                                 print(f"Invalid content item type: {item.get('type')}")
-                        normalized_msgs.append({"role": role, "content": new_content})        
+                        normalized_msgs.append({"role": role, "content": new_content})
 
                 else:
                     print(f"Invalid role found in messages: {role}")
 
         return normalized_msgs
-    
+
     def construct_text_response(self, raw_response):
         if isinstance(raw_response, dict):
             text_response = raw_response['choices'][0]['message']['content']
@@ -192,7 +192,7 @@ class BaseProvider(AccuracyMixin, ProviderInterface):
             token_count = (len(inter_token_latencies) + 1) if ttft is not None else 0
             non_first_latency = max(elapsed - (ttft or 0.0), 0.0)
             avg_tbt = (non_first_latency / (token_count)) if token_count > 0 else 0.0
-            
+
             if verbosity:
 
                 print(
