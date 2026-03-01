@@ -85,7 +85,7 @@ class GoogleGemini(ProviderInterface):
                     )
                 elif role == "assistant":
                     normalized_msgs.append(
-                        types.Content(role="model", parts=parts)
+                        types.Content(role="model", parts=[types.Part.from_text(text=content)])
                     )
                 else:
                     print(f"Invalid role found in messages: {role}")
