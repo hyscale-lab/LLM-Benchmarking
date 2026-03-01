@@ -71,6 +71,8 @@ class Benchmark:
             self.graph_dir = os.path.join("benchmark_graph", "trace", base_dir, provider_dir_name)
         elif self.input_type == "multiturn":
             self.graph_dir = os.path.join("benchmark_graph", "multiturn", base_dir, provider_dir_name)
+        elif self.input_type == "vqa":
+            self.graph_dir = os.path.join("benchmark_graph", "vqa", base_dir, provider_dir_name)
 
         # Create directories if they don't exist
         if not os.path.exists(self.graph_dir):
@@ -344,3 +346,39 @@ class Benchmark:
             self.plot_metrics("timetofirsttoken", "timetofirsttoken")
             self.plot_metrics("response_times", "totaltime")
             self.plot_metrics("timebetweentokens", "timebetweentokens")
+
+    def run_vqa(self):
+        """
+        Runs the benchmark for the selected providers and models, and plots the results.
+
+        This method sends a number of requests to each model for each provider, collects
+        performance metrics, and generates plots based on those metrics.
+        """
+        for provider in self.providers:
+            provider_name = provider.__class__.__name__
+            provider.initialize_client()
+            for model in self.models:
+                model_name = provider.get_model_name(model)
+                print(f"\n[{provider_name}] - Model: {model_name}")
+
+                # --- START TIME ---
+                start_time = datetime.now()
+                print(f"Start Time:  {start_time.strftime('%Y-%m-%d %H:%M:%S')}")
+                # ------------------
+
+                if provider_name == "vLLM":
+                    provider.perform_vqa(model, self.streaming, self.num_requests, self.verbosity, self.vllm_ip)
+                else:
+                    provider.perform_vqa(model, self.streaming, self.num_requests, self.verbosity)
+
+                # --- FINISH TIME & DURATION ---
+                end_time = datetime.now()
+                duration = end_time - start_time
+                print(f"Finish Time: {end_time.strftime('%Y-%m-%d %H:%M:%S')}")
+                print(f"Duration:    {duration}")
+                # ------------------------------
+
+        print()
+
+        if self.streaming:
+            self.plot_metrics("vision_encoder_timetofirsttoken", "vision_encoder_timetofirsttoken")
