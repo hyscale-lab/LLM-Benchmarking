@@ -196,7 +196,7 @@ const AppMetricsPage = ({ metricType, streaming = true, title = "Metrics Dashboa
                         <Grid item xs={12}>
                             <AppMetrics
                                 title={metricName}
-                                metricType={metricType}
+                                metricType={effectiveMetricType}
                                 subheader={`Latency vs CDF across all providers`}
                                 metrics={metrics}
                                 min={min}
