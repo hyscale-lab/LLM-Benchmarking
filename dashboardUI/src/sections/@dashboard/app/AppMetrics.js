@@ -40,7 +40,10 @@ const AppMetrics = ({ title, metricType, subheader, metrics, min, logScale = tru
         .filter(x => Number.isFinite(x));
     const maxLatency = Math.max(...allLatencies);
     const minLatency = Math.min(...allLatencies);
-    const suggestedMin = (min != null) ? (logScale ? Math.log10(min) : min) : minLatency;
+    let suggestedMin = minLatency;
+    if (min != null) {
+        suggestedMin = logScale ? Math.log10(min) : min;
+    }
     const computedMin = Math.min(suggestedMin, minLatency);
     // Chart options
     const chartOptions = merge(BaseOptionChart(), {
