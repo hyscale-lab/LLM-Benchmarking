@@ -4,7 +4,11 @@
         "AWSBedrock",
         "Azure",
         "Cloudflare",
+        "Google",
         "Groq",
+        "Hyperbolic",
+        "OpenAI",
+        "PerplexityAI",
         "TogetherAI"
     ],
     "models": [
