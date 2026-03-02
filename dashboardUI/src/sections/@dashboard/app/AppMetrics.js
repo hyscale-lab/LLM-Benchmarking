@@ -117,6 +117,7 @@ AppMetrics.propTypes = {
     subheader: PropTypes.string, // Additional information to display
     metrics: PropTypes.object.isRequired, // Metrics object with provider -> model -> metric structure
     min: PropTypes.number,
+    logScale: PropTypes.bool,
 };
 
 export default AppMetrics;
