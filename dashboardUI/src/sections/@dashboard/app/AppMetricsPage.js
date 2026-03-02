@@ -24,11 +24,25 @@ const AppMetricsPage = ({ metricType, streaming = true, title = "Metrics Dashboa
 
     const baseURL = process.env.REACT_APP_BASE_URL;
 
+    // Logic for overriding metricType namings, e.g. for VQA input type
+    const METRIC_OVERRIDES = {
+        timetofirsttoken: {
+            vqa: "vision_encoder_timetofirsttoken",
+        },
+        timetofirsttoken_median: {
+            vqa: "vision_encoder_timetofirsttoken_median",
+        },
+        timetofirsttoken_p95: {
+            vqa: "vision_encoder_timetofirsttoken_p95",
+        },
+    };
+    const effectiveMetricType = METRIC_OVERRIDES[metricType]?.[inputType] || metricType;
+
     const fetchPeriodMetrics = useCallback(async () => {
         setLoadingPeriodMetrics(true);
         try {
             const response = await axios.get(`${baseURL}/metrics/period`, {
-                params: { timeRange: dateRange, metricType, streaming, inputType },
+                params: { timeRange: dateRange, metricType: effectiveMetricType, streaming, inputType },
             });
             setPeriodMetrics(response.data.aggregated_metrics);
             setDateList(response.data.date_array);
@@ -43,14 +57,14 @@ const AppMetricsPage = ({ metricType, streaming = true, title = "Metrics Dashboa
         } finally {
             setLoadingPeriodMetrics(false);
         }
-    }, [baseURL, dateRange, metricType, streaming, inputType]);
+    }, [baseURL, dateRange, effectiveMetricType, streaming, inputType]);
 
     const fetchMetrics = useCallback(async () => {
         if (!selectedDate) return; // Ensure selectedDate is set before fetching metrics
         setLoadingMetrics(true);
         try {
             const response = await axios.get(`${baseURL}/metrics/date`, {
-                params: { date: selectedDate, metricType, streaming, inputType },
+                params: { date: selectedDate, metricType: effectiveMetricType, streaming, inputType },
             });
             setMetrics(response.data.metrics);
         } catch (error) {
@@ -59,7 +73,7 @@ const AppMetricsPage = ({ metricType, streaming = true, title = "Metrics Dashboa
         } finally {
             setLoadingMetrics(false);
         }
-    }, [baseURL, selectedDate, metricType, streaming, inputType]);
+    }, [baseURL, selectedDate, effectiveMetricType, streaming, inputType]);
 
     useEffect(() => {
         fetchPeriodMetrics();
@@ -107,9 +121,9 @@ const AppMetricsPage = ({ metricType, streaming = true, title = "Metrics Dashboa
 
                 <Grid container spacing={3}>
                     {/* Stack to hold dropdowns */}
-                    <Stack 
-                        direction="row" 
-                        alignItems="center" 
+                    <Stack
+                        direction="row"
+                        alignItems="center"
                         spacing={3}
                         sx={{ mb: 2, pt: 3, pl: 3 }}
                     >
@@ -138,6 +152,7 @@ const AppMetricsPage = ({ metricType, streaming = true, title = "Metrics Dashboa
                                     <MenuItem value="static">Static</MenuItem>
                                     <MenuItem value="trace">Trace</MenuItem>
                                     <MenuItem value="multiturn">Multiturn</MenuItem>
+                                    <MenuItem value="vqa">VQA</MenuItem>
                                 </Select>
                             </Stack>
                         )}
