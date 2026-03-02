@@ -10,7 +10,7 @@ import { providerColors } from "./AppMetricsDate";
 
 // ----------------------------------------------------------------------
 
-const AppMetrics = ({ title, metricType, subheader, metrics, min }) => {
+const AppMetrics = ({ title, metricType, subheader, metrics, min, logScale = true }) => {
     // Combine latencies and CDFs for all providers
     const chartData = Object.keys(metrics).map((provider) => {
         const providerData = metrics[provider];
@@ -27,7 +27,7 @@ const AppMetrics = ({ title, metricType, subheader, metrics, min }) => {
                 name: `${provider}`,
                 type: "line", // Line with points
                 data: latencies.map((latency, index) => ({
-                    x: Math.log10(latency),
+                    x: logScale ? Math.log10(latency) : latency,
                     y: cdf[index],
                 })),
                 color: providerColors[provider] || "#999999",
@@ -40,7 +40,11 @@ const AppMetrics = ({ title, metricType, subheader, metrics, min }) => {
         .filter(x => Number.isFinite(x));
     const maxLatency = Math.max(...allLatencies);
     const minLatency = Math.min(...allLatencies);
-    const computedMin = (min != null && min > 0) ? Math.log10(min) : minLatency;
+    let suggestedMin = minLatency;
+    if (min != null) {
+        suggestedMin = logScale ? Math.log10(min) : min;
+    }
+    const computedMin = Math.min(suggestedMin, minLatency);
     // Chart options
     const chartOptions = merge(BaseOptionChart(), {
         stroke: {
@@ -56,7 +60,7 @@ const AppMetrics = ({ title, metricType, subheader, metrics, min }) => {
             min: computedMin,
             max: maxLatency,
             labels: {
-                formatter: (value) => `${(10 ** value).toFixed(3)} ms`, // Convert back to linear scale for display
+                formatter: (value) => logScale ? `${(10 ** value).toFixed(3)} ms` : `${value.toFixed(3)} ms`, // Convert back to linear scale for display
             },
             tickAmount: 10,
         },
@@ -75,7 +79,7 @@ const AppMetrics = ({ title, metricType, subheader, metrics, min }) => {
             shared: true, // Shared tooltip for better interactivity
             intersect: false,
             x: {
-                formatter: (value) => `${(10 ** value).toFixed(3)} ms`,
+                formatter: (value) => logScale ? `${(10 ** value).toFixed(3)} ms` : `${value.toFixed(3)} ms`,
             },
             y: {
                 formatter: (value) => value.toFixed(3),
@@ -113,6 +117,7 @@ AppMetrics.propTypes = {
     subheader: PropTypes.string, // Additional information to display
     metrics: PropTypes.object.isRequired, // Metrics object with provider -> model -> metric structure
     min: PropTypes.number,
+    logScale: PropTypes.bool,
 };
 
 export default AppMetrics;
