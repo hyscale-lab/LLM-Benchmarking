@@ -200,6 +200,7 @@ const AppMetricsPage = ({ metricType, streaming = true, title = "Metrics Dashboa
                                 subheader={`Latency vs CDF across all providers`}
                                 metrics={metrics}
                                 min={min}
+                                logScale={inputType === 'vqa' ? false : true}
                             />
                         </Grid>
                     }
