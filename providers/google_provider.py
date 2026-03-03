@@ -185,7 +185,7 @@ class GoogleGemini(ProviderInterface):
                     break
                 if text:
                     try:
-                        num_tokens = int(self.model.count_tokens(text).total_tokens)
+                        num_tokens = int(self._client.models.count_tokens(model=model_id, contents=text).total_tokens)
                         if num_tokens <= 0:
                             num_tokens = 1
                     except Exception:
