@@ -7,7 +7,7 @@
         "vision-model"
     ],
     "input_type": "vqa",
-    "num_requests": 100,
+    "num_requests": 300,
     "streaming": true,
     "verbose": true,
     "backend": true
