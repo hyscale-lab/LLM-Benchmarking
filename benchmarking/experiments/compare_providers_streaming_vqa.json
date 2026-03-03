@@ -1,9 +1,7 @@
 {
     "providers": [
         "AWSBedrock",
-        "Azure",
-        "Google",
-        "TogetherAI"
+        "Azure"
     ],
     "models": [
         "vision-model"
