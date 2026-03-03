@@ -30,16 +30,32 @@ class GoogleGemini(ProviderInterface):
 
         project = os.getenv("GOOGLE_CLOUD_PROJECT")
         location = os.getenv("GOOGLE_CLOUD_LOCATION")
+        llama_4_location = os.getenv("LLAMA_4_GOOGLE_CLOUD_LOCATION")
         if not project:
             raise EnvironmentError("GOOGLE_CLOUD_PROJECT is not set in the environment.")
         if not location:
             raise EnvironmentError("GOOGLE_CLOUD_LOCATION is not set in the environment.")
+        if not llama_4_location:
+            raise EnvironmentError("LLAMA_4_GOOGLE_CLOUD_LOCATION is not set in the environment.")
 
-        self._client = genai.Client(
-            vertexai=True,
-            project=project,
-            location=location
-        )
+        self._clients = {
+            'llama-4-maverick': genai.Client(
+                vertexai=True,
+                project=project,
+                location=llama_4_location
+            ),
+            'default': genai.Client(
+                vertexai=True,
+                project=project,
+                location=location
+            ),
+        }
+
+    def _set_client_by_model(self, model_id):
+        if 'llama-4-maverick' in model_id:
+            self._client = self._clients['llama-4-maverick']
+        else:
+            self._client = self._clients['default']
 
     def get_model_name(self, model):
         """
@@ -112,6 +128,8 @@ class GoogleGemini(ProviderInterface):
             if model_id is None:
                 raise ValueError(f"Model {model} is not supported by GoogleGeminiProvider.")
 
+            self._set_client_by_model(model_id)
+
             start_time = timer()
             response = self._client.models.generate_content(
                 model=model_id,
@@ -154,6 +172,8 @@ class GoogleGemini(ProviderInterface):
             model_id = self.get_model_name(model)
             if model_id is None:
                 raise ValueError(f"Model {model} is not supported by GoogleGeminiProvider.")
+
+            self._set_client_by_model(model_id)
 
             start_time = timer()
             response = self._client.models.generate_content_stream(
