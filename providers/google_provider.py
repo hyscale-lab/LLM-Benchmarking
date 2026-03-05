@@ -119,6 +119,18 @@ class GoogleGemini(ProviderInterface):
 
         return text_response
 
+    def get_input_token_count(self, response, streaming):
+        if not response:
+            return 0
+
+        if not streaming:
+            usage = response.get('usage_metadata', {})
+            return usage.get('prompt_token_count', 0)
+        else:
+            last_chunk = response[-1]
+            usage = last_chunk.get('usage_metadata', {})
+            return usage.get('prompt_token_count', 0)
+
     def perform_inference(self, model, messages, max_output=100, verbosity=True):
         """
         Performs inference on a single prompt and returns the time taken for response generation.
