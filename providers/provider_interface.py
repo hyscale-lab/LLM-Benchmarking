@@ -390,7 +390,7 @@ class ProviderInterface(ABC):
             total_tokens = self.get_input_token_count(response, streaming)
             print(f"Generating dummy text with {total_tokens} tokens...")
             dummy_text = self.get_vqa_dummy_text(
-                self.get_model_name(model), 
+                self.get_model_name(model),
                 total_tokens
             )
             text_only_messages = [
