@@ -26,7 +26,8 @@ class Azure(AccuracyMixin, ProviderInterface):
             "meta-llama-3.1-8b-instruct": "Meta-Llama-3.1-8B-Instruct",
             "common-model": "Meta-Llama-3.1-8B-Instruct",
             "reasoning-model": ["o4-mini", "gpt-4o"],
-            "vision-model": "Llama-4-Maverick-17B-128E-Instruct-FP8"
+            "vision-model-01": "Llama-4-Maverick-17B-128E-Instruct-FP8",
+            "vision-model-02": "Llama-3.2-11B-Vision-Instruct",
         }
 
         self._client = None
@@ -126,6 +127,23 @@ class Azure(AccuracyMixin, ProviderInterface):
             )
 
         return text_response
+
+    def get_input_token_count(self, response, streaming):
+        if not response:
+            return 0
+
+        if not streaming:
+            usage = response.get('usage', {})
+            return usage.get('prompt_tokens', 0)
+        else:
+            # Azure usually sends usage in the final chunk
+            for chunk in reversed(response):
+                usage = chunk.get('usage')
+                if usage:
+                    return usage.get('prompt_tokens', 0)
+            
+            # Fallback to 0 if the service didn't provide usage in the stream
+            return 0
 
     def perform_inference(self, model, messages, max_output=100, verbosity=True):
         """Performs non-streaming inference request to Azure."""

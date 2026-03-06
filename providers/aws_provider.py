@@ -4,6 +4,7 @@ from timeit import default_timer as timer
 import json
 from dotenv import load_dotenv
 import boto3
+from botocore.config import Config
 from providers.provider_interface import ProviderInterface
 from utils.accuracy_mixin import AccuracyMixin
 
@@ -21,7 +22,8 @@ class AWSBedrock(AccuracyMixin, ProviderInterface):
             "meta-llama-3-70b-instruct": "meta.llama3-70b-instruct-v1:0",
             "common-model": "meta.llama3-70b-instruct-v1:0",
             "reasoning-model": ["us.anthropic.claude-3-7-sonnet-20250219-v1:0"],
-            "vision-model": "us.meta.llama4-maverick-17b-instruct-v1:0"
+            "vision-model-01": "us.meta.llama4-maverick-17b-instruct-v1:0",
+            "vision-model-02": "meta.llama3-2-11b-instruct-v1:0",
         }
 
     def initialize_client(self):
@@ -30,6 +32,11 @@ class AWSBedrock(AccuracyMixin, ProviderInterface):
             aws_access_key_id=os.getenv("AWS_BEDROCK_ACCESS_KEY_ID"),
             aws_secret_access_key=os.getenv("AWS_BEDROCK_SECRET_ACCESS_KEY"),
             region_name=os.getenv("AWS_BEDROCK_REGION"),
+            config=Config(
+                connect_timeout=30,
+                read_timeout=30,
+                retries={'max_attempts': 1, 'mode': 'standard'}
+            ),
         )
 
     def get_model_name(self, model):
@@ -109,6 +116,23 @@ class AWSBedrock(AccuracyMixin, ProviderInterface):
             )
 
         return text_response
+
+    def get_input_token_count(self, response, streaming):
+        if not response:
+            return 0
+
+        if not streaming:
+            usage = response.get('usage', {})
+            return usage.get('inputTokens', 0)
+        else:
+            # The 'metadata' event is usually the last or second-to-last event
+            for event in reversed(response):
+                if 'metadata' in event:
+                    usage = event['metadata'].get('usage', {})
+                    return usage.get('inputTokens', 0)
+
+            # Fall back to 0
+            return 0
 
     def perform_inference(self, model, messages, max_output=100, verbosity=True):
         """
