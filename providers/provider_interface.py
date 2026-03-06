@@ -4,6 +4,9 @@ import json
 import csv
 import asyncio
 import threading
+import random
+import requests
+from transformers import AutoTokenizer
 from abc import ABC, abstractmethod
 
 
@@ -50,6 +53,9 @@ class ProviderInterface(ABC):
         # for vqa input type
         self.vqa_dataset_path = os.getenv('VQA_DATASET_PATH')
         self.vqa_log_path = './vqa/logs'
+
+        self._vqa_tokenizers = {}
+        self._vqa_corpus_words = None
 
     def log_metrics(self, model_name, metric, value):
         """
@@ -249,6 +255,55 @@ class ProviderInterface(ABC):
             # Mimic human behaviour
             time.sleep(time_interval)
 
+    def get_vqa_dummy_text(self, model_id, total_tokens):
+        if total_tokens <= 0:
+            return ""
+
+        # Load tokenizer
+        repo_map = {
+            "llama-4": "meta-llama/Llama-4-Maverick-17B-128E-Instruct",
+            "llama-3.2": "meta-llama/Llama-3.2-11B-Vision-Instruct",
+            "gemini-3": "google/gemma-3-27b-it",
+        }
+
+        lowered_id = model_id.lower()
+        if 'llama4' in lowered_id or 'llama-4' in lowered_id:
+            model_id = 'llama-4'
+        elif 'llama' in lowered_id and ('3.2' in lowered_id or '3-2' in lowered_id):
+            model_id = 'llama-3.2'
+        elif 'gemini-3' in lowered_id:
+            model_id = 'gemini-3'
+        else:
+            raise Exception('Invalid model for VQA input type.')
+
+        if not self._vqa_tokenizers.get(model_id):
+            self._vqa_tokenizers[model_id] = AutoTokenizer.from_pretrained(repo_map[model_id])
+
+        tokenizer = self._vqa_tokenizers[model_id]
+
+        # Load corpus
+        if not self._vqa_corpus_words:
+            url = "https://www.gutenberg.org/cache/epub/2701/pg2701.txt"
+            try:
+                text = requests.get(url, timeout=10).text
+                all_ids = tokenizer.encode(text, add_special_tokens=False)
+                special_ids = set(tokenizer.all_special_ids)  # Filter out special tokens
+                self._vqa_corpus_words = [tid for tid in all_ids if tid not in special_ids]
+            except Exception as e:
+                print(f"Fallback to dummy tokens: {e}")
+                self._vqa_corpus_words = tokenizer.encode("The quick brown fox jumps over the lazy dog", add_special_tokens=False)
+
+        # Build dummy text
+        sampled_ids = random.choices(self._vqa_corpus_words, k=total_tokens)
+        dummy_text = tokenizer.decode(sampled_ids, clean_up_tokenization_spaces=False)
+
+        # Double check the count. If BPE merged some, we pad with '.'
+        final_ids = tokenizer.encode(dummy_text, add_special_tokens=False)
+        if len(final_ids) < total_tokens:
+            dummy_text += "." * (total_tokens - len(final_ids))
+
+        return dummy_text
+
     def perform_vqa(self, model, streaming, num_requests, verbosity):
         """
         Perform using vqa input
@@ -280,7 +335,7 @@ class ProviderInterface(ABC):
         os.makedirs(self.vqa_log_path, exist_ok=True)
         with open(os.path.join(self.vqa_log_path, csv_filename), mode='w', newline='', encoding='utf-8') as f:
             writer = csv.writer(f)
-            writer.writerow(["question_id", "multimodal_ttft", "text_only_ttft", "vision_encoder_ttft"])
+            writer.writerow(["question_id", "multimodal_ttft", "multimodal_input_tokens", "text_only_ttft", "vision_encoder_ttft"])
 
         vqa_iter = _load_vqa_iterator(self.vqa_dataset_path)
 
@@ -297,7 +352,6 @@ class ProviderInterface(ABC):
             question_id = item["question_id"]
             image_path = os.path.join(vqa_dataset_dir, item["image_path"])
             question = item["question"]
-            dummy_text = item["dummy_text"]
 
             # Prepare messages
             multimodal_messages = [
@@ -309,15 +363,9 @@ class ProviderInterface(ABC):
                     ]
                 }
             ]
-            text_only_messages = [
-                {
-                    "role": "user",
-                    "content": [{"type": "text", "text": dummy_text}]
-                }
-            ]
 
             # --- PASS 1 ---
-            print("--> Running Multimodal Pass...")
+            print("\n--> Running Multimodal Pass...")
             for attempt in range(max_retries):
                 if attempt > 0:
                     print(f"Retrying... (Attempt {attempt + 1}/{max_retries})")
@@ -344,8 +392,22 @@ class ProviderInterface(ABC):
                 print("Multimodal passes failed. Skipping sample...\n")
                 continue
 
+            # Prepare messages
+            total_tokens = self.get_input_token_count(response, streaming)
+            print(f"Generating dummy text with {total_tokens} tokens...")
+            dummy_text = self.get_vqa_dummy_text(
+                self.get_model_name(model),
+                total_tokens
+            )
+            text_only_messages = [
+                {
+                    "role": "user",
+                    "content": [{"type": "text", "text": dummy_text}]
+                }
+            ]
+
             # --- PASS 2 ---
-            print("--> Running Text-Only Baseline Pass...")
+            print("\n--> Running Text-Only Baseline Pass...")
             for attempt in range(max_retries):
                 if attempt > 0:
                     print(f"Retrying... (Attempt {attempt + 1}/{max_retries})")
@@ -371,6 +433,8 @@ class ProviderInterface(ABC):
                 print("Text passes failed. Skipping sample...\n")
                 continue
 
+            print(f"Pass 2 reported {self.get_input_token_count(response, streaming)} input tokens.")
+
             # --- CALCULATE VISION ENCODER LATENCY ---
             ttft_multimodal = self.metrics['timetofirsttoken'][model][-2]
             ttft_text = self.metrics['timetofirsttoken'][model][-1]
@@ -391,6 +455,7 @@ class ProviderInterface(ABC):
                 writer.writerow([
                     f"{question_id}",
                     f"{ttft_multimodal}",
+                    f"{total_tokens}",
                     f"{ttft_text}",
                     f"{ttft_vision_encoder}"
                 ])
