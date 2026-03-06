@@ -217,7 +217,6 @@ class AWSBedrock(AccuracyMixin, ProviderInterface):
                     stop_reason = event['messageStop']['stopReason']
                     if stop_reason == 'max_tokens':
                         print(f"\n[INFO] Stopped due to stop reason: {stop_reason}")
-                        break
 
                 if 'contentBlockDelta' in event:
                     chunk = event['contentBlockDelta']
