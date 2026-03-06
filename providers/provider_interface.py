@@ -406,6 +406,9 @@ class ProviderInterface(ABC):
                 }
             ]
 
+            # Pausing in between
+            time.sleep(15)
+
             # --- PASS 2 ---
             print("\n--> Running Text-Only Baseline Pass...")
             for attempt in range(max_retries):
@@ -460,5 +463,5 @@ class ProviderInterface(ABC):
                     f"{ttft_vision_encoder}"
                 ])
 
-            # Optional cooldown to let VRAM flush and prevent thermal throttling
+            # Optional cooldown
             time.sleep(15)
