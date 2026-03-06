@@ -1,9 +1,11 @@
 {
     "providers": [
-        "Google",
-        "Hyperbolic",
-        "OpenAI",
-        "PerplexityAI"
+        "Anthropic",
+        "AWSBedrock",
+        "Azure",
+        "Cloudflare",
+        "Groq",
+        "TogetherAI"
     ],
     "models": [
         "common-model"
