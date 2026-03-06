@@ -1,6 +1,5 @@
 {
     "providers": [
-        "AWSBedrock",
         "Azure",
         "Google"
     ],
