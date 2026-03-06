@@ -335,7 +335,7 @@ class ProviderInterface(ABC):
         os.makedirs(self.vqa_log_path, exist_ok=True)
         with open(os.path.join(self.vqa_log_path, csv_filename), mode='w', newline='', encoding='utf-8') as f:
             writer = csv.writer(f)
-            writer.writerow(["question_id", "multimodal_ttft", "text_only_ttft", "vision_encoder_ttft"])
+            writer.writerow(["question_id", "multimodal_ttft", "multimodal_input_tokens", "text_only_ttft", "vision_encoder_ttft"])
 
         vqa_iter = _load_vqa_iterator(self.vqa_dataset_path)
 
@@ -455,6 +455,7 @@ class ProviderInterface(ABC):
                 writer.writerow([
                     f"{question_id}",
                     f"{ttft_multimodal}",
+                    f"{total_tokens}",
                     f"{ttft_text}",
                     f"{ttft_vision_encoder}"
                 ])
