@@ -26,7 +26,8 @@ class Azure(AccuracyMixin, ProviderInterface):
             "meta-llama-3.1-8b-instruct": "Meta-Llama-3.1-8B-Instruct",
             "common-model": "Meta-Llama-3.1-8B-Instruct",
             "reasoning-model": ["o4-mini", "gpt-4o"],
-            "vision-model": "Llama-4-Maverick-17B-128E-Instruct-FP8"
+            "vision-model-01": "Llama-4-Maverick-17B-128E-Instruct-FP8",
+            "vision-model-02": "Llama-3.2-11B-Vision-Instruct",
         }
 
         self._client = None

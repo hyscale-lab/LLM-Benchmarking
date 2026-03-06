@@ -262,11 +262,17 @@ class ProviderInterface(ABC):
         # Load tokenizer
         repo_map = {
             "llama-4": "meta-llama/Llama-4-Maverick-17B-128E-Instruct",
-            "llama-3.2": "meta-llama/Llama-3.2-11B-Vision-Instruct"
+            "llama-3.2": "meta-llama/Llama-3.2-11B-Vision-Instruct",
+            "gemini-3": "google/gemma-3-27b-it",
         }
 
-        if 'llama4' in model_id.lower() or 'llama-4' in model_id.lower():
+        lowered_id = model_id.lower()
+        if 'llama4' in lowered_id or 'llama-4' in lowered_id:
             model_id = 'llama-4'
+        elif 'llama' in lowered_id and ('3.2' in lowered_id or '3-2' in lowered_id):
+            model_id = 'llama-3.2'
+        elif 'gemini-3' in lowered_id:
+            model_id = 'gemini-3'
         else:
             raise Exception('Invalid model for VQA input type.')
 
