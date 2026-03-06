@@ -4,7 +4,7 @@
         "Google"
     ],
     "models": [
-        "vision-model-02"
+        "vision-model-01"
     ],
     "input_type": "vqa",
     "num_requests": 150,
