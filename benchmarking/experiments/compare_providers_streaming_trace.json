@@ -1,11 +1,9 @@
 {
     "providers": [
-        "Anthropic",
-        "AWSBedrock",
-        "Azure",
-        "Cloudflare",
-        "Groq",
-        "TogetherAI"
+        "Google",
+        "Hyperbolic",
+        "OpenAI",
+        "PerplexityAI"
     ],
     "models": [
         "common-model"
