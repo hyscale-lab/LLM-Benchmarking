@@ -1,7 +1,7 @@
 {
     "providers": [
-        "AWSBedrock",
-        "TogetherAI"
+        "TogetherAI",
+        "AWSBedrock"
     ],
     "models": [
         "vision-model-01"

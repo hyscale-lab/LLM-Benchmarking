@@ -96,6 +96,27 @@ class BaseProvider(AccuracyMixin, ProviderInterface):
 
         return text_response
 
+    def get_input_token_count(self, response, streaming):
+        """
+        Extracts the input (prompt) token count from OpenAI-compatible responses.
+        This includes text tokens and any visual tokens expanded from images.
+        """
+        if not response:
+            return 0
+
+        if not streaming:
+            usage = response.get('usage', {})
+            return usage.get('prompt_tokens', 0)
+        else:
+            # OpenAI and compatible providers usually send a final chunk 
+            # where 'usage' is populated and 'choices' is empty.
+            for chunk in reversed(response):
+                usage = chunk.get('usage')
+                if usage:
+                    return usage.get('prompt_tokens', 0)
+            
+            return 0
+
     def perform_inference(self, model, messages, max_output=100, verbosity=True):
 
         try:
@@ -153,7 +174,8 @@ class BaseProvider(AccuracyMixin, ProviderInterface):
                 messages=self.normalize_messages(messages),
                 stream=True,
                 max_tokens=max_output,
-                timeout=self.timeout
+                timeout=self.timeout,
+                stream_options={"include_usage": True}
             )
             print("SENT")
 
@@ -164,6 +186,9 @@ class BaseProvider(AccuracyMixin, ProviderInterface):
                     elapsed = timer() - start
                     print("[WARN] Streaming exceeded 90s, stopping early.")
                     break
+
+                if not chunk.choices:
+                    continue
 
                 if first_token_time is None:
                     first_token_time = timer()
@@ -176,7 +201,6 @@ class BaseProvider(AccuracyMixin, ProviderInterface):
                     elapsed = timer() - start
                     if verbosity:
                         print(f"\nTotal Response Time: {elapsed:.4f} seconds")
-                    break
 
                 time_to_next_token = timer()
                 inter_token_latency = time_to_next_token - prev_token_time
