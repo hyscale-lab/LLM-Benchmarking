@@ -1,10 +1,10 @@
 {
     "providers": [
-        "TogetherAI",
-        "AWSBedrock"
+        "Azure",
+        "Google"
     ],
     "models": [
-        "vision-model-01"
+        "vision-model-02"
     ],
     "input_type": "vqa",
     "num_requests": 150,
