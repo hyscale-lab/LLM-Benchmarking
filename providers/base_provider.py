@@ -108,13 +108,13 @@ class BaseProvider(AccuracyMixin, ProviderInterface):
             usage = response.get('usage', {})
             return usage.get('prompt_tokens', 0)
         else:
-            # OpenAI and compatible providers usually send a final chunk 
+            # OpenAI and compatible providers usually send a final chunk
             # where 'usage' is populated and 'choices' is empty.
             for chunk in reversed(response):
                 usage = chunk.get('usage')
                 if usage:
                     return usage.get('prompt_tokens', 0)
-            
+
             return 0
 
     def perform_inference(self, model, messages, max_output=100, verbosity=True):
