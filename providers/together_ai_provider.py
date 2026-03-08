@@ -20,5 +20,5 @@ class TogetherAI(BaseProvider):
             "meta-llama-3.1-405b-instruct": "meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo",
             "common-model": "meta-llama/Llama-3.3-70B-Instruct-Turbo",
             "reasoning-model": ["openai/gpt-oss-120b"],
-            "vision-model": "meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8"
+            "vision-model-01": "meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8"
         }
