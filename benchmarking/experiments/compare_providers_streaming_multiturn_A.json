@@ -1,0 +1,18 @@
+{
+    "providers": [
+        "Anthropic",
+        "AWSBedrock",
+        "Azure",
+        "Cloudflare",
+        "Google",
+        "Groq"
+    ],
+    "models": [
+        "common-model"
+    ],
+    "input_type": "multiturn",
+    "num_requests": 100,
+    "streaming": true,
+    "verbose": true,
+    "backend": true
+}
