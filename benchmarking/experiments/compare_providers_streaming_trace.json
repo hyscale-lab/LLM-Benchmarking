@@ -1,9 +1,6 @@
 {
     "providers": [
-        "Google",
-        "Hyperbolic",
-        "OpenAI",
-        "PerplexityAI"
+        "TogetherAI"
     ],
     "models": [
         "common-model"
