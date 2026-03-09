@@ -25,6 +25,7 @@ class Cloudflare(AccuracyMixin, ProviderInterface):
             "mistral-7b-instruct-v0.1": "@cf/mistral/mistral-7b-instruct-v0.1",
             "meta-llama-3.1-70b-instruct": "@cf/meta/llama-3.1-70b-instruct",
             "common-model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+            "cache-model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
             "reasoning-model": ["@cf/openai/gpt-oss-120b"]
         }
 

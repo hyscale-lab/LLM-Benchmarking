@@ -25,6 +25,7 @@ class Azure(AccuracyMixin, ProviderInterface):
             "llama-3.3-70b-instruct": "Llama-3.3-70B-Instruct",
             "meta-llama-3.1-8b-instruct": "Meta-Llama-3.1-8B-Instruct",
             "common-model": "Meta-Llama-3.1-8B-Instruct",
+            "cache-model": "gpt-4o",
             "reasoning-model": ["o4-mini", "gpt-4o"],
             "vision-model-01": "Llama-4-Maverick-17B-128E-Instruct-FP8",
             "vision-model-02": "Llama-3.2-11B-Vision-Instruct",

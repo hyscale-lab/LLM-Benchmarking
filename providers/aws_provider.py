@@ -22,6 +22,7 @@ class AWSBedrock(AccuracyMixin, ProviderInterface):
             "meta-llama-3-70b-instruct": "meta.llama3-70b-instruct-v1:0",
             "common-model": "meta.llama3-70b-instruct-v1:0",
             "reasoning-model": ["us.anthropic.claude-3-7-sonnet-20250219-v1:0"],
+            "cache-model": "anthropic.claude-sonnet-4-5-20250929-v1:0",
             "vision-model-01": "us.meta.llama4-maverick-17b-instruct-v1:0",
             "vision-model-02": "us.meta.llama3-2-11b-instruct-v1:0",
         }
@@ -42,6 +43,20 @@ class AWSBedrock(AccuracyMixin, ProviderInterface):
     def get_model_name(self, model):
         return self.model_map.get(model, None)  # or model
     
+    def apply_cache_markers(self, messages):
+        if len(messages) <= 1:
+            return messages
+        marked = []
+        for i, msg in enumerate(messages):
+            if i < len(messages) - 1:
+                content = msg["content"]
+                if isinstance(content, str):
+                    content = [{"type": "text", "text": content}, {"type": "_cachepoint"}]
+                marked.append({"role": msg["role"], "content": content})
+            else:
+                marked.append(msg)
+        return marked
+
     def normalize_messages(self, messages):
         if isinstance(messages, str):
             normalized_msgs = [{
@@ -66,14 +81,17 @@ class AWSBedrock(AccuracyMixin, ProviderInterface):
                         for item in content:
                             if item.get("type") == "text":
                                 new_content.append({"text": item["text"]})
-                            
+
+                            elif item.get("type") == "_cachepoint":
+                                new_content.append({"cachePoint": {"type": "default"}})
+
                             elif item.get("type") == "image":
                                 img_path = item["image_path"]
-                                
+
                                 # Bedrock strictly requires the format to be explicitly stated
                                 ext = os.path.splitext(img_path)[1][1:].lower()
                                 img_format = "jpeg" if ext in ["jpg", "jpeg"] else ext
-                                
+
                                 # Bedrock supports jpeg, png, webp, and gif
                                 if img_format not in ["jpeg", "png", "webp", "gif"]:
                                     print(f"Warning: Unsupported image format '{ext}'. Defaulting to jpeg.")
@@ -82,14 +100,14 @@ class AWSBedrock(AccuracyMixin, ProviderInterface):
                                 # Read the raw bytes (No Base64 encoding needed for Bedrock Converse API)
                                 with open(img_path, "rb") as img_file:
                                     img_bytes = img_file.read()
-                                    
+
                                 new_content.append({
                                     "image": {
                                         "format": img_format,
                                         "source": {"bytes": img_bytes}
                                     }
                                 })
-                                    
+
                         normalized_msgs.append({
                             "role": role,
                             "content": new_content

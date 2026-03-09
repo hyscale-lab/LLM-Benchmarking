@@ -17,6 +17,7 @@ class Anthropic(AccuracyMixin, ProviderInterface):
         self.model_map = {
             "claude-haiku-4-5": "claude-haiku-4-5-20251001",
             "common-model": "claude-haiku-4-5-20251001",
+            "cache-model": "claude-haiku-4-5-20251001",
             "reasoning-model": ["claude-sonnet-4-5-20250929"]
         }
 
@@ -40,6 +41,20 @@ class Anthropic(AccuracyMixin, ProviderInterface):
             str: The identifier of the model for API calls.
         """
         return self.model_map.get(model, None)
+
+    def apply_cache_markers(self, messages):
+        if len(messages) <= 1:
+            return messages
+        marked = []
+        for i, msg in enumerate(messages):
+            if i < len(messages) - 1:
+                content = msg["content"]
+                if isinstance(content, str):
+                    content = [{"type": "text", "text": content, "cache_control": {"type": "ephemeral"}}]
+                marked.append({"role": msg["role"], "content": content})
+            else:
+                marked.append(msg)
+        return marked
 
     def normalize_messages(self, messages):
         if isinstance(messages, str):

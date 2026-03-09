@@ -154,7 +154,15 @@ class ProviderInterface(ABC):
         Construct text response from raw response
         """
 
-    def perform_multiturn(self, model, time_interval, streaming, num_requests, verbosity):
+    def apply_cache_markers(self, messages):
+        """
+        Returns a copy of messages with provider-specific cache control markers applied
+        to all turns except the last (new user turn). No-op by default; overridden by
+        providers that require explicit cache markers (e.g. Anthropic, AWS Bedrock).
+        """
+        return messages
+
+    def perform_multiturn(self, model, time_interval, streaming, num_requests, verbosity, caching_enabled=False):
         """
         Perform using multiturn input
         """
@@ -207,6 +215,7 @@ class ProviderInterface(ABC):
 
                 # Perform Inference
                 print(f"------------ Turn: {(idx // 2) + 1}/{len(conversation) // 2} ------------")
+                messages_to_send = self.apply_cache_markers(current_messages) if caching_enabled else current_messages
                 for attempt in range(max_retries):
                     if attempt > 0:
                         print(f"Retrying... (Attempt {attempt + 1}/{max_retries})")
@@ -215,14 +224,14 @@ class ProviderInterface(ABC):
                     if streaming:
                         response = self.perform_inference_streaming(
                             model,
-                            current_messages,
+                            messages_to_send,
                             target_tokens,
                             verbosity
                         )
                     else:
                         response = self.perform_inference(
                             model,
-                            current_messages,
+                            messages_to_send,
                             target_tokens,
                             verbosity
                         )
