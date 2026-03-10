@@ -24,39 +24,39 @@ on:
       run_static:
         description: 'Run Static Benchmark'
         type: boolean
-        default: true
+        default: false
       run_trace_a:
         description: 'Run Trace Benchmark A'
         type: boolean
-        default: true
+        default: false
       run_trace_b:
         description: 'Run Trace Benchmark B'
         type: boolean
-        default: true
+        default: false
       run_multiturn_a:
         description: 'Run Multiturn Benchmark A'
         type: boolean
-        default: true
+        default: false
       run_multiturn_b:
         description: 'Run Multiturn Benchmark B'
         type: boolean
-        default: true
+        default: false
       run_multiturn_c:
         description: 'Run Multiturn Benchmark C'
         type: boolean
-        default: true
+        default: false
       run_vqa_a:
         description: 'Run VQA Benchmark A'
         type: boolean
-        default: true
+        default: false
       run_vqa_b:
         description: 'Run VQA Benchmark B'
         type: boolean
-        default: true
+        default: false
       run_vqa_v2:
         description: 'Run VQA Benchmark V2'
         type: boolean
-        default: true
+        default: false
   # schedule:
   #   # Monday (Static)
   #   - cron: "0 0 * * 1"
