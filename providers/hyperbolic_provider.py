@@ -28,6 +28,6 @@ class Hyperbolic(BaseProvider):
             "qwen2.5-vl-7b-instruct": "Qwen/Qwen2.5-VL-7B-Instruct",
             "meta-llama-3.1-70b-instruct": "meta-llama/Meta-Llama-3.1-70B-Instruct",
             "common-model": "Qwen/Qwen2.5-VL-7B-Instruct",
-            "cache-model": "meta-llama/Meta-Llama-3.1-70B-Instruct",
+            "cache-model": "meta-llama/Llama-3.3-70B-Instruct",
             "reasoning-model": ["openai/gpt-oss-120b"]
         }
