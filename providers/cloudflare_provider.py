@@ -25,6 +25,7 @@ class Cloudflare(AccuracyMixin, ProviderInterface):
             "mistral-7b-instruct-v0.1": "@cf/mistral/mistral-7b-instruct-v0.1",
             "meta-llama-3.1-70b-instruct": "@cf/meta/llama-3.1-70b-instruct",
             "common-model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+            "cache-model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
             "reasoning-model": ["@cf/openai/gpt-oss-120b"]
         }
 
@@ -61,6 +62,28 @@ class Cloudflare(AccuracyMixin, ProviderInterface):
 
         return normalized_msgs
     
+    def get_response_usage(self, response, streaming):
+        if not response:
+            return {"total_input": 0, "output": 0}
+
+        if streaming:
+            usage = {}
+            for block in response:
+                if isinstance(block, dict) and 'usage' in block:
+                    usage = block['usage']
+                    break
+        else:
+            usage = response.get("result", {}).get("usage", {})
+
+        result = {
+            "total_input": usage.get("prompt_tokens", 0),
+            "output": usage.get("completion_tokens", 0),
+        }
+        cached = usage.get("prompt_tokens_details", {}).get("cached_tokens")
+        if cached:
+            result["cache_read"] = cached
+        return result
+
     def construct_text_response(self, raw_response):
         if isinstance(raw_response, dict):
             text_response = raw_response["result"]["response"]

@@ -243,7 +243,7 @@ def run_benchmark(config, vllm_ip=None):
     elif input_type == "trace":
         benchmark.run_trace()
     elif input_type == "multiturn":
-        benchmark.run_multiturn(time_interval=10)
+        benchmark.run_multiturn(time_interval=15)
     elif input_type == "vqa":
         benchmark.run_vqa()
 
