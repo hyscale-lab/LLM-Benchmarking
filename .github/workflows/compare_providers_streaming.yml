@@ -1,5 +1,22 @@
 name: Compare Providers Streaming
 
+run-name: >-
+  ${{ github.event_name == 'schedule' &&
+    (github.event.schedule == '0 0 * * 1' && 'Scheduled: Static' ||
+     github.event.schedule == '0 0 * * 2' && 'Scheduled: Trace-A Trace-B' ||
+     github.event.schedule == '0 0 * * 3' && 'Scheduled: Multiturn-A Multiturn-B Multiturn-C' ||
+     github.event.schedule == '0 0 * * 4' && 'Scheduled: VQA-A VQA-B' ||
+     'Scheduled') ||
+    format('Manual:{0}{1}{2}{3}{4}{5}{6}{7}',
+      inputs.run_static && ' Static' || '',
+      inputs.run_trace_a && ' Trace-A' || '',
+      inputs.run_trace_b && ' Trace-B' || '',
+      inputs.run_multiturn_a && ' Multiturn-A' || '',
+      inputs.run_multiturn_b && ' Multiturn-B' || '',
+      inputs.run_multiturn_c && ' Multiturn-C' || '',
+      inputs.run_vqa_a && ' VQA-A' || '',
+      inputs.run_vqa_b && ' VQA-B' || '') }}
+
 on:
   workflow_dispatch:
     inputs:
@@ -236,6 +253,15 @@ jobs:
     - name: Run Multiturn Experiment A
       run: python -u main.py -c benchmarking/experiments/compare_providers_streaming_multiturn_A.json
 
+    - name: Upload Multiturn Logs
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: logs-multiturn-a
+        path: |
+          ${{ github.workspace }}/multiturn/logs/*.csv
+        if-no-files-found: warn
+
     - name: Upload Experiment Outputs
       uses: actions/upload-artifact@v4
       with:
@@ -276,6 +302,15 @@ jobs:
     - name: Run Multiturn Experiment B
       run: python -u main.py -c benchmarking/experiments/compare_providers_streaming_multiturn_B.json
 
+    - name: Upload Multiturn Logs
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: logs-multiturn-b
+        path: |
+          ${{ github.workspace }}/multiturn/logs/*.csv
+        if-no-files-found: warn
+
     - name: Upload Experiment Outputs
       uses: actions/upload-artifact@v4
       with:
@@ -315,6 +350,15 @@ jobs:
 
     - name: Run Multiturn Experiment C
       run: python -u main.py -c benchmarking/experiments/compare_providers_streaming_multiturn_C.json
+
+    - name: Upload Multiturn Logs
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: logs-multiturn-c
+        path: |
+          ${{ github.workspace }}/multiturn/logs/*.csv
+        if-no-files-found: warn
 
     - name: Upload Experiment Outputs
       uses: actions/upload-artifact@v4
