@@ -5,7 +5,7 @@ run-name: >-
     (github.event.schedule == '0 0 * * 1' && 'Scheduled: Static' ||
      github.event.schedule == '0 0 * * 2' && 'Scheduled: Trace-A Trace-B' ||
      github.event.schedule == '0 0 * * 3' && 'Scheduled: Multiturn-A Multiturn-B Multiturn-C' ||
-     github.event.schedule == '0 0 * * 4' && 'Scheduled: VQA-A VQA-B VQA-V2' ||
+     github.event.schedule == '0 0 * * 4' && 'Scheduled: VQA-A VQA-B' ||
      'Scheduled') ||
     format('Manual:{0}{1}{2}{3}{4}{5}{6}{7}{8}',
       inputs.run_static && ' Static' || '',
@@ -64,7 +64,7 @@ on:
   #   - cron: "0 0 * * 2"
   #   # Wednesday (Multiturn A + B + C)
   #   - cron: "0 0 * * 3"
-  #   # Thursday (VQA A + B + V2)
+  #   # Thursday (VQA A + B)
   #   - cron: "0 0 * * 4"
 
 env:
@@ -481,7 +481,7 @@ jobs:
     name: VQA Benchmark V2
     runs-on: ubuntu-latest
 
-    if: ${{ (github.event_name == 'workflow_dispatch' && inputs.run_vqa_v2 == true) || (github.event_name == 'schedule' && github.event.schedule == '0 0 * * 4') }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_vqa_v2 == true }}
     steps:
     - name: Check out repository
       uses: actions/checkout@v4

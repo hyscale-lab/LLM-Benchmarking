@@ -1,7 +1,6 @@
 {
     "providers": [
-        "Azure",
-        "Google"
+        "Azure"
     ],
     "models": [
         "vision-model-02"
