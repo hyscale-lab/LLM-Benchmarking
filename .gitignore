@@ -29,3 +29,6 @@ trace/proxy/*.log
 
 # Logs from vqa runs
 vqa
+
+# Logs from multiturn runs
+multiturn

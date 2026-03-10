@@ -1,0 +1,15 @@
+{
+    "providers": [
+        "Cloudflare",
+        "Google",
+        "Hyperbolic"
+    ],
+    "models": [
+        "cache-model"
+    ],
+    "input_type": "multiturn",
+    "num_requests": 100,
+    "streaming": true,
+    "verbose": true,
+    "backend": true
+}

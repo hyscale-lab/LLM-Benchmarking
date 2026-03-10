@@ -91,31 +91,33 @@ class BaseProvider(AccuracyMixin, ProviderInterface):
             text_response = "".join(
                 block['choices'][0]['delta']['content']
                 for block in raw_response
-                if block['choices'][0]['delta']['content']
+                if len(block['choices']) > 0 and block['choices'][0].get('delta', {}).get('content')
             )
 
         return text_response
 
-    def get_input_token_count(self, response, streaming):
-        """
-        Extracts the input (prompt) token count from OpenAI-compatible responses.
-        This includes text tokens and any visual tokens expanded from images.
-        """
+    def get_response_usage(self, response, streaming):
         if not response:
-            return 0
+            return {"total_input": 0, "output": 0}
 
         if not streaming:
             usage = response.get('usage', {})
-            return usage.get('prompt_tokens', 0)
         else:
-            # OpenAI and compatible providers usually send a final chunk
-            # where 'usage' is populated and 'choices' is empty.
+            usage = {}
             for chunk in reversed(response):
-                usage = chunk.get('usage')
-                if usage:
-                    return usage.get('prompt_tokens', 0)
+                if chunk.get('usage'):
+                    usage = chunk['usage']
+                    break
 
-            return 0
+        result = {
+            "total_input": usage.get('prompt_tokens', 0),
+            "output": usage.get('completion_tokens', 0)
+        }
+        details = usage.get('prompt_tokens_details') or {}
+        cached = details.get('cached_tokens')
+        if cached is not None:
+            result["cache_read"] = cached
+        return result
 
     def perform_inference(self, model, messages, max_output=100, verbosity=True):
 
@@ -175,7 +177,7 @@ class BaseProvider(AccuracyMixin, ProviderInterface):
                 stream=True,
                 max_tokens=max_output,
                 timeout=self.timeout,
-                stream_options={"include_usage": True}
+                extra_body={"stream_options": {"include_usage": True}}
             )
             print("SENT")
 

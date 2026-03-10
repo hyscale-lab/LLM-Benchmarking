@@ -49,6 +49,8 @@ class ProviderInterface(ABC):
 
         # for multiturn input type
         self.multiturn_dataset_path = os.getenv('MULTITURN_DATASET_PATH')
+        self.multiturn_log_path = './multiturn/logs'
+        self._cache_write_confirmed = False  # reset per conversation; used by apply_cache_markers
 
         # for vqa input type
         self.vqa_dataset_path = os.getenv('VQA_DATASET_PATH')
@@ -154,7 +156,23 @@ class ProviderInterface(ABC):
         Construct text response from raw response
         """
 
-    def perform_multiturn(self, model, time_interval, streaming, num_requests, verbosity):
+    def get_response_usage(self, response, streaming):
+        """
+        Returns token usage from a completed inference response.
+        Override in providers that support caching to extract cache-aware counts.
+        Returns dict with keys: total_input (all input tokens incl. cache read/write), output.
+        """
+        return {"total_input": 0, "output": 0}
+
+    def apply_cache_markers(self, messages):
+        """
+        Returns a copy of messages with provider-specific cache control markers applied.
+        No-op by default; overridden by providers that require explicit cache markers
+        (e.g. Anthropic, AWS Bedrock).
+        """
+        return messages
+
+    def perform_multiturn(self, model, time_interval, streaming, num_requests, verbosity, caching_enabled=False):
         """
         Perform using multiturn input
         """
@@ -393,7 +411,7 @@ class ProviderInterface(ABC):
                 continue
 
             # Prepare messages
-            total_tokens = self.get_input_token_count(response, streaming)
+            total_tokens = self.get_response_usage(response, streaming)["total_input"]
             print(f"Generating dummy text with {total_tokens} tokens...")
             dummy_text = self.get_vqa_dummy_text(
                 self.get_model_name(model),
@@ -436,7 +454,7 @@ class ProviderInterface(ABC):
                 print("Text passes failed. Skipping sample...\n")
                 continue
 
-            print(f"Pass 2 reported {self.get_input_token_count(response, streaming)} input tokens.")
+            print(f"Pass 2 reported {self.get_response_usage(response, streaming)['total_input']} input tokens.")
 
             # --- CALCULATE VISION ENCODER LATENCY ---
             ttft_multimodal = self.metrics['timetofirsttoken'][model][-2]

@@ -31,6 +31,7 @@ class PerplexityAI(BaseProvider):
             "sonar-pro": "sonar-pro",
             "sonar-reasoning-pro": "sonar-reasoning-pro",
             "common-model": "sonar-pro",
+            "cache-model": "sonar-pro",
         }
 
     def perform_inference_streaming(

@@ -120,27 +120,37 @@ class Benchmark:
         Store benchmark data in DynamoDB using an optimized schema with nested metrics.
         """
         table = self.dynamodb.Table(self.table_name)
-        try:
-            for provider_name, models in self.benchmark_data["providers"].items():
-                for model_name, metrics in models.items():
-                    model_key = "common" if self.models[0] in ["common-model", "vision-model"] else "multi"
-                    item = {
-                        "id": str(uuid.uuid4()),
-                        "run_id": self.benchmark_data["run_id"],
-                        "timestamp": self.benchmark_data["timestamp"],
-                        "provider_name": provider_name,
-                        "model_name": model_name,
-                        "model_key": model_key,
-                        "prompt": self.benchmark_data["prompt"],
-                        "metrics": json.dumps(metrics),  # Serialize metrics as JSON string
-                        "streaming": self.streaming,
-                        "input_type": self.input_type
-                    }
-                    print(item)
-                    table.put_item(Item=item)
-            print(f"Successfully stored benchmark data for run ID {self.run_id}")
-        except ClientError as e:
-            print(f"Error saving to DynamoDB: {e.response['Error']['Message']}")
+        for provider_name, models in self.benchmark_data["providers"].items():
+            for model_name, metrics in models.items():
+                model_key = "common" if self.models[0] in ["common-model", "vision-model"] else "multi"
+                item = {
+                    "id": str(uuid.uuid4()),
+                    "run_id": self.benchmark_data["run_id"],
+                    "timestamp": self.benchmark_data["timestamp"],
+                    "provider_name": provider_name,
+                    "model_name": model_name,
+                    "model_key": model_key,
+                    "prompt": self.benchmark_data["prompt"],
+                    "metrics": json.dumps(metrics),  # Serialize metrics as JSON string
+                    "streaming": self.streaming,
+                    "input_type": self.input_type
+                }
+                print(item)
+                backoff = 1
+                while True:
+                    try:
+                        table.put_item(Item=item)
+                        break
+                    except ClientError as e:
+                        error_code = e.response.get("Error", {}).get("Code", "")
+                        if error_code == "ProvisionedThroughputExceededException":
+                            print(f"Write throttled for {provider_name}/{model_name}, retrying in {backoff}s")
+                            time.sleep(backoff)
+                            backoff = min(backoff * 2, 30)
+                        else:
+                            print(f"Error saving to DynamoDB: {e.response['Error']['Message']}")
+                            return
+        print(f"Successfully stored benchmark data for run ID {self.run_id}")
 
     def add_metric_data(self, provider_name, model_name, metric, latencies, track=None):
         """
@@ -416,7 +426,7 @@ class Benchmark:
                 if provider_name == "vLLM":
                     provider.perform_multiturn(model, time_interval, self.streaming, self.num_requests, self.verbosity, self.vllm_ip)
                 else:
-                    provider.perform_multiturn(model, time_interval, self.streaming, self.num_requests, self.verbosity)
+                    provider.perform_multiturn(model, time_interval, self.streaming, self.num_requests, self.verbosity, caching_enabled=True)
 
                 # --- FINISH TIME & DURATION ---
                 end_time = datetime.now()

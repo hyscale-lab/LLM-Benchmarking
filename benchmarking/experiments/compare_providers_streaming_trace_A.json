@@ -1,6 +1,11 @@
 {
     "providers": [
-        "TogetherAI"
+        "Anthropic",
+        "AWSBedrock",
+        "Azure",
+        "Cloudflare",
+        "Google",
+        "Groq"
     ],
     "models": [
         "common-model"

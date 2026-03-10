@@ -1,11 +1,5 @@
 {
     "providers": [
-        "Anthropic",
-        "AWSBedrock",
-        "Azure",
-        "Cloudflare",
-        "Google",
-        "Groq",
         "Hyperbolic",
         "OpenAI",
         "PerplexityAI",
@@ -14,7 +8,7 @@
     "models": [
         "common-model"
     ],
-    "input_type": "multiturn",
+    "input_type": "trace",
     "num_requests": 100,
     "streaming": true,
     "verbose": true,
