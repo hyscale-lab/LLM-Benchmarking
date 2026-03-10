@@ -20,9 +20,8 @@ class AWSBedrock(AccuracyMixin, ProviderInterface):
         # model names
         self.model_map = {
             "meta-llama-3-70b-instruct": "meta.llama3-70b-instruct-v1:0",
-            "common-model": "us.meta.llama3-3-70b-instruct-v1:0",
+            "common-model": "meta.llama3-70b-instruct-v1:0",
             "reasoning-model": ["us.anthropic.claude-3-7-sonnet-20250219-v1:0"],
-            "cache-model": "us.anthropic.claude-sonnet-4-5-20250929-v1:0",
             "vision-model-01": "us.meta.llama4-maverick-17b-instruct-v1:0",
             "vision-model-02": "us.meta.llama3-2-11b-instruct-v1:0",
         }
@@ -43,67 +42,6 @@ class AWSBedrock(AccuracyMixin, ProviderInterface):
     def get_model_name(self, model):
         return self.model_map.get(model, None)  # or model
     
-    def get_response_usage(self, response, streaming):
-        if not response:
-            return {"total_input": 0, "output": 0}
-
-        if not streaming:
-            usage = response.get('usage', {})
-        else:
-            usage = {}
-            for event in reversed(response):
-                if 'metadata' in event:
-                    usage = event['metadata'].get('usage', {})
-                    break
-
-        result = {
-            "total_input": (
-                usage.get('inputTokens', 0)
-                + usage.get('cacheReadInputTokens', 0)
-                + usage.get('cacheWriteInputTokens', 0)
-            ),
-            "output": usage.get('outputTokens', 0)
-        }
-        if 'cacheReadInputTokens' in usage:
-            result["cache_read"] = usage['cacheReadInputTokens']
-        if 'cacheWriteInputTokens' in usage:
-            result["cache_write"] = usage['cacheWriteInputTokens']
-        return result
-
-    def apply_cache_markers(self, messages):
-        # Find indices of all user messages
-        user_indices = [i for i, m in enumerate(messages) if m["role"] == "user"]
-        if not user_indices:
-            return messages
-
-        # Strip any existing _cachepoint entries (clean slate each turn)
-        def strip_cachepoints(msg):
-            content = msg["content"]
-            if isinstance(content, list):
-                cleaned = [item for item in content if item.get("type") != "_cachepoint"]
-                return {**msg, "content": cleaned}
-            return msg
-
-        marked = [strip_cachepoints(m) for m in messages]
-
-        # Phase 1 (no confirmed write yet): 1 cachePoint on last user msg — slides forward until API confirms a write
-        # Phase 2 (write confirmed by API response): 2 cachePoints — second-to-last (READ) + last (WRITE)
-        if not self._cache_write_confirmed or len(user_indices) < 2:
-            to_mark = [user_indices[-1]]
-        else:
-            to_mark = [user_indices[-2], user_indices[-1]]
-
-        for idx in to_mark:
-            msg = marked[idx]
-            content = msg["content"]
-            if isinstance(content, str):
-                content = [{"type": "text", "text": content}, {"type": "_cachepoint"}]
-            else:
-                content = list(content) + [{"type": "_cachepoint"}]
-            marked[idx] = {**msg, "content": content}
-
-        return marked
-
     def normalize_messages(self, messages):
         if isinstance(messages, str):
             normalized_msgs = [{
@@ -128,17 +66,14 @@ class AWSBedrock(AccuracyMixin, ProviderInterface):
                         for item in content:
                             if item.get("type") == "text":
                                 new_content.append({"text": item["text"]})
-
-                            elif item.get("type") == "_cachepoint":
-                                new_content.append({"cachePoint": {"type": "default"}})
-
+                            
                             elif item.get("type") == "image":
                                 img_path = item["image_path"]
-
+                                
                                 # Bedrock strictly requires the format to be explicitly stated
                                 ext = os.path.splitext(img_path)[1][1:].lower()
                                 img_format = "jpeg" if ext in ["jpg", "jpeg"] else ext
-
+                                
                                 # Bedrock supports jpeg, png, webp, and gif
                                 if img_format not in ["jpeg", "png", "webp", "gif"]:
                                     print(f"Warning: Unsupported image format '{ext}'. Defaulting to jpeg.")
@@ -147,33 +82,24 @@ class AWSBedrock(AccuracyMixin, ProviderInterface):
                                 # Read the raw bytes (No Base64 encoding needed for Bedrock Converse API)
                                 with open(img_path, "rb") as img_file:
                                     img_bytes = img_file.read()
-
+                                    
                                 new_content.append({
                                     "image": {
                                         "format": img_format,
                                         "source": {"bytes": img_bytes}
                                     }
                                 })
-
+                                    
                         normalized_msgs.append({
                             "role": role,
                             "content": new_content
                         })
 
                 elif role == "assistant":
-                    if isinstance(content, list):
-                        new_content = []
-                        for item in content:
-                            if item.get("type") == "text":
-                                new_content.append({"text": item["text"]})
-                            elif item.get("type") == "_cachepoint":
-                                new_content.append({"cachePoint": {"type": "default"}})
-                        normalized_msgs.append({"role": role, "content": new_content})
-                    else:
-                        normalized_msgs.append({
-                            "role": role,
-                            "content": [{"text": content}]
-                        })
+                    normalized_msgs.append({
+                        "role": role,
+                        "content": [{"text": content}]
+                    })
                 else:
                     print(f"Invalid role found in messages: {role}")
 
@@ -190,6 +116,23 @@ class AWSBedrock(AccuracyMixin, ProviderInterface):
             )
 
         return text_response
+
+    def get_input_token_count(self, response, streaming):
+        if not response:
+            return 0
+
+        if not streaming:
+            usage = response.get('usage', {})
+            return usage.get('inputTokens', 0)
+        else:
+            # The 'metadata' event is usually the last or second-to-last event
+            for event in reversed(response):
+                if 'metadata' in event:
+                    usage = event['metadata'].get('usage', {})
+                    return usage.get('inputTokens', 0)
+
+            # Fall back to 0
+            return 0
 
     def perform_inference(self, model, messages, max_output=100, verbosity=True):
         """

@@ -17,7 +17,6 @@ class Anthropic(AccuracyMixin, ProviderInterface):
         self.model_map = {
             "claude-haiku-4-5": "claude-haiku-4-5-20251001",
             "common-model": "claude-haiku-4-5-20251001",
-            "cache-model": "claude-haiku-4-5-20251001",
             "reasoning-model": ["claude-sonnet-4-5-20250929"]
         }
 
@@ -42,66 +41,6 @@ class Anthropic(AccuracyMixin, ProviderInterface):
         """
         return self.model_map.get(model, None)
 
-    def get_response_usage(self, response, streaming):
-        if not response:
-            return {"total_input": 0, "output": 0}
-
-        if streaming:
-            usage = next((item['usage'] for item in reversed(response) if isinstance(item, dict) and 'usage' in item), {})
-        else:
-            usage = response.get('usage', {})
-
-        cache_read = usage.get('cache_read_input_tokens', 0)
-        cache_write = usage.get('cache_creation_input_tokens', 0)
-        result = {
-            "total_input": usage.get('input_tokens', 0) + cache_read + cache_write,
-            "output": usage.get('output_tokens', 0)
-        }
-        if 'cache_read_input_tokens' in usage:
-            result["cache_read"] = cache_read
-        if 'cache_creation_input_tokens' in usage:
-            result["cache_write"] = cache_write
-        return result
-
-    def apply_cache_markers(self, messages):
-        user_indices = [i for i, m in enumerate(messages) if m["role"] == "user"]
-        if not user_indices:
-            return messages
-
-        # Strip existing cache_control from all messages (clean slate each turn)
-        def strip_cache_control(msg):
-            content = msg["content"]
-            if isinstance(content, list):
-                cleaned = [{k: v for k, v in block.items() if k != "cache_control"}
-                           if isinstance(block, dict) else block
-                           for block in content]
-                return {**msg, "content": cleaned}
-            return msg
-
-        marked = [strip_cache_control(m) for m in messages]
-
-        # Phase 1 (no confirmed write yet): 1 marker on last user msg — slides forward until API confirms a write
-        # Phase 2 (write confirmed by API response): 2 markers — second-to-last user (READ) + last user (WRITE)
-        if not self._cache_write_confirmed or len(user_indices) < 2:
-            to_mark = [user_indices[-1]]
-        else:
-            to_mark = [user_indices[-2], user_indices[-1]]
-
-        for idx in to_mark:
-            msg = marked[idx]
-            content = msg["content"]
-            if isinstance(content, str):
-                content = [{"type": "text", "text": content, "cache_control": {"type": "ephemeral"}}]
-            elif isinstance(content, list):
-                content = list(content)
-                for j in range(len(content) - 1, -1, -1):
-                    if isinstance(content[j], dict) and content[j].get("type") == "text":
-                        content[j] = {**content[j], "cache_control": {"type": "ephemeral"}}
-                        break
-            marked[idx] = {**msg, "content": content}
-
-        return marked
-
     def normalize_messages(self, messages):
         if isinstance(messages, str):
             normalized_msgs = [{"role": "user", "content": messages}]
@@ -124,7 +63,7 @@ class Anthropic(AccuracyMixin, ProviderInterface):
             for block in raw_response['content']:
                 text_response += block['text']
         elif isinstance(raw_response, list):
-            text_response = "".join(item for item in raw_response if isinstance(item, str))
+            text_response = "".join(raw_response)
 
         return text_response
 
@@ -233,8 +172,6 @@ class Anthropic(AccuracyMixin, ProviderInterface):
                 if verbosity:
                     print(f"\nTotal Response Time: {elapsed:.4f} seconds")
                     print(f"Total tokens: {len(inter_token_latencies)}")
-
-                response_list.append(stream.get_final_message().model_dump())
 
             # Log remaining metrics
             token_count = len(inter_token_latencies) + (1 if TTFT is not None else 0)

@@ -5,12 +5,16 @@
         "Azure",
         "Cloudflare",
         "Google",
-        "Groq"
+        "Groq",
+        "Hyperbolic",
+        "OpenAI",
+        "PerplexityAI",
+        "TogetherAI"
     ],
     "models": [
         "common-model"
     ],
-    "input_type": "trace",
+    "input_type": "multiturn",
     "num_requests": 100,
     "streaming": true,
     "verbose": true,
