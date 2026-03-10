@@ -49,6 +49,7 @@ class ProviderInterface(ABC):
 
         # for multiturn input type
         self.multiturn_dataset_path = os.getenv('MULTITURN_DATASET_PATH')
+        self.multiturn_log_path = './multiturn/logs'
         self._cache_write_confirmed = False  # reset per conversation; used by apply_cache_markers
 
         # for vqa input type
@@ -196,6 +197,15 @@ class ProviderInterface(ABC):
 
         conv_iter = _load_conversation_iterator(self.multiturn_dataset_path)
 
+        # Initialize log file
+        safe_model_name = self.get_model_name(model).replace("/", "_").replace(":", "_")
+        csv_filename = f"multiturn_usage_{self.__class__.__name__}_{safe_model_name}.csv"
+        print(f"Initializing log file: {csv_filename}")
+        os.makedirs(self.multiturn_log_path, exist_ok=True)
+        with open(os.path.join(self.multiturn_log_path, csv_filename), mode='w', newline='', encoding='utf-8') as f:
+            writer = csv.writer(f)
+            writer.writerow(["conversation", "turn", "total_input", "output", "cache_read", "cache_write"])
+
         request_id = 0
         max_retries = 3
         for i, conversation in enumerate(conv_iter):
@@ -255,12 +265,22 @@ class ProviderInterface(ABC):
                     print("Turn failed. Skipping conversation...\n")
                     break  # Turn failed. SKIP conversation
 
-                # Advance cache phase when a write is confirmed by the API response
-                if caching_enabled:
-                    usage = self.get_response_usage(response, streaming)
-                    print(f"\nProvider Usage: {usage}\n")
-                    if usage.get('cache_write', 0) > 0:
-                        self._cache_write_confirmed = True
+                # Log usage and advance cache phase when a write is confirmed
+                usage = self.get_response_usage(response, streaming)
+                print(f"\nProvider Usage: {usage}\n")
+                if caching_enabled and usage.get('cache_write', 0) > 0:
+                    self._cache_write_confirmed = True
+
+                with open(os.path.join(self.multiturn_log_path, csv_filename), mode='a', newline='', encoding='utf-8') as f:
+                    writer = csv.writer(f)
+                    writer.writerow([
+                        i + 1,
+                        (idx // 2) + 1,
+                        usage.get('total_input', 0),
+                        usage.get('output', 0),
+                        usage.get('cache_read', 0),
+                        usage.get('cache_write', 0),
+                    ])
 
                 # Update Context with actual response
                 current_messages.append({
