@@ -49,6 +49,8 @@ class ProviderInterface(ABC):
 
         # for multiturn input type
         self.multiturn_dataset_path = os.getenv('MULTITURN_DATASET_PATH')
+        self.multiturn_log_path = './multiturn/logs'
+        self._cache_write_confirmed = False  # reset per conversation; used by apply_cache_markers
 
         # for vqa input type
         self.vqa_dataset_path = os.getenv('VQA_DATASET_PATH')
@@ -154,7 +156,23 @@ class ProviderInterface(ABC):
         Construct text response from raw response
         """
 
-    def perform_multiturn(self, model, time_interval, streaming, num_requests, verbosity):
+    def get_response_usage(self, response, streaming):
+        """
+        Returns token usage from a completed inference response.
+        Override in providers that support caching to extract cache-aware counts.
+        Returns dict with keys: total_input (all input tokens incl. cache read/write), output.
+        """
+        return {"total_input": 0, "output": 0}
+
+    def apply_cache_markers(self, messages):
+        """
+        Returns a copy of messages with provider-specific cache control markers applied.
+        No-op by default; overridden by providers that require explicit cache markers
+        (e.g. Anthropic, AWS Bedrock).
+        """
+        return messages
+
+    def perform_multiturn(self, model, time_interval, streaming, num_requests, verbosity, caching_enabled=False):
         """
         Perform using multiturn input
         """
@@ -179,9 +197,19 @@ class ProviderInterface(ABC):
 
         conv_iter = _load_conversation_iterator(self.multiturn_dataset_path)
 
+        # Initialize log file
+        safe_model_name = self.get_model_name(model).replace("/", "_").replace(":", "_")
+        csv_filename = f"multiturn_usage_{self.__class__.__name__}_{safe_model_name}.csv"
+        print(f"Initializing log file: {csv_filename}")
+        os.makedirs(self.multiturn_log_path, exist_ok=True)
+        with open(os.path.join(self.multiturn_log_path, csv_filename), mode='w', newline='', encoding='utf-8') as f:
+            writer = csv.writer(f)
+            writer.writerow(["conversation", "turn", "total_input", "output", "cache_read", "cache_write"])
+
         request_id = 0
         max_retries = 3
         for i, conversation in enumerate(conv_iter):
+            self._cache_write_confirmed = False  # reset per conversation
             print(f"============ Conversation: {i + 1} ============")
 
             current_messages = []
@@ -207,6 +235,7 @@ class ProviderInterface(ABC):
 
                 # Perform Inference
                 print(f"------------ Turn: {(idx // 2) + 1}/{len(conversation) // 2} ------------")
+                messages_to_send = self.apply_cache_markers(current_messages) if caching_enabled else current_messages
                 for attempt in range(max_retries):
                     if attempt > 0:
                         print(f"Retrying... (Attempt {attempt + 1}/{max_retries})")
@@ -215,14 +244,14 @@ class ProviderInterface(ABC):
                     if streaming:
                         response = self.perform_inference_streaming(
                             model,
-                            current_messages,
+                            messages_to_send,
                             target_tokens,
                             verbosity
                         )
                     else:
                         response = self.perform_inference(
                             model,
-                            current_messages,
+                            messages_to_send,
                             target_tokens,
                             verbosity
                         )
@@ -235,6 +264,23 @@ class ProviderInterface(ABC):
                 else:
                     print("Turn failed. Skipping conversation...\n")
                     break  # Turn failed. SKIP conversation
+
+                # Log usage and advance cache phase when a write is confirmed
+                usage = self.get_response_usage(response, streaming)
+                print(f"\nProvider Usage: {usage}\n")
+                if caching_enabled and usage.get('cache_write', 0) > 0:
+                    self._cache_write_confirmed = True
+
+                with open(os.path.join(self.multiturn_log_path, csv_filename), mode='a', newline='', encoding='utf-8') as f:
+                    writer = csv.writer(f)
+                    writer.writerow([
+                        i + 1,
+                        (idx // 2) + 1,
+                        usage.get('total_input', 0),
+                        usage.get('output', 0),
+                        usage.get('cache_read', 0),
+                        usage.get('cache_write', 0),
+                    ])
 
                 # Update Context with actual response
                 current_messages.append({
@@ -393,7 +439,7 @@ class ProviderInterface(ABC):
                 continue
 
             # Prepare messages
-            total_tokens = self.get_input_token_count(response, streaming)
+            total_tokens = self.get_response_usage(response, streaming)["total_input"]
             print(f"Generating dummy text with {total_tokens} tokens...")
             dummy_text = self.get_vqa_dummy_text(
                 self.get_model_name(model),
@@ -436,7 +482,7 @@ class ProviderInterface(ABC):
                 print("Text passes failed. Skipping sample...\n")
                 continue
 
-            print(f"Pass 2 reported {self.get_input_token_count(response, streaming)} input tokens.")
+            print(f"Pass 2 reported {self.get_response_usage(response, streaming)['total_input']} input tokens.")
 
             # --- CALCULATE VISION ENCODER LATENCY ---
             ttft_multimodal = self.metrics['timetofirsttoken'][model][-2]

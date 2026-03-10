@@ -416,7 +416,7 @@ class Benchmark:
                 if provider_name == "vLLM":
                     provider.perform_multiturn(model, time_interval, self.streaming, self.num_requests, self.verbosity, self.vllm_ip)
                 else:
-                    provider.perform_multiturn(model, time_interval, self.streaming, self.num_requests, self.verbosity)
+                    provider.perform_multiturn(model, time_interval, self.streaming, self.num_requests, self.verbosity, caching_enabled=True)
 
                 # --- FINISH TIME & DURATION ---
                 end_time = datetime.now()
