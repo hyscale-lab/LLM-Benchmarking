@@ -197,6 +197,15 @@ class ProviderInterface(ABC):
 
         conv_iter = _load_conversation_iterator(self.multiturn_dataset_path)
 
+        # Initialize log file
+        safe_model_name = self.get_model_name(model).replace("/", "_").replace(":", "_")
+        csv_filename = f"multiturn_usage_{self.__class__.__name__}_{safe_model_name}.csv"
+        print(f"Initializing log file: {csv_filename}")
+        os.makedirs(self.multiturn_log_path, exist_ok=True)
+        with open(os.path.join(self.multiturn_log_path, csv_filename), mode='w', newline='', encoding='utf-8') as f:
+            writer = csv.writer(f)
+            writer.writerow(["request", "total_input", "output", "cache_read", "cache_write"])
+
         max_retries = 3
         for i, conversation in enumerate(conv_iter):
             if i == num_requests:
@@ -269,6 +278,21 @@ class ProviderInterface(ABC):
 
             else:
                 print("Request failed. Skipping request...\n")
+                time.sleep(time_interval)
+                continue
+
+            # Log usage
+            usage = self.get_response_usage(response, streaming)
+            print(f"\nProvider Usage: {usage}\n")
+            with open(os.path.join(self.multiturn_log_path, csv_filename), mode='a', newline='', encoding='utf-8') as f:
+                writer = csv.writer(f)
+                writer.writerow([
+                    i + 1,
+                    usage.get('total_input', 0),
+                    usage.get('output', 0),
+                    usage.get('cache_read', 0),
+                    usage.get('cache_write', 0),
+                ])
 
             # Mimic human behaviour
             time.sleep(time_interval)
