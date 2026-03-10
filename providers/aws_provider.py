@@ -24,7 +24,6 @@ class AWSBedrock(AccuracyMixin, ProviderInterface):
             "reasoning-model": ["us.anthropic.claude-3-7-sonnet-20250219-v1:0"],
             "cache-model": "us.anthropic.claude-sonnet-4-5-20250929-v1:0",
             "vision-model-01": "us.meta.llama4-maverick-17b-instruct-v1:0",
-            "vision-model-02": "us.meta.llama3-2-11b-instruct-v1:0",
         }
 
     def initialize_client(self):

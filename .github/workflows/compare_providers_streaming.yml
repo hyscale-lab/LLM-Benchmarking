@@ -5,9 +5,9 @@ run-name: >-
     (github.event.schedule == '0 0 * * 1' && 'Scheduled: Static' ||
      github.event.schedule == '0 0 * * 2' && 'Scheduled: Trace-A Trace-B' ||
      github.event.schedule == '0 0 * * 3' && 'Scheduled: Multiturn-A Multiturn-B Multiturn-C' ||
-     github.event.schedule == '0 0 * * 4' && 'Scheduled: VQA-A VQA-B' ||
+     github.event.schedule == '0 0 * * 4' && 'Scheduled: VQA-A VQA-B VQA-V2' ||
      'Scheduled') ||
-    format('Manual:{0}{1}{2}{3}{4}{5}{6}{7}',
+    format('Manual:{0}{1}{2}{3}{4}{5}{6}{7}{8}',
       inputs.run_static && ' Static' || '',
       inputs.run_trace_a && ' Trace-A' || '',
       inputs.run_trace_b && ' Trace-B' || '',
@@ -15,7 +15,8 @@ run-name: >-
       inputs.run_multiturn_b && ' Multiturn-B' || '',
       inputs.run_multiturn_c && ' Multiturn-C' || '',
       inputs.run_vqa_a && ' VQA-A' || '',
-      inputs.run_vqa_b && ' VQA-B' || '') }}
+      inputs.run_vqa_b && ' VQA-B' || '',
+      inputs.run_vqa_v2 && ' VQA-V2' || '') }}
 
 on:
   workflow_dispatch:
@@ -52,6 +53,10 @@ on:
         description: 'Run VQA Benchmark B'
         type: boolean
         default: true
+      run_vqa_v2:
+        description: 'Run VQA Benchmark V2'
+        type: boolean
+        default: true
   # schedule:
   #   # Monday (Static)
   #   - cron: "0 0 * * 1"
@@ -59,7 +64,7 @@ on:
   #   - cron: "0 0 * * 2"
   #   # Wednesday (Multiturn A + B + C)
   #   - cron: "0 0 * * 3"
-  #   # Thursday (VQA A + B)
+  #   # Thursday (VQA A + B + V2)
   #   - cron: "0 0 * * 4"
 
 env:
@@ -472,12 +477,65 @@ jobs:
         name: results-vqa-b
         path: ${{ github.workspace }}/benchmark_graph
 
+  vqa-benchmark-v2:
+    name: VQA Benchmark V2
+    runs-on: ubuntu-latest
+
+    if: ${{ (github.event_name == 'workflow_dispatch' && inputs.run_vqa_v2 == true) || (github.event_name == 'schedule' && github.event.schedule == '0 0 * * 4') }}
+    steps:
+    - name: Check out repository
+      uses: actions/checkout@v4
+
+    - name: Authenticate to Google Cloud
+      uses: 'google-github-actions/auth@v2'
+      with:
+        credentials_json: '${{ secrets.GOOGLE_CREDENTIALS }}'
+
+    - name: Set up Python 3.12
+      uses: actions/setup-python@v5
+      with:
+        python-version: 3.12
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Setup VQA Input
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        gh release download -p "vqa_dataset.tar.gz"
+        tar -xzf vqa_dataset.tar.gz
+        mv vqa_dataset/vqa.jsonl .
+        mv vqa_dataset/val2014 .
+        rm -rf vqa_dataset vqa_dataset.tar.gz
+        echo "VQA_DATASET_PATH=${{ github.workspace }}/vqa.jsonl" >> $GITHUB_ENV
+
+    - name: Run VQA Experiment V2
+      run: python -u main.py -c benchmarking/experiments/compare_providers_streaming_vqa_v2.json
+
+    - name: Upload VQA Logs
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: logs-vqa-v2
+        path: |
+          ${{ github.workspace }}/vqa/logs/*.csv
+        if-no-files-found: warn
+
+    - name: Upload Experiment Outputs
+      uses: actions/upload-artifact@v4
+      with:
+        name: results-vqa-v2
+        path: ${{ github.workspace }}/benchmark_graph
+
   download-artifacts:
     runs-on: ubuntu-latest
-    needs: [static-benchmark, trace-benchmark-a, trace-benchmark-b, multiturn-benchmark-a, multiturn-benchmark-b, multiturn-benchmark-c, vqa-benchmark-a, vqa-benchmark-b]
+    needs: [static-benchmark, trace-benchmark-a, trace-benchmark-b, multiturn-benchmark-a, multiturn-benchmark-b, multiturn-benchmark-c, vqa-benchmark-a, vqa-benchmark-b, vqa-benchmark-v2]
 
     # Run if at least one of the previous jobs succeed
-    if: always() && (needs.static-benchmark.result == 'success' || needs.trace-benchmark-a.result == 'success' || needs.trace-benchmark-b.result == 'success' || needs.multiturn-benchmark-a.result == 'success' || needs.multiturn-benchmark-b.result == 'success' || needs.multiturn-benchmark-c.result == 'success' || needs.vqa-benchmark-a.result == 'success' || needs.vqa-benchmark-b.result == 'success')
+    if: always() && (needs.static-benchmark.result == 'success' || needs.trace-benchmark-a.result == 'success' || needs.trace-benchmark-b.result == 'success' || needs.multiturn-benchmark-a.result == 'success' || needs.multiturn-benchmark-b.result == 'success' || needs.multiturn-benchmark-c.result == 'success' || needs.vqa-benchmark-a.result == 'success' || needs.vqa-benchmark-b.result == 'success' || needs.vqa-benchmark-v2.result == 'success')
     steps:
       - name: Download Artifacts
         uses: actions/download-artifact@v4
