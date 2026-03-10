@@ -18,7 +18,6 @@ class Open_AI(BaseProvider):
             "mistral-7b-instruct-v0.1": "gpt-4o",  # speculative: 200-1000b
             "meta-llama-3.1-70b-instruct": "gpt-4",  # 1000-1800b
             "common-model": "gpt-4o",
-            "cache-model": "gpt-4o",
             "reasoning-model": ["o4-mini", "gpt-4o"]
         }
 
