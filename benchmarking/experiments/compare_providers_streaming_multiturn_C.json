@@ -1,8 +1,9 @@
 {
     "providers": [
-        "Anthropic",
-        "AWSBedrock",
-        "Azure"
+        "Groq",
+        "OpenAI",
+        "PerplexityAI",
+        "TogetherAI"
     ],
     "models": [
         "cache-model"

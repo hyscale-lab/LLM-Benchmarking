@@ -1,12 +1,11 @@
 {
     "providers": [
-        "Hyperbolic",
-        "OpenAI",
-        "PerplexityAI",
-        "TogetherAI"
+        "Cloudflare",
+        "Google",
+        "Hyperbolic"
     ],
     "models": [
-        "common-model"
+        "cache-model"
     ],
     "input_type": "multiturn",
     "num_requests": 100,
