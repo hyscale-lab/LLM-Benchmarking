@@ -25,6 +25,9 @@ class GoogleGemini(ProviderInterface):
             "vision-model-02": "gemini-3-pro-preview",
         }
 
+        # for multiturn caching
+        self._google_cache_name = None
+
     def initialize_client(self):
         # Configure API key for Google Gemini
         if not os.getenv("GOOGLE_APPLICATION_CREDENTIALS"):
@@ -110,6 +113,36 @@ class GoogleGemini(ProviderInterface):
 
         return normalized_msgs
 
+    def apply_cache_markers(self, messages):
+        if not isinstance(messages, list) or len(messages) < 3:
+            # Turn 1: no history to cache yet; reset for new conversation
+            self._google_cache_name = None
+            return messages
+
+        # Cache everything except the last user message
+        history_to_cache = messages[:-1]
+        tail_messages = [messages[-1]]
+
+        model_id = self.model_map.get("cache-model")
+        self._set_client_by_model(model_id)
+        normalized_history = self.normalize_messages(history_to_cache)
+        try:
+            cache = self._client.caches.create(
+                model=model_id,
+                config=types.CreateCachedContentConfig(
+                    contents=normalized_history,
+                    system_instruction=self.system_prompt,
+                    ttl="300s",
+                )
+            )
+            self._google_cache_name = cache.name
+            print(f"[Google Cache] Created: {cache.name}")
+            return tail_messages
+        except Exception as e:
+            print(f"[WARN] Google cache creation failed: {e}. Falling back to full context.")
+            self._google_cache_name = None
+            return messages
+
     def construct_text_response(self, raw_response):
         if isinstance(raw_response, dict):
             text_response = raw_response['candidates'][0]['content']['parts'][0]['text']
@@ -121,17 +154,19 @@ class GoogleGemini(ProviderInterface):
 
         return text_response
 
-    def get_input_token_count(self, response, streaming):
+    def get_response_usage(self, response, streaming):
         if not response:
-            return 0
+            return {"total_input": 0, "output": 0}
 
-        if not streaming:
-            usage = response.get('usage_metadata', {})
-            return usage.get('prompt_token_count', 0)
-        else:
-            last_chunk = response[-1]
-            usage = last_chunk.get('usage_metadata', {})
-            return usage.get('prompt_token_count', 0)
+        usage = response[-1].get('usage_metadata', {}) if streaming else response.get('usage_metadata', {})
+        result = {
+            "total_input": usage.get('prompt_token_count', 0),
+            "output": usage.get('candidates_token_count', 0)
+        }
+        cached = usage.get('cached_content_token_count')
+        if cached:
+            result["cache_read"] = cached
+        return result
 
     def perform_inference(self, model, messages, max_output=100, verbosity=True):
         """
@@ -149,8 +184,13 @@ class GoogleGemini(ProviderInterface):
                 model=model_id,
                 contents=self.normalize_messages(messages),
                 config=types.GenerateContentConfig(
+                    cached_content=self._google_cache_name,
+                    max_output_tokens=max_output,
+                    thinking_config=types.ThinkingConfig(thinking_budget=0)
+                ) if self._google_cache_name else types.GenerateContentConfig(
                     system_instruction=self.system_prompt,
-                    max_output_tokens=max_output
+                    max_output_tokens=max_output,
+                    thinking_config=types.ThinkingConfig(thinking_budget=0)
                 ),
             )
             elapsed = timer() - start_time
@@ -194,8 +234,13 @@ class GoogleGemini(ProviderInterface):
                 model=model_id,
                 contents=self.normalize_messages(messages),
                 config=types.GenerateContentConfig(
+                    cached_content=self._google_cache_name,
+                    max_output_tokens=max_output,
+                    thinking_config=types.ThinkingConfig(thinking_budget=0)
+                ) if self._google_cache_name else types.GenerateContentConfig(
                     system_instruction=self.system_prompt,
-                    max_output_tokens=max_output
+                    max_output_tokens=max_output,
+                    thinking_config=types.ThinkingConfig(thinking_budget=0)
                 ),
             )
 
