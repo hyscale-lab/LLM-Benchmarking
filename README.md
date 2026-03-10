@@ -46,19 +46,19 @@ AZURE_OPENAI_ENDPOINT="your-azure-openai-endpoint"
 CLOUDFLARE_ACCOUNT_ID="your-cloudflare-account-id"
 CLOUDFLARE_AI_TOKEN="your-cloudflare-ai-token"
 
-# TogetherAI / OpenAI / Anthropic / PerplexityAI / Hyperbolic / Groq
-TOGETHER_AI_API="your-together-ai-api-key"
-OPEN_AI_API="your-openai-api-key"
-ANTHROPIC_API="your-anthropic-api-key"
-PERPLEXITY_AI_API="your-perplexity-ai-api-key"
-HYPERBOLIC_API="your-hyperbolic-api-key"
-GROQ_API_KEY="your-groq-api-key"
-
 # Google
 GOOGLE_APPLICATION_CREDENTIALS="path/to/service-account.json"
 GOOGLE_CLOUD_PROJECT="your-google-cloud-project"
 GOOGLE_CLOUD_LOCATION="your-google-cloud-location"
 LLAMA_4_GOOGLE_CLOUD_LOCATION="your-llama4-specific-region"
+
+# Anthropic / Groq / Hyperbolic / OpenAI / PerplexityAI / TogetherAI
+ANTHROPIC_API="your-anthropic-api-key"
+GROQ_API_KEY="your-groq-api-key"
+HYPERBOLIC_API="your-hyperbolic-api-key"
+OPEN_AI_API="your-openai-api-key"
+PERPLEXITY_AI_API="your-perplexity-ai-api-key"
+TOGETHER_AI_API="your-together-ai-api-key"
 
 # HuggingFace (required for VQA tokenizer downloads)
 HF_TOKEN="your-huggingface-token"
