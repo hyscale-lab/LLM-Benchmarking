@@ -24,7 +24,7 @@ class Azure(AccuracyMixin, ProviderInterface):
         self.model_map = {
             "llama-3.3-70b-instruct": "Llama-3.3-70B-Instruct",
             "meta-llama-3.1-8b-instruct": "Meta-Llama-3.1-8B-Instruct",
-            "common-model": "Meta-Llama-3.1-70B-Instruct",
+            "common-model": "Llama-3.3-70B-Instruct",
             "cache-model": "gpt-4o",
             "reasoning-model": ["o4-mini", "gpt-4o"],
             "vision-model-01": "Llama-4-Maverick-17B-128E-Instruct-FP8",
@@ -124,27 +124,33 @@ class Azure(AccuracyMixin, ProviderInterface):
             text_response = "".join(
                 block['choices'][0]['delta']['content']
                 for block in raw_response
-                if len(block['choices']) > 0
+                if len(block['choices']) > 0 and block['choices'][0].get('delta', {}).get('content')
             )
 
         return text_response
 
-    def get_input_token_count(self, response, streaming):
+    def get_response_usage(self, response, streaming):
         if not response:
-            return 0
+            return {"total_input": 0, "output": 0}
 
         if not streaming:
             usage = response.get('usage', {})
-            return usage.get('prompt_tokens', 0)
         else:
-            # Azure usually sends usage in the final chunk
+            usage = {}
             for chunk in reversed(response):
-                usage = chunk.get('usage')
-                if usage:
-                    return usage.get('prompt_tokens', 0)
-            
-            # Fallback to 0 if the service didn't provide usage in the stream
-            return 0
+                if chunk.get('usage'):
+                    usage = chunk['usage']
+                    break
+
+        result = {
+            "total_input": usage.get('prompt_tokens', 0),
+            "output": usage.get('completion_tokens', 0)
+        }
+        details = usage.get('prompt_tokens_details') or {}
+        cached = details.get('cached_tokens')
+        if cached is not None:
+            result["cache_read"] = cached
+        return result
 
     def perform_inference(self, model, messages, max_output=100, verbosity=True):
         """Performs non-streaming inference request to Azure."""
@@ -200,7 +206,8 @@ class Azure(AccuracyMixin, ProviderInterface):
                 stream=True,
                 messages=self.normalize_messages(messages),
                 max_tokens=max_output,
-                model=model_id
+                model=model_id,
+                model_extras={"stream_options": {"include_usage": True}}
             ) as response:
                 response_list = []
                 for event in response:
