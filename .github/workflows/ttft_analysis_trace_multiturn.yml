@@ -2,8 +2,8 @@ name: TTFT Analysis Experiment
 
 run-name: >-
   ${{ format('Manual:{0}{1}{2}{3}{4}',
-    inputs.run_trace_a && ' Trace-A' || '',
-    inputs.run_trace_b && ' Trace-B' || '',
+    inputs.run_trace_a && format(' Trace-A({0}m)', inputs.trace_duration) || '',
+    inputs.run_trace_b && format(' Trace-B({0}m)', inputs.trace_duration) || '',
     inputs.run_multiturn_a && ' Multiturn-A' || '',
     inputs.run_multiturn_b && ' Multiturn-B' || '',
     inputs.run_multiturn_c && ' Multiturn-C' || '') }}
@@ -11,6 +11,14 @@ run-name: >-
 on:
   workflow_dispatch:
     inputs:
+      trace_duration:
+        description: 'Trace dataset duration (minutes)'
+        type: choice
+        options:
+          - '10'
+          - '20'
+          - '40'
+        default: '40'
       run_trace_a:
         description: 'Run Trace Benchmark A'
         type: boolean
@@ -84,8 +92,8 @@ jobs:
       env:
         GH_TOKEN: ${{ github.token }}
       run: |
-        gh release download input-type-v2.0-ttft-analysis -p "trace_conv_sampled_40min.json"
-        echo "TRACE_DATASET_PATH=${{ github.workspace }}/trace_conv_sampled_40min.json" >> $GITHUB_ENV
+        gh release download input-type-v2.0-ttft-analysis -p "trace_conv_sampled_${{ inputs.trace_duration }}min.json"
+        echo "TRACE_DATASET_PATH=${{ github.workspace }}/trace_conv_sampled_${{ inputs.trace_duration }}min.json" >> $GITHUB_ENV
 
     - name: Run Trace Experiment A
       run: python -u main.py -c benchmarking/experiments/compare_providers_streaming_trace_A.json
@@ -134,8 +142,8 @@ jobs:
       env:
         GH_TOKEN: ${{ github.token }}
       run: |
-        gh release download input-type-v2.0-ttft-analysis -p "trace_conv_sampled_40min.json"
-        echo "TRACE_DATASET_PATH=${{ github.workspace }}/trace_conv_sampled_40min.json" >> $GITHUB_ENV
+        gh release download input-type-v2.0-ttft-analysis -p "trace_conv_sampled_${{ inputs.trace_duration }}min.json"
+        echo "TRACE_DATASET_PATH=${{ github.workspace }}/trace_conv_sampled_${{ inputs.trace_duration }}min.json" >> $GITHUB_ENV
 
     - name: Run Trace Experiment B
       run: python -u main.py -c benchmarking/experiments/compare_providers_streaming_trace_B.json
