@@ -1,8 +1,327 @@
 name: TTFT Analysis Experiment
 
-on: workflow_dispatch
+run-name: >-
+  ${{ format('Manual:{0}{1}{2}{3}{4}',
+    inputs.run_trace_a && format(' Trace-A({0}m)', inputs.trace_duration) || '',
+    inputs.run_trace_b && format(' Trace-B({0}m)', inputs.trace_duration) || '',
+    inputs.run_multiturn_a && ' Multiturn-A' || '',
+    inputs.run_multiturn_b && ' Multiturn-B' || '',
+    inputs.run_multiturn_c && ' Multiturn-C' || '') }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      trace_duration:
+        description: 'Trace dataset duration (minutes)'
+        type: choice
+        options:
+          - '10'
+          - '20'
+          - '40'
+        default: '40'
+      run_trace_a:
+        description: 'Run Trace Benchmark A'
+        type: boolean
+        default: false
+      run_trace_b:
+        description: 'Run Trace Benchmark B'
+        type: boolean
+        default: false
+      run_multiturn_a:
+        description: 'Run Multiturn Benchmark A'
+        type: boolean
+        default: false
+      run_multiturn_b:
+        description: 'Run Multiturn Benchmark B'
+        type: boolean
+        default: false
+      run_multiturn_c:
+        description: 'Run Multiturn Benchmark C'
+        type: boolean
+        default: false
+
+env:
+  HF_TOKEN: ${{ secrets.HF_TOKEN }}
+  CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+  CLOUDFLARE_AI_TOKEN: ${{ secrets.CLOUDFLARE_AI_TOKEN }}
+  GOOGLE_CLOUD_PROJECT: ${{ secrets.GOOGLE_CLOUD_PROJECT }}
+  GOOGLE_CLOUD_LOCATION: ${{ secrets.GOOGLE_CLOUD_LOCATION }}
+  LLAMA_4_GOOGLE_CLOUD_LOCATION: ${{ secrets.LLAMA_4_GOOGLE_CLOUD_LOCATION }}
+  GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+  HYPERBOLIC_API: ${{ secrets.HYPERBOLIC_API }}
+  OPEN_AI_API: ${{ secrets.OPEN_AI_API }}
+  PERPLEXITY_AI_API: ${{ secrets.PERPLEXITY_AI_API }}
+  TOGETHER_AI_API: ${{ secrets.TOGETHER_AI_API }}
+  ANTHROPIC_API: ${{ secrets.ANTHROPIC_API }}
+  AWS_BEDROCK_ACCESS_KEY_ID: ${{ secrets.AWS_BEDROCK_ACCESS_KEY_ID }}
+  AWS_BEDROCK_SECRET_ACCESS_KEY: ${{ secrets.AWS_BEDROCK_SECRET_ACCESS_KEY }}
+  AWS_BEDROCK_REGION: ${{ secrets.AWS_BEDROCK_REGION }}
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  AZURE_AI_ENDPOINT: ${{ secrets.AZURE_AI_ENDPOINT }}
+  AZURE_AI_API_KEY: ${{ secrets.AZURE_AI_API_KEY }}
+  AZURE_OPENAI_ENDPOINT: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+
 jobs:
-  dummy:
+  trace-benchmark-a:
+    name: Trace Benchmark A
     runs-on: ubuntu-latest
+
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_trace_a == true }}
     steps:
-      - run: echo "Registered"
+    - name: Check out repository
+      uses: actions/checkout@v4
+
+    - name: Authenticate to Google Cloud
+      uses: 'google-github-actions/auth@v2'
+      with:
+        credentials_json: '${{ secrets.GOOGLE_CREDENTIALS }}'
+
+    - name: Set up Python 3.12
+      uses: actions/setup-python@v5
+      with:
+        python-version: 3.12
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Setup Trace Input
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        gh release download input-type-v2.0-ttft-analysis -p "trace_conv_sampled_${{ inputs.trace_duration }}min.json"
+        echo "TRACE_DATASET_PATH=${{ github.workspace }}/trace_conv_sampled_${{ inputs.trace_duration }}min.json" >> $GITHUB_ENV
+
+    - name: Run Trace Experiment A
+      run: python -u main.py -c benchmarking/experiments/compare_providers_streaming_trace_A.json
+
+    - name: Upload Trace Logs
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: logs-trace-a
+        path: |
+          ${{ github.workspace }}/trace/proxy/*.log
+          ${{ github.workspace }}/trace/*.result
+        if-no-files-found: warn
+
+    - name: Upload Experiment Outputs
+      uses: actions/upload-artifact@v4
+      with:
+        name: results-trace-a
+        path: ${{ github.workspace }}/benchmark_graph
+
+  trace-benchmark-b:
+    name: Trace Benchmark B
+    runs-on: ubuntu-latest
+
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_trace_b == true }}
+    steps:
+    - name: Check out repository
+      uses: actions/checkout@v4
+
+    - name: Authenticate to Google Cloud
+      uses: 'google-github-actions/auth@v2'
+      with:
+        credentials_json: '${{ secrets.GOOGLE_CREDENTIALS }}'
+
+    - name: Set up Python 3.12
+      uses: actions/setup-python@v5
+      with:
+        python-version: 3.12
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Setup Trace Input
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        gh release download input-type-v2.0-ttft-analysis -p "trace_conv_sampled_${{ inputs.trace_duration }}min.json"
+        echo "TRACE_DATASET_PATH=${{ github.workspace }}/trace_conv_sampled_${{ inputs.trace_duration }}min.json" >> $GITHUB_ENV
+
+    - name: Run Trace Experiment B
+      run: python -u main.py -c benchmarking/experiments/compare_providers_streaming_trace_B.json
+
+    - name: Upload Trace Logs
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: logs-trace-b
+        path: |
+          ${{ github.workspace }}/trace/proxy/*.log
+          ${{ github.workspace }}/trace/*.result
+        if-no-files-found: warn
+
+    - name: Upload Experiment Outputs
+      uses: actions/upload-artifact@v4
+      with:
+        name: results-trace-b
+        path: ${{ github.workspace }}/benchmark_graph
+
+  multiturn-benchmark-a:
+    name: Multiturn Benchmark A
+    runs-on: ubuntu-latest
+
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_multiturn_a == true }}
+    steps:
+    - name: Check out repository
+      uses: actions/checkout@v4
+
+    - name: Authenticate to Google Cloud
+      uses: 'google-github-actions/auth@v2'
+      with:
+        credentials_json: '${{ secrets.GOOGLE_CREDENTIALS }}'
+
+    - name: Set up Python 3.12
+      uses: actions/setup-python@v5
+      with:
+        python-version: 3.12
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Setup Multiturn Input
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        gh release download input-type-v2.0-ttft-analysis -p "multiturn_no_cache.json"
+        echo "MULTITURN_DATASET_PATH=${{ github.workspace }}/multiturn_no_cache.json" >> $GITHUB_ENV
+
+    - name: Run Multiturn Experiment A
+      run: python -u main.py -c benchmarking/experiments/compare_providers_streaming_multiturn_A.json
+
+    - name: Upload Multiturn Logs
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: logs-multiturn-a
+        path: |
+          ${{ github.workspace }}/multiturn/logs/*.csv
+        if-no-files-found: warn
+
+    - name: Upload Experiment Outputs
+      uses: actions/upload-artifact@v4
+      with:
+        name: results-multiturn-a
+        path: ${{ github.workspace }}/benchmark_graph
+
+  multiturn-benchmark-b:
+    name: Multiturn Benchmark B
+    runs-on: ubuntu-latest
+
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_multiturn_b == true }}
+    steps:
+    - name: Check out repository
+      uses: actions/checkout@v4
+
+    - name: Authenticate to Google Cloud
+      uses: 'google-github-actions/auth@v2'
+      with:
+        credentials_json: '${{ secrets.GOOGLE_CREDENTIALS }}'
+
+    - name: Set up Python 3.12
+      uses: actions/setup-python@v5
+      with:
+        python-version: 3.12
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Setup Multiturn Input
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        gh release download input-type-v2.0-ttft-analysis -p "multiturn_no_cache.json"
+        echo "MULTITURN_DATASET_PATH=${{ github.workspace }}/multiturn_no_cache.json" >> $GITHUB_ENV
+
+    - name: Run Multiturn Experiment B
+      run: python -u main.py -c benchmarking/experiments/compare_providers_streaming_multiturn_B.json
+
+    - name: Upload Multiturn Logs
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: logs-multiturn-b
+        path: |
+          ${{ github.workspace }}/multiturn/logs/*.csv
+        if-no-files-found: warn
+
+    - name: Upload Experiment Outputs
+      uses: actions/upload-artifact@v4
+      with:
+        name: results-multiturn-b
+        path: ${{ github.workspace }}/benchmark_graph
+
+  multiturn-benchmark-c:
+    name: Multiturn Benchmark C
+    runs-on: ubuntu-latest
+
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_multiturn_c == true }}
+    steps:
+    - name: Check out repository
+      uses: actions/checkout@v4
+
+    - name: Authenticate to Google Cloud
+      uses: 'google-github-actions/auth@v2'
+      with:
+        credentials_json: '${{ secrets.GOOGLE_CREDENTIALS }}'
+
+    - name: Set up Python 3.12
+      uses: actions/setup-python@v5
+      with:
+        python-version: 3.12
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Setup Multiturn Input
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        gh release download input-type-v2.0-ttft-analysis -p "multiturn_no_cache.json"
+        echo "MULTITURN_DATASET_PATH=${{ github.workspace }}/multiturn_no_cache.json" >> $GITHUB_ENV
+
+    - name: Run Multiturn Experiment C
+      run: python -u main.py -c benchmarking/experiments/compare_providers_streaming_multiturn_C.json
+
+    - name: Upload Multiturn Logs
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: logs-multiturn-c
+        path: |
+          ${{ github.workspace }}/multiturn/logs/*.csv
+        if-no-files-found: warn
+
+    - name: Upload Experiment Outputs
+      uses: actions/upload-artifact@v4
+      with:
+        name: results-multiturn-c
+        path: ${{ github.workspace }}/benchmark_graph
+
+  download-artifacts:
+    runs-on: ubuntu-latest
+    needs: [trace-benchmark-a, trace-benchmark-b, multiturn-benchmark-a, multiturn-benchmark-b, multiturn-benchmark-c]
+
+    # Run if at least one of the previous jobs succeed
+    if: always() && (needs.trace-benchmark-a.result == 'success' || needs.trace-benchmark-b.result == 'success' || needs.multiturn-benchmark-a.result == 'success' || needs.multiturn-benchmark-b.result == 'success' || needs.multiturn-benchmark-c.result == 'success')
+    steps:
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: List Downloaded Artifacts
+        run: ls -R artifacts
