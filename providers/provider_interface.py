@@ -422,7 +422,7 @@ class ProviderInterface(ABC):
                     response = self.perform_inference_streaming(
                         model,
                         multimodal_messages,
-                        max_output=10,
+                        max_output=1,
                         verbosity=verbosity
                     )
                 else:
@@ -468,7 +468,7 @@ class ProviderInterface(ABC):
                     response = self.perform_inference_streaming(
                         model,
                         text_only_messages,
-                        max_output=10,
+                        max_output=1,
                         verbosity=verbosity
                     )
                 else:
