@@ -439,7 +439,9 @@ class ProviderInterface(ABC):
                 continue
 
             # Prepare messages
-            total_tokens = self.get_response_usage(response, streaming)["total_input"]
+            usage1 = self.get_response_usage(response, streaming)
+            print(f"\nPass 1 Usage: {usage1}")
+            total_tokens = usage1["total_input"]
             print(f"Generating dummy text with {total_tokens} tokens...")
             dummy_text = self.get_vqa_dummy_text(
                 self.get_model_name(model),
@@ -482,7 +484,8 @@ class ProviderInterface(ABC):
                 print("Text passes failed. Skipping sample...\n")
                 continue
 
-            print(f"Pass 2 reported {self.get_response_usage(response, streaming)['total_input']} input tokens.")
+            usage2 = self.get_response_usage(response, streaming)
+            print(f"\nPass 2 Usage: {usage2}")
 
             # --- CALCULATE VISION ENCODER LATENCY ---
             ttft_multimodal = self.metrics['timetofirsttoken'][model][-2]
