@@ -122,7 +122,7 @@ class Benchmark:
         table = self.dynamodb.Table(self.table_name)
         for provider_name, models in self.benchmark_data["providers"].items():
             for model_name, metrics in models.items():
-                model_key = "common" if self.models[0] in ["common-model", "vision-model"] else "multi"
+                model_key = "common" if self.models[0] in ["common-model", "vision-model", "cache-model", "vision-model-01", "vision-model-02"] else "multi"
                 item = {
                     "id": str(uuid.uuid4()),
                     "run_id": self.benchmark_data["run_id"],
