@@ -1,7 +1,7 @@
 name: TTFT Analysis Experiment
 
 run-name: >-
-  ${{ format('Manual:{0}{1}{2}{3}{4}{5}',
+  ${{ format('Manual:{0}{1}{2}{3}{4}',
     inputs.run_trace_a && ' Trace-A' || '',
     inputs.run_trace_b && ' Trace-B' || '',
     inputs.run_multiturn_a && ' Multiturn-A' || '',
