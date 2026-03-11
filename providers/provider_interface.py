@@ -377,7 +377,7 @@ class ProviderInterface(ABC):
         os.makedirs(self.vqa_log_path, exist_ok=True)
         with open(os.path.join(self.vqa_log_path, csv_filename), mode='w', newline='', encoding='utf-8') as f:
             writer = csv.writer(f)
-            writer.writerow(["question_id", "multimodal_ttft", "multimodal_input_tokens", "text_only_ttft", "vision_encoder_ttft"])
+            writer.writerow(["question_id", "multimodal_ttft", "multimodal_input_tokens", "multimodal_output_tokens", "multimodal_cache_read", "multimodal_cache_write", "text_only_ttft", "text_only_input_tokens", "text_only_output_tokens", "text_only_cache_read", "text_only_cache_write", "vision_encoder_ttft"])
 
         vqa_iter = _load_vqa_iterator(self.vqa_dataset_path)
 
@@ -435,7 +435,9 @@ class ProviderInterface(ABC):
                 continue
 
             # Prepare messages
-            total_tokens = self.get_response_usage(response, streaming)["total_input"]
+            usage1 = self.get_response_usage(response, streaming)
+            print(f"\nPass 1 Usage: {usage1}")
+            total_tokens = usage1["total_input"]
             print(f"Generating dummy text with {total_tokens} tokens...")
             dummy_text = self.get_vqa_dummy_text(
                 self.get_model_name(model),
@@ -478,7 +480,8 @@ class ProviderInterface(ABC):
                 print("Text passes failed. Skipping sample...\n")
                 continue
 
-            print(f"Pass 2 reported {self.get_response_usage(response, streaming)['total_input']} input tokens.")
+            usage2 = self.get_response_usage(response, streaming)
+            print(f"\nPass 2 Usage: {usage2}")
 
             # --- CALCULATE VISION ENCODER LATENCY ---
             ttft_multimodal = self.metrics['timetofirsttoken'][model][-2]
@@ -500,8 +503,15 @@ class ProviderInterface(ABC):
                 writer.writerow([
                     f"{question_id}",
                     f"{ttft_multimodal}",
-                    f"{total_tokens}",
+                    usage1.get("total_input", 0),
+                    usage1.get("output", 0),
+                    usage1.get("cache_read", 0),
+                    usage1.get("cache_write", 0),
                     f"{ttft_text}",
+                    usage2.get("total_input", 0),
+                    usage2.get("output", 0),
+                    usage2.get("cache_read", 0),
+                    usage2.get("cache_write", 0),
                     f"{ttft_vision_encoder}"
                 ])
 
